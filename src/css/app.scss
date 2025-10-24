@@ -1,1 +1,78 @@
-// app global css in SCSS form
+/*
+ * Fichero de estilos global para una interfaz más compacta
+ */
+
+// --- 1. Regla Global de Fuente ---
+// Reducimos el tamaño de fuente base del documento.
+// Quasar usa unidades 'rem', que se basan en este tamaño.
+// Al cambiarlo de 16px (default) a 14px, todo se escala proporcionalmente.
+// ¡Esta es la regla más importante!
+html {
+  font-size: 12px; // Puedes probar con 13px si quieres algo aún más pequeño
+}
+
+
+// --- 2. Ajustes para Componentes Específicos de Quasar ---
+
+// Pestañas (Tabs) más pequeñas
+.q-tabs__content .q-tab {
+  min-height: 40px; // Reduce la altura de las pestañas
+}
+.q-tab__label {
+  font-size: 0.875rem; // Hace el texto de la pestaña más pequeño
+  font-weight: 500;
+}
+
+// Botones más compactos
+// Hacemos los botones 'dense' un poco más pequeños
+.q-btn--dense {
+  padding: 2px 8px;
+  font-size: 0.8rem;
+}
+
+// Títulos (h6 es muy usado en la app)
+.text-h6 {
+  // El tamaño original es 1.25rem. Lo bajamos.
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+// Subtítulos y texto de soporte
+.text-subtitle2 {
+  font-size: 0.85rem;
+}
+
+// Inputs y Selects
+.q-field--dense .q-field__control {
+  height: 36px; // Reduce la altura de los campos de formulario densos
+}
+.q-field--dense .q-field__label {
+  font-size: 0.9rem; // Reduce el tamaño de la etiqueta del campo
+}
+
+
+// --- 3. Ajustes para los Nodos de VueFlow ---
+// Para que el texto dentro de los nodos también sea más pequeño
+
+.vue-flow__node {
+  .node-description {
+    font-size: 13px; // Ajusta el tamaño de la descripción principal del nodo
+  }
+  .node-id {
+    font-size: 10px; // Hace el ID del nodo muy pequeño
+  }
+}
+
+// --- 4. Ajustes para la Ficha de Personaje ---
+// Hacemos las filas de estadísticas más compactas
+
+.stat-row {
+  // El grid original es: 100px 1fr 60px 20px 60px;
+  // Lo hacemos más estrecho
+  grid-template-columns: 90px 1fr 50px 15px 50px;
+  gap: 6px;
+}
+
+.stat-label {
+  font-size: 0.95rem;
+}

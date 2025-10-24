@@ -1,102 +1,108 @@
+<!-- src/layouts/MainLayout.vue -->
 <template>
-  <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
+  <q-layout view="lHh lpr lFf">
+    <!-- 1. Cabecera con fondo gris oscuro y texto blanco -->
+    <q-header bordered v-if="isHeaderVisible" class="bg-grey-9 text-white">
+      <!-- Barra de Título Superior -->
       <q-toolbar>
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          aria-label="Menu"
-          @click="toggleLeftDrawer"
-        />
-
-        <q-toolbar-title>
-          Quasar App
+        <q-toolbar-title class="text-weight-bold">
+          GameBooks design & test
         </q-toolbar-title>
 
-        <div>Quasar v{{ $q.version }}</div>
+        <q-space />
+
+        <q-btn
+          flat
+          round
+          @click="toggleDarkMode"
+          :icon="darkModeIcon"
+        />
       </q-toolbar>
+
+      <!-- Barra de Navegación con Pestañas -->
+      <q-tabs
+        align="left"
+        dense
+        class="custom-tabs-minimal"
+        active-color="primary"
+        indicator-color="primary"
+      >
+        <q-route-tab
+          v-for="route in menuRoutes"
+          :key="route.path"
+          :to="route.path"
+          :label="route.name"
+          exact
+          dense
+          no-caps
+        />
+      </q-tabs>
     </q-header>
 
-    <q-drawer
-      v-model="leftDrawerOpen"
-      show-if-above
-      bordered
-    >
-      <q-list>
-        <q-item-label
-          header
-        >
-          Essential Links
-        </q-item-label>
-
-        <EssentialLink
-          v-for="link in linksList"
-          :key="link.title"
-          v-bind="link"
-        />
-      </q-list>
-    </q-drawer>
-
-    <q-page-container>
+    <!-- 3. Contenedor de página con fondo azul marino -->
+    <q-page-container class="bg-blue-grey-10 overflow-hidden">
       <router-view />
     </q-page-container>
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import EssentialLink, { type EssentialLinkProps } from 'components/EssentialLink.vue';
+import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useQuasar } from 'quasar';
+import { useAssetsStore } from 'src/stores/assets-store'; // 1. Importar el store de assets
 
-const linksList: EssentialLinkProps[] = [
-  {
-    title: 'Docs',
-    caption: 'quasar.dev',
-    icon: 'school',
-    link: 'https://quasar.dev'
-  },
-  {
-    title: 'Github',
-    caption: 'github.com/quasarframework',
-    icon: 'code',
-    link: 'https://github.com/quasarframework'
-  },
-  {
-    title: 'Discord Chat Channel',
-    caption: 'chat.quasar.dev',
-    icon: 'chat',
-    link: 'https://chat.quasar.dev'
-  },
-  {
-    title: 'Forum',
-    caption: 'forum.quasar.dev',
-    icon: 'record_voice_over',
-    link: 'https://forum.quasar.dev'
-  },
-  {
-    title: 'Twitter',
-    caption: '@quasarframework',
-    icon: 'rss_feed',
-    link: 'https://twitter.quasar.dev'
-  },
-  {
-    title: 'Facebook',
-    caption: '@QuasarFramework',
-    icon: 'public',
-    link: 'https://facebook.quasar.dev'
-  },
-  {
-    title: 'Quasar Awesome',
-    caption: 'Community Quasar projects',
-    icon: 'favorite',
-    link: 'https://awesome.quasar.dev'
-  }
-];
+const router = useRouter();
+const $q = useQuasar();
+const assetsStore = useAssetsStore(); // 2. Instanciar el store
 
-const leftDrawerOpen = ref(false);
-
-function toggleLeftDrawer () {
-  leftDrawerOpen.value = !leftDrawerOpen.value;
+// --- Lógica para el modo oscuro (sin cambios) ---
+const darkModeIcon = computed(() => ($q.dark.isActive ? 'light_mode' : 'dark_mode'));
+function toggleDarkMode() {
+  $q.dark.toggle();
+  localStorage.setItem('darkMode', String($q.dark.isActive));
 }
+
+onMounted(async () => { // 3. Hacer el hook asíncrono
+  const darkModeIsActive = localStorage.getItem('darkMode') === 'true';
+  $q.dark.set(darkModeIsActive);
+
+  // 4. Llamar a la acción para cargar los assets al iniciar
+  await assetsStore.loadAssets();
+});
+
+// --- Lógica para las rutas del menú (ACTUALIZADA) ---
+const menuRoutes = computed(() => {
+  const mainLayoutRoute = router.options.routes.find(r => r.path === '/');
+  const children = mainLayoutRoute?.children || [];
+
+  // 3. Filtramos las rutas para mostrar solo las que deben estar en el menú
+  return children.filter(route => route.meta?.showInMenu !== false);
+});
+
+// --- Lógica para controlar la visibilidad de la cabecera (sin cambios) ---
+const isHeaderVisible = ref(true);
 </script>
+
+<style lang="scss">
+/* 4. Estilos ajustados para el menú sobre fondo oscuro */
+.custom-tabs-minimal {
+  .q-tab {
+    min-height: 32px;
+    padding: 0 12px;
+  }
+
+  .q-tab__label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    /* Opacidad para pestañas inactivas para que no destaquen tanto */
+    opacity: 0.7;
+  }
+
+  /* La pestaña activa recupera la opacidad y gana peso para destacar */
+  .q-tab--active .q-tab__label {
+    opacity: 1;
+    font-weight: 700;
+  }
+}
+</style>

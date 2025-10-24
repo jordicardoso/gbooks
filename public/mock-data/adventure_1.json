@@ -1,0 +1,246 @@
+{
+  "meta": {
+    "title": "El silencio de la taiga",
+    "version": "0.1"
+  },
+  "characterSheet": {
+    "stats": {
+      "health": {
+        "current": 50,
+        "max": 100
+      },
+      "warmth": {
+        "current": 40,
+        "max": 100
+      },
+      "fatigue": {
+        "current": 30,
+        "max": 100
+      },
+      "thirst": {
+        "current": 10,
+        "max": 100
+      },
+      "hunger": {
+        "current": 10,
+        "max": 100
+      }
+    },
+    "equipment": {
+      "head": {
+        "id": "gorro_lana_viejo",
+        "name": "Gorro de Lana Viejo",
+        "modifiers": [
+          {
+            "stat": "warmthBonus",
+            "value": 4
+          }
+        ]
+      },
+      "jacket": {
+        "id": "chaqueta_ligera",
+        "name": "Chaqueta Ligera",
+        "modifiers": [
+          {
+            "stat": "warmthBonus",
+            "value": 8
+          }
+        ]
+      },
+      "torso": null,
+      "legs": {
+        "id": "pantalones_trabajo",
+        "name": "Pantalones de Trabajo",
+        "modifiers": [
+          {
+            "stat": "warmthBonus",
+            "value": 5
+          }
+        ]
+      },
+      "feet": null
+    },
+    "inventory": [
+      {
+        "id": "barrita_energetica",
+        "name": "Barrita Energética",
+        "quantity": 1
+      }
+    ],
+    "skills": [
+      {
+        "id": "Cocina",
+        "name": "Cocina",
+        "quantity": 0
+      },
+      {
+        "id": "Inicio de Fuego",
+        "name": "Inicio de Fuego",
+        "quantity": 0
+      },
+      {
+        "id": "Pesca",
+        "name": "Pesca",
+        "quantity": 0
+      },
+      {
+        "id": "Arquería",
+        "name": "Arquería",
+        "quantity": 0
+      },
+      {
+        "id": "Sastrería",
+        "name": "Sastrería",
+        "quantity": 0
+      },
+      {
+        "id": "Arma de Fuego",
+        "name": "Arma de Fuego",
+        "quantity": 0
+      }
+    ],
+    "afflictions": [
+      {
+        "id": "hipotermia_leve",
+        "name": "Hipotermia Leve",
+        "description": "Tiemblas incontrolablemente. Te cuesta coordinar tus movimientos.",
+        "effects": [
+          {
+            "type": "statModifier",
+            "stat": "dexterity",
+            "operation": "subtract",
+            "value": 2
+          }
+        ]
+      }
+    ]
+  },
+  "characterSheetSchema": {
+    "layout": [
+      {
+        "type": "stats",
+        "title": "Estadísticas Vitales",
+        "dataKey": "stats"
+      },
+      {
+        "type": "equipment",
+        "title": "Equipamiento",
+        "icon": "checkroom",
+        "dataKey": "equipment"
+      },
+      {
+        "type": "itemList",
+        "title": "Inventario",
+        "icon": "backpack",
+        "dataKey": "inventory"
+      },
+      {
+        "type": "itemList",
+        "title": "Aflicciones y Estados",
+        "icon": "warning",
+        "dataKey": "afflictions"
+      },
+      {
+        "type": "itemList",
+        "title": "Habilidades",
+        "icon": "psychology",
+        "dataKey": "skills"
+      }
+    ]
+  },
+  "nodes": [
+    {
+      "id": "node-start",
+      "type": "start",
+      "description": "Te encuentras en la entrada de una cueva oscura y misteriosa. El aire es frío. ¿Qué haces?",
+      "position": {
+        "x": 250,
+        "y": 50
+      }
+    },
+    {
+      "id": "node-enter-cave",
+      "type": "story",
+      "description": "Decides entrar. La oscuridad es casi total, pero distingues dos pasillos. Uno a la izquierda, de donde proviene un eco de agua, y otro a la derecha, con un extraño brillo rojizo.",
+      "position": {
+        "x": 26.60668528904347,
+        "y": 317.9162022965128
+      },
+      "imageId": "1761300060867-cueva1.png",
+      "size": "medium"
+    },
+    {
+      "id": "node-go-around",
+      "type": "story",
+      "description": "Prefieres no arriesgarte y rodeas la montaña. Tras una larga caminata, encuentras un pequeño pueblo abandonado.",
+      "position": {
+        "x": 438.71152379106667,
+        "y": 320.38430041642835
+      },
+      "color": "#0000a3",
+      "size": "medium",
+      "imageId": "1761295361511-monta_a_Urales.png"
+    },
+    {
+      "id": "node-dragon-end",
+      "type": "end",
+      "description": "El brillo rojizo era un dragón durmiendo sobre un tesoro. Tu ruido lo despierta y... Fin.",
+      "position": {
+        "x": 1.3885104245419626,
+        "y": 641.9167795668544
+      }
+    },
+    {
+      "id": "node-village-end",
+      "type": "end",
+      "description": "Exploras el pueblo y encuentras un mapa que te lleva a un tesoro escondido. ¡Has triunfado!",
+      "position": {
+        "x": 561.1158630357984,
+        "y": 641.6104480952648
+      }
+    },
+    {
+      "id": "9ad259a7-9552-4650-8926-614bd1067f3a",
+      "description": "Nuevo Pasaje",
+      "type": "story",
+      "position": {
+        "x": 956.2800697751159,
+        "y": 607.6803799670706
+      },
+      "size": "medium"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "source": "node-start",
+      "target": "node-enter-cave",
+      "description": "Entrar en la cueva"
+    },
+    {
+      "id": "edge-2",
+      "source": "node-start",
+      "target": "node-go-around",
+      "description": "Rodear la montaña"
+    },
+    {
+      "id": "edge-3",
+      "source": "node-enter-cave",
+      "target": "node-dragon-end",
+      "description": "Ir por la derecha (brillo)"
+    },
+    {
+      "id": "edge-4",
+      "source": "node-go-around",
+      "target": "node-village-end",
+      "description": "Explorar el pueblo"
+    },
+    {
+      "id": "8d3b4f5e-b485-4410-89aa-3c43c74b7cba",
+      "source": "node-go-around",
+      "target": "9ad259a7-9552-4650-8926-614bd1067f3a",
+      "description": "Eleccion random"
+    }
+  ],
+  "mapId": "1761295847679-mapa_general.png"
+}
