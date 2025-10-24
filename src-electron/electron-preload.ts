@@ -1,19 +1,21 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
+
+  loadLibrary: () => ipcRenderer.invoke('library:load'),
+  saveLibrary: (books) => ipcRenderer.invoke('library:save', books),
+  createBook: (data) => ipcRenderer.invoke('book:create', data),
+
   saveBook: (
     bookId: string, // Ahora saveBook también recibe bookId
     content: string
   ): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke('save-book', bookId, content),
 
-  /**
-   * Carga el contenido de un archivo.
-   * @param relativePath - Ej: 'public/mock-data/adventure_1.json'
-   * @returns El contenido del archivo como string.
-   */
   loadBook: (bookId: string): Promise<string> => // Ahora loadBook también recibe bookId
     ipcRenderer.invoke('load-book', bookId),
+
+  deleteBook: (bookId: string) => ipcRenderer.invoke('book:delete', bookId),
 
   listAssets: (bookId: string): Promise<string[]> => // Ahora listAssets recibe bookId
     ipcRenderer.invoke('list-assets', bookId),

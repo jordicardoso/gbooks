@@ -50,42 +50,37 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
-import { useAssetsStore } from 'src/stores/assets-store'; // 1. Importar el store de assets
+import { useLibraryStore } from 'src/stores/library-store';
 
 const router = useRouter();
 const $q = useQuasar();
-const assetsStore = useAssetsStore(); // 2. Instanciar el store
+const libraryStore = useLibraryStore();
 
-// --- Lógica para el modo oscuro (sin cambios) ---
 const darkModeIcon = computed(() => ($q.dark.isActive ? 'light_mode' : 'dark_mode'));
 function toggleDarkMode() {
   $q.dark.toggle();
   localStorage.setItem('darkMode', String($q.dark.isActive));
 }
 
-onMounted(async () => { // 3. Hacer el hook asíncrono
+onMounted(async () => {
   const darkModeIsActive = localStorage.getItem('darkMode') === 'true';
   $q.dark.set(darkModeIsActive);
 
-  // 4. Llamar a la acción para cargar los assets al iniciar
-  await assetsStore.loadAssets();
+  await libraryStore.initializeLibrary();
 });
 
-// --- Lógica para las rutas del menú (ACTUALIZADA) ---
 const menuRoutes = computed(() => {
   const mainLayoutRoute = router.options.routes.find(r => r.path === '/');
   const children = mainLayoutRoute?.children || [];
 
-  // 3. Filtramos las rutas para mostrar solo las que deben estar en el menú
   return children.filter(route => route.meta?.showInMenu !== false);
 });
 
-// --- Lógica para controlar la visibilidad de la cabecera (sin cambios) ---
 const isHeaderVisible = ref(true);
 </script>
 
 <style lang="scss">
-/* 4. Estilos ajustados para el menú sobre fondo oscuro */
+/* Estilos sin cambios */
 .custom-tabs-minimal {
   .q-tab {
     min-height: 32px;
@@ -95,11 +90,9 @@ const isHeaderVisible = ref(true);
   .q-tab__label {
     font-size: 0.8rem;
     font-weight: 500;
-    /* Opacidad para pestañas inactivas para que no destaquen tanto */
     opacity: 0.7;
   }
 
-  /* La pestaña activa recupera la opacidad y gana peso para destacar */
   .q-tab--active .q-tab__label {
     opacity: 1;
     font-weight: 700;

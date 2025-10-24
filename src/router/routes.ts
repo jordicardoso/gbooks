@@ -24,6 +24,7 @@ const routes: RouteRecordRaw[] = [
         name: 'book-editor',
         component: () => import('pages/BookPage.vue'),
         meta: { showInMenu: false, name: 'Libro' },
+        props: true,
       },
       {
         path: 'book/:id/character',

@@ -1,166 +1,161 @@
 // src/stores/book-store.ts
-
 import { defineStore } from 'pinia';
-import { uid } from 'quasar';
+import {
+  Node,
+  Edge,
+  Viewport,
+} from '@vue-flow/core';
 
-// --- TUS INTERFACES (SIN CAMBIOS, SON CORRECTAS) ---
-export interface Meta {
+// Interfaces para la estructura de datos de un libro
+export interface BookMeta {
   title: string;
-  version: string;
-}
-// ... (resto de tus interfaces: Stat, Modifier, BookNode, BookEdge, etc. sin cambios) ...
-export interface BookData {
-  meta: Meta;
-  characterSheet: CharacterSheet;
-  characterSheetSchema: CharacterSheetSchema;
-  nodes: BookNode[];
-  edges: BookEdge[];
-  mapId: string | null;
+  description: string;
+  author: string;
 }
 
-export interface BookState extends BookData {
-  id: string | null; // El ID del libro, que coincide con el nombre de su carpeta
-  // 'name' y 'jsonFilePath' se eliminan porque son redundantes.
-  // El nombre/título está en 'meta.title'.
+export interface BookVariable {
+  id: string;
+  name: string;
+  initialValue: string | number | boolean;
 }
+
+export interface BookData {
+  meta: BookMeta;
+  chapters: Node[];
+  edges: Edge[]; // <-- 1. AÑADIR EDGES AL MODELO
+  assets: string[];
+  variables: BookVariable[];
+  viewport: Viewport;
+}
+
+export interface BookState {
+  activeBook: BookData | null;
+  activeBookId: string | null;
+  isLoading: boolean;
+  isDirty: boolean; // Para saber si hay cambios sin guardar
+}
+
+/**
+ * SOLUCIÓN CLAVE: Esta función toma los datos crudos del fichero JSON
+ * y se asegura de que todas las propiedades necesarias existan,
+ * añadiendo valores por defecto si faltan.
+ */
+function validateAndRepairBookData(data: any): BookData {
+  const defaults = {
+    meta: { title: 'Sin Título', description: '', author: '' },
+    chapters: [],
+    edges: [], // <-- 2. AÑADIR VALOR POR DEFECTO PARA EDGES
+    assets: [],
+    variables: [],
+    viewport: { x: 0, y: 0, zoom: 1 },
+  };
+
+  if (!data || typeof data !== 'object') {
+    return defaults;
+  }
+
+  // Asegura que cada propiedad principal exista
+  return {
+    meta: data.meta && typeof data.meta === 'object' ? data.meta : defaults.meta,
+    chapters: Array.isArray(data.chapters) ? data.chapters : defaults.chapters,
+    edges: Array.isArray(data.edges) ? data.edges : defaults.edges, // <-- 3. VALIDAR Y REPARAR EDGES
+    assets: Array.isArray(data.assets) ? data.assets : defaults.assets,
+    variables: Array.isArray(data.variables) ? data.variables : defaults.variables,
+    viewport: data.viewport && typeof data.viewport === 'object' ? data.viewport : defaults.viewport,
+  };
+}
+
 
 export const useBookStore = defineStore('book', {
-  // --- ESTADO INICIAL AJUSTADO ---
   state: (): BookState => ({
-    id: null,
-    meta: { title: '', version: '' },
-    characterSheet: {
-      stats: {
-        health: { current: 0, max: 0 },
-        dexterity: { current: 0, max: 0 },
-        warmth: { current: 0, max: 0 },
-        fatigue: { current: 0, max: 0 },
-        thirst: { current: 0, max: 0 },
-        hunger: { current: 0, max: 0 },
-      },
-      equipment: { head: null, jacket: null, torso: null, legs: null, feet: null },
-      inventory: [],
-      afflictions: [],
-    },
-    mapId: null,
-    characterSheetSchema: { layout: [] },
-    nodes: [],
-    edges: [],
+    activeBook: null,
+    activeBookId: null,
+    isLoading: false,
+    isDirty: false,
   }),
 
-  getters: {
-    // El getter es correcto, no necesita cambios
-    getNodeById: (state) => {
-      return (nodeId: string): BookNode | undefined =>
-        state.nodes.find((node) => node.id === nodeId);
-    },
-    // Un nuevo getter útil
-    currentBookTitle: (state) => state.meta.title || 'Libro sin título',
-  },
-
   actions: {
-    /**
-     * Acción interna para poblar el estado con los datos de un libro.
-     */
-    _populateStore(bookData: BookData) {
-      this.meta = bookData.meta || this.meta;
-      this.characterSheet = bookData.characterSheet || this.characterSheet;
-      this.characterSheetSchema = bookData.characterSheetSchema || { layout: [] };
-      this.nodes = bookData.nodes || [];
-      this.edges = bookData.edges || [];
-      this.mapId = bookData.mapId || null;
-    },
-
-    /**
-     * Carga un libro por su ID, usando la API de Electron.
-     */
     async loadBookById(bookId: string) {
-      if (!bookId) {
-        console.warn('Se intentó cargar un libro sin ID.');
-        this.clearBook();
-        return;
-      }
+      if (!bookId) return;
 
-      this.id = bookId;
-
+      this.isLoading = true;
+      this.isDirty = false;
       try {
-        if (window.electronAPI?.loadBook) {
-          console.log(`Cargando libro con ID "${bookId}" vía Electron API...`);
-          // La API de Electron ahora solo necesita el bookId
-          const fileContent = await window.electronAPI.loadBook(bookId);
-          const bookData = JSON.parse(fileContent) as BookData;
+        console.log(`Cargando libro con ID "${bookId}" vía Electron API...`);
+        const content = await window.electronAPI.loadBook(bookId);
+        const rawData = JSON.parse(content);
 
-          if (!bookData.meta || !bookData.nodes) {
-            throw new Error('Estructura de datos del libro inválida.');
-          }
+        // Usamos la función de validación y reparación
+        this.activeBook = validateAndRepairBookData(rawData);
+        this.activeBookId = bookId;
 
-          this._populateStore(bookData);
-          console.log(`Libro '${this.meta.title}' cargado exitosamente.`);
-        } else {
-          // Lógica para modo web (actualmente no implementada, podría usar fetch a un API)
-          console.warn('Modo web: La carga de libros desde el sistema de archivos no está soportada.');
-          // Aquí podrías cargar un libro de ejemplo si lo deseas
-          this.clearBook();
-        }
       } catch (error) {
         console.error(`Error al cargar el libro con ID "${bookId}":`, error);
         this.clearBook();
+        throw error;
+      } finally {
+        this.isLoading = false;
       }
     },
 
-    /**
-     * Guarda el estado actual del libro en su archivo correspondiente.
-     */
     async saveCurrentBook() {
-      if (!this.id) {
+      if (!this.activeBook || !this.activeBookId) {
         console.warn('No hay un libro activo para guardar.');
         return;
       }
+      if (!this.isDirty) {
+        // console.log('No hay cambios para guardar.');
+        return;
+      }
 
-      const bookDataToSave: BookData = {
-        meta: this.meta,
-        characterSheet: this.characterSheet,
-        characterSheetSchema: this.characterSheetSchema,
-        nodes: this.nodes,
-        edges: this.edges,
-        mapId: this.mapId,
-      };
-      const content = JSON.stringify(bookDataToSave, null, 2);
-
-      if (window.electronAPI?.saveBook) {
-        // La API de Electron ahora solo necesita el bookId y el contenido
-        const result = await window.electronAPI.saveBook(this.id, content);
-        if (result.success) {
-          console.log(`Libro '${this.meta.title}' guardado exitosamente.`);
-        } else {
-          console.error(`Error al guardar el libro:`, result.error);
-        }
-      } else {
-        // Fallback para modo web
-        localStorage.setItem(`gbooks_book_${this.id}`, content);
-        console.log(`Libro '${this.meta.title}' guardado en localStorage (modo navegador).`);
+      this.isLoading = true;
+      try {
+        const content = JSON.stringify(this.activeBook, null, 2);
+        await window.electronAPI.saveBook(this.activeBookId, content);
+        this.isDirty = false;
+        console.log(`Libro "${this.activeBookId}" guardado.`);
+      } catch (error) {
+        console.error('Error al guardar el libro:', error);
+        throw error;
+      } finally {
+        this.isLoading = false;
       }
     },
 
-    /**
-     * Limpia el estado del libro actual.
-     */
     clearBook() {
-      this.id = null;
-      // Restablece el estado al inicial
-      this.$reset();
+      this.activeBook = null;
+      this.activeBookId = null;
+      this.isDirty = false;
     },
 
-    // --- El resto de tus acciones (addNode, updateNode, etc.) son correctas y no necesitan cambios ---
-    updateCharacterSheet(updates: Partial<CharacterSheet>) {
-      // ...
+    // --- Acciones para modificar el libro ---
+
+    setDirty() {
+      if (!this.isDirty) {
+        this.isDirty = true;
+      }
     },
-    addNode(payload: { /* ... */ }) {
-      // ...
+
+    updateViewport(viewport: Viewport) {
+      if (this.activeBook) {
+        this.activeBook.viewport = viewport;
+        this.setDirty();
+      }
     },
-    updateNode(nodeId: string, updates: Partial<BookNode>) {
-      // ...
+
+    updateNodes(nodes: Node[]) {
+      if (this.activeBook) {
+        this.activeBook.chapters = nodes;
+        this.setDirty();
+      }
     },
-    // ...etc
+
+    updateEdges(edges: Edge[]) {
+      // <-- 4. CORREGIR LA LÓGICA DE ESTA ACCIÓN
+      if (this.activeBook) {
+        this.activeBook.edges = edges;
+        this.setDirty();
+      }
+    }
   },
 });

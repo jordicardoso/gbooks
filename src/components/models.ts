@@ -1,8 +1,12 @@
-export interface Todo {
-  id: number;
-  content: string;
-}
+// src/components/models.ts
 
-export interface Meta {
-  totalCount: number;
+/**
+ * Define la estructura de un libro dentro de la biblioteca.
+ */
+export interface Book {
+  id: string;
+  name: string;
+  description: string;
+  jsonFile: string;
+  image?: string;
 }

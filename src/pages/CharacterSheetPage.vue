@@ -1,16 +1,9 @@
 <!-- src/pages/CharacterSheetPage.vue -->
 <template>
-  <q-page class="q-pa-md bg-blue-grey-10 text-white">
-    <div class="row items-center q-mb-md">
-      <q-btn icon="arrow_back" flat round dense @click="router.back()" class="q-mr-sm" />
-      <div class="text-h6">
-        Ficha de Personaje: {{ bookStore.meta.title || 'Sin título' }}
-      </div>
-    </div>
-
+  <!-- Usamos un div contenedor que solo se muestra si el libro está cargado -->
+  <div v-if="bookStore.activeBook">
     <CharacterSheetEditor />
-
-  </q-page>
+  </div>
 </template>
 
 <script setup lang="ts">

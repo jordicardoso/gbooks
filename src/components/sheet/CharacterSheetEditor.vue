@@ -13,10 +13,9 @@
     </div>
   </div>
 
-  <div v-else class="text-center text-grey-5 q-mt-xl">
+  <div v-else class="text-center text-grey-5 q-pa-xl">
     <q-icon name="error_outline" size="4rem" />
-    <p class="text-h6">No se ha cargado ningún libro.</p>
-    <q-btn label="Volver a la Biblioteca" color="primary" :to="{ name: 'library' }" />
+    <q-btn label="Diseñar ficha de personaje" color="primary" :to="{ name: 'library' }" />
   </div>
   </q-card>
 </template>
