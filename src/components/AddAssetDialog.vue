@@ -90,6 +90,11 @@ const onSubmit = async () => {
 
   isSubmitting.value = true;
   try {
+    // --- INICIO DEPURACIÓN ---
+    console.log('1. [AddAssetDialog] Contenido de file.value:', file.value);
+    console.log('2. [AddAssetDialog] ¿Es file.value una instancia de File?', file.value instanceof File);
+    // --- FIN DEPURACIÓN ---
+
     // Emitimos los datos al componente padre para que los procese
     emit('submit', {
       file: file.value,

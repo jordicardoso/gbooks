@@ -73,7 +73,7 @@
         class="col-12 col-sm-6 col-md-4 col-lg-3"
       >
         <q-card class="asset-card bg-grey-10">
-          <q-img :src="asset.src" :ratio="16 / 9">
+          <q-img :src="assetsStore.getAssetUrl(asset.filename)" :ratio="16 / 9">
             <div class="absolute-bottom-right text-subtitle2 q-pa-xs bg-primary" style="border-top-left-radius: 3px;">
               {{ asset.category }}
             </div>
@@ -246,10 +246,7 @@ const handleAssetUpdate = (data: { id: string; name: string; category: string })
 };
 
 const confirmDelete = (asset: Asset) => {
-  if (!props.bookId) {
-    $q.notify({ message: 'Error: No hay libro seleccionado para eliminar assets.', color: 'negative' });
-    return;
-  }
+  // El bookId ya no es necesario aquí, el store lo gestiona
   $q.dialog({
     title: 'Confirmar eliminación',
     message: `¿Estás seguro de que quieres eliminar el asset "<b>${asset.name}</b>"? Esta acción no se puede deshacer.`,
@@ -260,16 +257,19 @@ const confirmDelete = (asset: Asset) => {
     ok: { color: 'negative', label: 'Eliminar' },
     cancel: { flat: true, label: 'Cancelar' },
   }).onOk(async () => {
-    const success = await assetsStore.removeAsset(props.bookId, asset.id); // <-- PASAMOS bookId
-    if (success) {
+    try {
+      // --- CORRECCIÓN AQUÍ ---
+      // 1. Se usa el nombre correcto: deleteAsset
+      // 2. Se pasa solo el argumento necesario: asset.id
+      await assetsStore.deleteAsset(asset.id);
       $q.notify({
         message: `Asset "${asset.name}" eliminado.`,
         color: 'positive',
         icon: 'check_circle',
       });
-    } else {
+    } catch (error) {
       $q.notify({
-        message: 'Error al eliminar el asset.',
+        message: (error as Error).message || 'Error al eliminar el asset.',
         color: 'negative',
         icon: 'error',
       });

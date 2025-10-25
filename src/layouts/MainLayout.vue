@@ -1,45 +1,6 @@
 <!-- src/layouts/MainLayout.vue -->
 <template>
   <q-layout view="lHh lpr lFf">
-    <!-- 1. Cabecera con fondo gris oscuro y texto blanco -->
-    <q-header bordered v-if="isHeaderVisible" class="bg-grey-9 text-white">
-      <!-- Barra de Título Superior -->
-      <q-toolbar>
-        <q-toolbar-title class="text-weight-bold">
-          GameBooks design & test
-        </q-toolbar-title>
-
-        <q-space />
-
-        <q-btn
-          flat
-          round
-          @click="toggleDarkMode"
-          :icon="darkModeIcon"
-        />
-      </q-toolbar>
-
-      <!-- Barra de Navegación con Pestañas -->
-      <q-tabs
-        align="left"
-        dense
-        class="custom-tabs-minimal"
-        active-color="primary"
-        indicator-color="primary"
-      >
-        <q-route-tab
-          v-for="route in menuRoutes"
-          :key="route.path"
-          :to="route.path"
-          :label="route.name"
-          exact
-          dense
-          no-caps
-        />
-      </q-tabs>
-    </q-header>
-
-    <!-- 3. Contenedor de página con fondo azul marino -->
     <q-page-container class="bg-blue-grey-10 overflow-hidden">
       <router-view />
     </q-page-container>

@@ -27,9 +27,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   ): Promise<{ success: boolean; filename?: string; error?: string }> =>
     ipcRenderer.invoke('add-asset', bookId, originalName, fileData),
 
+  saveAsset: (bookId: string, assetData: { buffer: ArrayBuffer, name: string, category: string, originalName: string, type: string }) =>
+    ipcRenderer.invoke('save-asset', bookId, assetData),
+
   deleteAsset: (
     bookId: string, // Ahora deleteAsset recibe bookId
-    filename: string
+    assetId: string
   ): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke('delete-asset', bookId, filename),
+    ipcRenderer.invoke('delete-asset', bookId, assetId),
 });

@@ -10,18 +10,19 @@ const platform = process.platform || os.platform();
 
 const currentDir = fileURLToPath(new URL('.', import.meta.url));
 
-// --- MODIFICACIÓN: Definición de rutas centralizada ---
+// --- Definición de rutas centralizada ---
 const userDataPath = app.getPath('userData');
 const booksBaseDir = path.join(userDataPath, 'gbooks-books');
 const libraryFilePath = path.join(userDataPath, 'library.json');
-// --- FIN MODIFICACIÓN ---
+
+// --- Funciones de Ayuda para Rutas ---
+function getBookDir(bookId: string): string {
+  return path.join(booksBaseDir, bookId);
+}
 
 function getBookAssetsDir(bookId: string): string {
   return path.join(booksBaseDir, bookId, 'assets');
 }
-
-// ELIMINADO: Esta ruta ya no es necesaria, los assets son por libro
-// const assetsDir = path.join(app.getPath('userData'), 'gbooks-assets');
 
 let mainWindow: BrowserWindow | undefined;
 
@@ -67,11 +68,11 @@ async function createWindow() {
   });
 }
 
-void app.whenReady().then(async () => { // --- MODIFICACIÓN: Convertido a async ---
-                                        // --- MODIFICACIÓN: Asegurarse de que la carpeta de libros exista al inicio ---
+void app.whenReady().then(async () => {
+  // Asegurarse de que la carpeta de libros exista al inicio
   await fs.mkdir(booksBaseDir, { recursive: true });
-  // --- FIN MODIFICACIÓN ---
 
+  // Protocolo personalizado para servir assets de forma segura
   protocol.registerFileProtocol('gbooks-asset', (request, callback) => {
     const urlParts = request.url.replace(/^gbooks-asset:\/\//, '').split('/');
     if (urlParts.length < 2) {
@@ -86,41 +87,39 @@ void app.whenReady().then(async () => { // --- MODIFICACIÓN: Convertido a async
 
   // --- MANEJADORES DE IPC ---
 
-  // --- NUEVO: Manejador para cargar la biblioteca ---
+  // Cargar la biblioteca de libros
   ipcMain.handle('library:load', async () => {
     try {
       const fileContent = await fs.readFile(libraryFilePath, 'utf-8');
       return JSON.parse(fileContent);
     } catch (error) {
-      // Si el archivo no existe (ENOENT), es la primera ejecución. Devolvemos un array vacío.
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return [];
+        return []; // Si no existe, es la primera vez, devuelve array vacío.
       }
       console.error('Failed to load library:', error);
-      throw error; // Propagar otros errores
+      throw error;
     }
   });
 
-  // --- NUEVO: Manejador para guardar la biblioteca ---
+  // Guardar la biblioteca de libros
   ipcMain.handle('library:save', async (event, books) => {
     try {
-      const data = JSON.stringify(books, null, 2); // Formateado para legibilidad
+      const data = JSON.stringify(books, null, 2);
       await fs.writeFile(libraryFilePath, data, 'utf-8');
       return { success: true };
     } catch (error) {
       console.error('Failed to save library:', error);
-      const err = error as Error;
-      return { success: false, error: err.message };
+      return { success: false, error: (error as Error).message };
     }
   });
 
-  // --- NUEVO: Manejador para crear un nuevo libro ---
+  // Crear un nuevo libro
   ipcMain.handle(
     'book:create',
     async (event, data: { name: string; description: string }) => {
       const bookId = uid();
-      const bookDir = path.join(booksBaseDir, bookId);
-      const assetsDir = path.join(bookDir, 'assets');
+      const bookDir = getBookDir(bookId);
+      const assetsDir = getBookAssetsDir(bookId);
       const bookJsonFilePath = path.join(bookDir, 'book.json');
 
       const newBook = {
@@ -139,75 +138,57 @@ void app.whenReady().then(async () => { // --- MODIFICACIÓN: Convertido a async
         chapters: [],
         assets: [],
         variables: [],
+        edges: [],
+        viewport: { x: 0, y: 0, zoom: 1 },
       };
 
       try {
-        // MEJORA: Crear primero el directorio principal del libro.
         await fs.mkdir(bookDir, { recursive: true });
-        // MEJORA: Luego, crear el directorio de assets dentro de él.
         await fs.mkdir(assetsDir, { recursive: true });
-
-        // Escribir el nuevo archivo JSON para el libro
         await fs.writeFile(
           bookJsonFilePath,
           JSON.stringify(initialBookContent, null, 2)
         );
-
         console.log(`[Electron Main] Libro creado con ID: ${bookId}`);
         return newBook;
       } catch (error) {
         console.error(`[Electron Main] Fallo al crear ficheros para el libro ${bookId}:`, error);
-        // Esto ya está bien, lanza el error de vuelta al renderer.
         throw error;
       }
     }
   );
 
-  // --- CÓDIGO EXISTENTE (SIN CAMBIOS) ---
-
-  // Manejador para guardar el libro
+  // Guardar el contenido de un libro (book.json)
   ipcMain.handle(
     'save-book',
     async (event, bookId: string, content: string) => {
-      const bookDir = path.join(booksBaseDir, bookId);
-      await fs.mkdir(bookDir, { recursive: true });
-      const absolutePath = path.join(bookDir, 'book.json');
+      const bookJsonPath = path.join(getBookDir(bookId), 'book.json');
       try {
-        await fs.writeFile(absolutePath, content, 'utf-8');
-        console.log(`[Electron Main] Archivo guardado en: ${absolutePath}`);
+        await fs.writeFile(bookJsonPath, content, 'utf-8');
         return { success: true };
       } catch (error) {
-        const err = error as Error;
-        console.error(
-          `[Electron Main] Error al guardar el archivo ${absolutePath}:`,
-          err
-        );
-        return { success: false, error: err.message };
+        console.error(`[Electron Main] Error al guardar el archivo ${bookJsonPath}:`, error);
+        return { success: false, error: (error as Error).message };
       }
     }
   );
 
-  // Manejador para cargar el libro
+  // Cargar el contenido de un libro (book.json)
   ipcMain.handle('load-book', async (event, bookId: string) => {
-    const bookDir = path.join(booksBaseDir, bookId);
-    const absolutePath = path.join(bookDir, 'book.json');
+    const bookJsonPath = path.join(getBookDir(bookId), 'book.json');
     try {
-      const content = await fs.readFile(absolutePath, 'utf-8');
-      console.log(`[Electron Main] Archivo cargado desde: ${absolutePath}`);
+      const content = await fs.readFile(bookJsonPath, 'utf-8');
       return content;
     } catch (error) {
-      console.error(
-        `[Electron Main] Error al leer el archivo ${absolutePath}:`,
-        error
-      );
+      console.error(`[Electron Main] Error al leer el archivo ${bookJsonPath}:`, error);
       throw error;
     }
   });
 
+  // Eliminar un libro completo
   ipcMain.handle('book:delete', async (event, bookId: string) => {
-    const bookDir = path.join(booksBaseDir, bookId);
+    const bookDir = getBookDir(bookId);
     try {
-      // fs.rm es la forma moderna de borrar directorios recursivamente
       await fs.rm(bookDir, { recursive: true, force: true });
       console.log(`[Electron Main] Directorio del libro ${bookId} eliminado.`);
       return { success: true };
@@ -217,83 +198,96 @@ void app.whenReady().then(async () => { // --- MODIFICACIÓN: Convertido a async
     }
   });
 
-  // Manejador para listar assets
+  // --- MANEJADORES DE ASSETS REFACTORIZADOS ---
+
+  // Listar los assets de un libro (desde book.json)
   ipcMain.handle('list-assets', async (event, bookId: string) => {
-    const assetsDir = getBookAssetsDir(bookId);
+    const bookJsonPath = path.join(getBookDir(bookId), 'book.json');
     try {
-      await fs.mkdir(assetsDir, { recursive: true });
-      const files = await fs.readdir(assetsDir);
-      return files.filter((file) => /\.(png|jpe?g|gif|webp|svg)$/i.test(file));
+      const bookContent = await fs.readFile(bookJsonPath, 'utf-8');
+      const bookData = JSON.parse(bookContent);
+      return bookData.assets || []; // Devuelve la lista de assets o un array vacío
     } catch (err) {
-      console.error(
-        `Error al leer el directorio de assets para el libro ${bookId}:`,
-        err
-      );
+      console.error(`Error al leer los assets del libro ${bookId}:`, err);
       return [];
     }
   });
 
-  // Manejador para añadir un asset
-  ipcMain.handle(
-    'add-asset',
-    async (
-      event,
-      bookId: string,
-      originalName: string,
-      fileData: ArrayBuffer
-    ) => {
-      const assetsDir = getBookAssetsDir(bookId);
-      try {
-        const buffer = Buffer.from(fileData);
-        const timestamp = Date.now();
-        const extension = path.extname(originalName);
-        const safeBaseName = path
-          .basename(originalName, extension)
-          .replace(/[^a-zA-Z0-9]/g, '_');
-        const newFileName = `${timestamp}-${safeBaseName}${extension}`;
+  // Guardar un nuevo asset y registrarlo en book.json
+  ipcMain.handle('save-asset', async (event, bookId, assetData) => {
+    const bookDir = getBookDir(bookId);
+    const assetsDir = getBookAssetsDir(bookId);
+    const bookJsonPath = path.join(bookDir, 'book.json');
 
-        const filePath = path.join(assetsDir, newFileName);
+    try {
+      // 1. Generar nombre de archivo único
+      const assetId = uid();
+      const fileExtension = path.extname(assetData.originalName);
+      const filename = `${assetId}${fileExtension}`;
+      const filePath = path.join(assetsDir, filename);
 
-        await fs.mkdir(assetsDir, { recursive: true });
-        await fs.writeFile(filePath, buffer);
+      // 2. Guardar el archivo físico
+      await fs.mkdir(assetsDir, { recursive: true });
+      await fs.writeFile(filePath, Buffer.from(assetData.buffer));
 
-        console.log(
-          `[Electron Main] Asset guardado para el libro ${bookId} como: ${newFileName}`
-        );
-        return { success: true, filename: newFileName };
-      } catch (error) {
-        const err = error as Error;
-        console.error(
-          `[Electron Main] Error al guardar el asset para el libro ${bookId}:`,
-          err
-        );
-        return { success: false, error: err.message };
-      }
+      // 3. Crear el objeto de metadatos del asset
+      const newAsset = {
+        id: assetId,
+        name: assetData.name,
+        category: assetData.category,
+        type: assetData.type,
+        filename: filename,
+        creationDate: new Date().toISOString(),
+      };
+
+      // 4. Actualizar book.json
+      const bookContent = await fs.readFile(bookJsonPath, 'utf-8');
+      const bookData = JSON.parse(bookContent);
+      bookData.assets = bookData.assets || [];
+      bookData.assets.push(newAsset);
+      await fs.writeFile(bookJsonPath, JSON.stringify(bookData, null, 2));
+
+      console.log(`[Electron Main] Asset guardado y registrado para el libro ${bookId}: ${filename}`);
+      return newAsset; // 5. Devolver el objeto completo al frontend
+    } catch (error) {
+      console.error(`[Electron Main] Error al guardar el asset para el libro ${bookId}:`, error);
+      return null;
     }
-  );
+  });
 
-  // Manejador para eliminar un asset
-  ipcMain.handle(
-    'delete-asset',
-    async (event, bookId: string, filename: string) => {
-      const assetsDir = getBookAssetsDir(bookId);
-      try {
-        const filePath = path.join(assetsDir, filename);
-        await fs.unlink(filePath);
-        console.log(
-          `[Electron Main] Asset eliminado para el libro ${bookId}: ${filename}`
-        );
-        return { success: true };
-      } catch (error) {
-        const err = error as Error;
-        console.error(
-          `[Electron Main] Error al eliminar el asset ${filename} para el libro ${bookId}:`,
-          err
-        );
-        return { success: false, error: err.message };
+  // Eliminar un asset (actualizando book.json y borrando el archivo)
+  ipcMain.handle('delete-asset', async (event, bookId: string, assetId: string) => {
+    const bookJsonPath = path.join(getBookDir(bookId), 'book.json');
+    try {
+      // 1. Leer book.json
+      const bookContent = await fs.readFile(bookJsonPath, 'utf-8');
+      const bookData = JSON.parse(bookContent);
+
+      const assets = bookData.assets || [];
+      const assetIndex = assets.findIndex((a: { id: string }) => a.id === assetId);
+
+      if (assetIndex === -1) {
+        throw new Error(`Asset con ID ${assetId} no encontrado en el libro ${bookId}.`);
       }
+
+      // 2. Obtener el nombre del archivo y eliminar el asset de la lista
+      const [assetToDelete] = assets.splice(assetIndex, 1);
+      bookData.assets = assets;
+
+      // 3. Escribir el book.json actualizado
+      await fs.writeFile(bookJsonPath, JSON.stringify(bookData, null, 2));
+
+      // 4. Borrar el archivo físico
+      const filePath = path.join(getBookAssetsDir(bookId), assetToDelete.filename);
+      await fs.unlink(filePath);
+
+      console.log(`[Electron Main] Asset eliminado para el libro ${bookId}: ${assetToDelete.filename}`);
+      return { success: true };
+    } catch (error) {
+      console.error(`[Electron Main] Error al eliminar el asset ${assetId} para el libro ${bookId}:`, error);
+      return { success: false, error: (error as Error).message };
     }
-  );
+  });
 
   // Crear la ventana después de registrar los manejadores
   void createWindow();

@@ -2,8 +2,17 @@
 
 import { defineStore } from 'pinia';
 
+export interface Asset {
+  id: string;
+  name: string;
+  category: string;
+  type: 'image';
+  filename: string;
+  creationDate: string;
+}
+
 export interface AssetState {
-  assets: string[];
+  assets: Asset[];
   currentBookId: string | null;
   isLoading: boolean;
 }
@@ -32,19 +41,17 @@ export const useAssetsStore = defineStore('assets', {
      * @param bookId - El ID del libro del que se cargarán los assets.
      */
     async loadAssets(bookId: string) {
-      if (!bookId || this.currentBookId === bookId) {
-        return;
-      }
+      if (!bookId) return;
 
       this.isLoading = true;
       this.currentBookId = bookId;
       try {
-        // Llama a la función del backend de Electron
-        const assetList = await window.electronAPI.listAssets(bookId);
+        // La API de Electron ahora devuelve Asset[]
+        const assetList: Asset[] = await window.electronAPI.listAssets(bookId);
         this.assets = assetList;
       } catch (error) {
         console.error(`Error al cargar los assets para el libro ${bookId}:`, error);
-        this.assets = []; // En caso de error, vaciamos la lista
+        this.assets = [];
       } finally {
         this.isLoading = false;
       }
@@ -54,27 +61,29 @@ export const useAssetsStore = defineStore('assets', {
      * Añade un nuevo asset al libro actual.
      * @param file - El fichero a subir.
      */
-    async addAsset(file: File) {
-      if (!this.currentBookId) {
-        throw new Error('No hay un libro seleccionado para añadir el asset.');
+    async addAsset(bookId: string, file: File, name: string, category: string) {
+      if (!bookId) {
+        console.error('addAsset: bookId es nulo o indefinido.');
+        return false;
       }
-
       try {
-        const fileData = await file.arrayBuffer();
-        const result = await window.electronAPI.addAsset(
-          this.currentBookId,
-          file.name,
-          fileData
-        );
+        const buffer = await file.arrayBuffer();
+        const result: Asset | null = await window.electronAPI.saveAsset(bookId, {
+          buffer,
+          name,
+          category,
+          originalName: file.name,
+          type: 'image',
+        });
 
-        if (result.success && result.filename) {
-          this.assets.push(result.filename);
-        } else {
-          throw new Error(result.error || 'Error desconocido al añadir el asset.');
+        if (result) {
+          this.assets.push(result); // Ahora esto es consistente
+          return true;
         }
+        return false;
       } catch (error) {
         console.error('Error en la acción addAsset:', error);
-        throw error;
+        return false;
       }
     },
 
@@ -82,15 +91,16 @@ export const useAssetsStore = defineStore('assets', {
      * Elimina un asset del libro actual.
      * @param filename - El nombre del fichero a eliminar.
      */
-    async deleteAsset(filename: string) {
+    async deleteAsset(assetId: string) {
       if (!this.currentBookId) {
         throw new Error('No hay un libro seleccionado para eliminar el asset.');
       }
 
       try {
-        const result = await window.electronAPI.deleteAsset(this.currentBookId, filename);
+        // La API de Electron ahora espera el assetId
+        const result = await window.electronAPI.deleteAsset(this.currentBookId, assetId);
         if (result.success) {
-          const index = this.assets.indexOf(filename);
+          const index = this.assets.findIndex(asset => asset.id === assetId);
           if (index > -1) {
             this.assets.splice(index, 1);
           }
@@ -103,9 +113,6 @@ export const useAssetsStore = defineStore('assets', {
       }
     },
 
-    /**
-     * Limpia el store cuando se sale de la vista de un libro.
-     */
     clearAssets() {
       this.assets = [];
       this.currentBookId = null;

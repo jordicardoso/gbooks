@@ -27,6 +27,7 @@
       <q-tab name="meta" label="Metadatos" />
       <q-tab name="character" label="Ficha de Personaje" />
       <q-tab name="maps" label="Mapas" />
+      <q-tab name="testing" label="Testing & Build" />
     </q-tabs>
 
     <q-separator />
@@ -86,6 +87,11 @@
         <!-- El componente se renderiza aquí, pasándole el ID del libro -->
         <BookMap v-if="props.id" :book-id="props.id" />
       </q-tab-panel>
+
+      <!-- Panel de Testing -->
+      <q-tab-panel name="testing" class="q-pa-md">
+        <TestingPage /> <!-- El componente TestingPage se renderiza aquí -->
+      </q-tab-panel>
     </q-tab-panels>
 
     <!-- Mensaje de carga general -->
@@ -107,7 +113,8 @@ import { useAssetsStore } from 'src/stores/assets-store';
 import BookGraph from 'src/components/BookGraph.vue';
 import CharacterSheetPage from 'pages/CharacterSheetPage.vue';
 import BookMap from 'src/components/BookMap.vue';
-import AssetsPage from 'pages/AssetsPage.vue'; // Importación añadida
+import AssetsPage from 'pages/AssetsPage.vue';
+import TestingPage from 'pages/TestingPage.vue';
 
 const props = defineProps<{ id: string }>();
 const router = useRouter();
