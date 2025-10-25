@@ -1,28 +1,33 @@
+<!-- src/components/BookEndNode.vue (CORREGIDO) -->
 <template>
   <div class="book-node book-node-end">
     <div class="node-header">
       <q-icon name="flag" class="q-mr-xs" />
-      <span class="text-weight-bold">Fin</span>
+      <!-- Usamos la prop 'label' que nos da Vue Flow -->
+      <span class="text-weight-bold">{{ label || 'Fin' }}</span>
     </div>
     <div class="node-content q-mt-xs">
-      {{ node.description }}
+      <!-- Accedemos a la descripción a través de 'data' -->
+      {{ data.description }}
     </div>
     <Handle type="target" :position="Position.Top" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { Handle, Position } from '@vue-flow/core';
-import { BookNode } from 'src/stores/book-store';
+// 1. Importamos NodeProps
+import { Handle, Position, type NodeProps } from '@vue-flow/core';
+// 2. Importamos el tipo de nuestros datos personalizados
+import type { BookNodeData } from 'src/stores/book-store';
 
-defineProps<{
-  node: BookNode;
-}>();
+// 3. Usamos NodeProps para definir las props.
+// Esto nos da acceso a 'label', 'data', 'id', etc.
+defineProps<NodeProps<BookNodeData>>();
 </script>
 
 <style scoped>
+/* Tus estilos están perfectos y no necesitan cambios */
 .book-node {
-  /* ... (tus estilos de .book-node se mantienen igual) ... */
   min-width: 150px;
   max-width: 250px;
   padding: 10px;
@@ -34,7 +39,6 @@ defineProps<{
   position: relative;
 }
 
-/* El color de fondo específico para cada tipo de nodo */
 .book-node-start { background-color: #388e3c; }
 .book-node-story { background-color: #455a64; }
 .book-node-end { background-color: #d32f2f; }
@@ -51,11 +55,10 @@ defineProps<{
   white-space: pre-wrap;
 }
 
-/* Estilo único y correcto para los handles */
 .vue-flow__handle {
   width: 10px;
   height: 10px;
-  background: var(--q-primary); /* Usa la variable CSS de Quasar */
+  background: var(--q-primary);
   border: 1px solid white;
 }
 </style>

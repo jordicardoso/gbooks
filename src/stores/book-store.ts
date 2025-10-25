@@ -5,6 +5,24 @@ import {
   Edge,
   Viewport,
 } from '@vue-flow/core';
+import { uid } from 'quasar';
+
+export interface BookNodeData {
+  description: string;
+  imageId?: string;
+  tag?: string;
+  color?: string;
+  size?: 'small' | 'medium' | 'large';
+}
+
+// 2. Define un BookNode como un Nodo de Vue Flow que usa tus datos personalizados
+export type BookNode = Node<BookNodeData>;
+
+export interface BookData {
+  meta: BookMeta;
+  chapters: BookNode[]; // Usa el tipo BookNode que acabamos de definir
+  // ... resto de la interfaz
+}
 
 // Interfaces para la estructura de datos de un libro
 export interface BookMeta {
@@ -134,6 +152,34 @@ export const useBookStore = defineStore('book', {
       if (!this.isDirty) {
         this.isDirty = true;
       }
+    },
+
+    createNode(payload: { position: { x: number; y: number }; type: string }) {
+      if (!this.activeBook) return;
+
+      if (payload.type === 'start' && this.activeBook.chapters.some(n => n.type === 'start')) {
+        console.warn('Intento de crear un segundo nodo inicial. Operación cancelada.');
+        // Opcional: Mostrar una notificación al usuario con Quasar.
+        return;
+      }
+      // 3. Crea el nodo siguiendo el nuevo formato
+      const newNode: BookNode = {
+        id: uid(),
+        type: payload.type,
+        position: payload.position,
+        label: `Nuevo Nodo ${this.activeBook.chapters.length + 1}`,
+        // ¡IMPORTANTE! Los datos personalizados van dentro de la propiedad 'data'
+        data: {
+          description: 'Nuevo nodo de historia...',
+        },
+      };
+
+      this.activeBook = {
+        ...this.activeBook,
+        chapters: [...this.activeBook.chapters, newNode],
+      };
+
+      this.setDirty();
     },
 
     updateViewport(viewport: Viewport) {

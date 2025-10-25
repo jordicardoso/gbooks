@@ -1,20 +1,44 @@
 <!-- src/components/BookGraph.vue -->
 <template>
-  <VueFlow
-    v-model:nodes="nodes"
-    v-model:edges="edges"
-    v-model:viewport="viewport"
-    :min-zoom="0.2"
-    :max-zoom="4"
-    @nodes-change="onNodesChange"
-    @edges-change="onEdgesChange"
-    @connect="onConnect"
-    @move-end="onMoveEnd"
-  >
-    <Background />
-    <MiniMap />
-    <Controls />
-  </VueFlow>
+  <!-- 1. Contenedor relativo para posicionar elementos sobre el grafo -->
+  <!--<div style="width: 100%; height: 100%; position: relative">-->
+  <div class="fit absolute">
+    <VueFlow
+      v-model:nodes="nodes"
+      v-model:edges="edges"
+      v-model:viewport="viewport"
+      :min-zoom="0.2"
+      :max-zoom="4"
+      @nodes-change="onNodesChange"
+      @edges-change="onEdgesChange"
+      @connect="onConnect"
+      @move-end="onMoveEnd"
+      @pane-context-menu="onPaneContextMenu"
+    >
+      <Background />
+      <MiniMap />
+      <Controls />
+
+      <template #node-start="props">
+        <BookStartNode v-bind="props" />
+      </template>
+      <template #node-story="props">
+        <BookStoryNode v-bind="props" />
+      </template>
+      <template #node-end="props">
+        <BookEndNode v-bind="props" />
+      </template>
+    </VueFlow>
+
+    <!-- 2. Nuestro menú contextual personalizado -->
+    <ContextMenu
+      :show="isMenuOpen"
+      :position="menuPosition"
+      :items="contextMenuItems"
+      @close="isMenuOpen = false"
+      @action="handleMenuAction"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -23,7 +47,7 @@ import '@vue-flow/core/dist/style.css';
 import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/controls/dist/style.css';
 
-import { ref, watch } from 'vue';
+import { ref, watch, nextTick, computed } from 'vue';
 import {
   VueFlow,
   useVueFlow,
@@ -39,54 +63,88 @@ import { Controls } from '@vue-flow/controls';
 import { MiniMap } from '@vue-flow/minimap';
 import { useBookStore } from 'src/stores/book-store';
 import { debounce } from 'quasar';
+import ContextMenu, { type MenuItem } from './ContextMenu.vue';
+import BookStartNode from './BookStartNode.vue';
+import BookStoryNode from './BookStoryNode.vue';
+import BookEndNode from './BookEndNode.vue';
 
 const bookStore = useBookStore();
-const { onConnect, addEdges } = useVueFlow();
+// 4. Obtener 'project' de useVueFlow para convertir coordenadas de pantalla a grafo
+const { onConnect, addEdges, project } = useVueFlow();
 
 const nodes = ref<Node[]>([]);
 const edges = ref<Edge[]>([]);
 const viewport = ref<Viewport>({ x: 0, y: 0, zoom: 1 });
 
-// --- REFACTORIZADO ---
-// Este watcher ahora solo reacciona cuando el libro activo es reemplazado por otro,
-// no a cada pequeño cambio dentro del libro. Es mucho más eficiente.
+// --- 5. State para el menú contextual ---
+const isMenuOpen = ref(false);
+const menuPosition = ref({ x: 0, y: 0 });
+// Guardamos el evento para tener acceso a las coordenadas al crear el nodo
+const lastPaneMenuEvent = ref<MouseEvent | null>(null);
+
+const hasStartNode = computed(() => nodes.value.some((node) => node.type === 'start'));
+
+const contextMenuItems = computed<MenuItem[]>(() => {
+  if (!hasStartNode.value) {
+    return [
+      {
+        action: 'add-start-node',
+        label: 'Crear Nodo Inicial',
+        icon: 'play_arrow',
+        color: 'positive',
+      },
+    ];
+  }
+
+  return [
+    {
+      action: 'add-story-node',
+      label: 'Crear Nodo de Historia',
+      icon: 'article',
+    },
+    {
+      action: 'add-end-node',
+      label: 'Crear Nodo Final',
+      icon: 'flag',
+      color: 'negative',
+    },
+  ];
+});
+
+// --- Watcher y Lógica del Grafo (sin cambios) ---
 watch(
   () => bookStore.activeBook,
   (newBook) => {
     if (newBook) {
-      console.log('[BookGraph] Libro cambiado. Sincronizando grafo desde el store...');
-      // Sincronizamos los datos del grafo desde el store al componente
-      nodes.value = newBook.chapters.map((n) => ({ ...n }));
-      edges.value = newBook.edges.map((e) => ({ ...e }));
-      // Asignamos el viewport guardado o uno por defecto
+      console.log(
+        '[BookGraph] Libro cambiado. Sincronizando grafo desde el store...'
+      );
+      nodes.value = newBook.chapters;
+      edges.value = newBook.edges;
       viewport.value = newBook.viewport || { x: 0, y: 0, zoom: 1 };
     } else {
-      // Si no hay libro, vaciamos el grafo
       nodes.value = [];
       edges.value = [];
     }
   },
   {
-    // Ya no se necesita 'deep: true'. 'immediate: true' asegura que se cargue al inicio.
     immediate: true,
+    deep: true,
   }
 );
 
 onConnect((params: Connection) => {
   addEdges([params]);
-  // La llamada a onEdgesChange se encargará de guardar
+  // onEdgesChange se encargará de guardar
 });
 
 const debouncedSave = debounce(() => {
-  // Solo guardamos si hay cambios pendientes
   if (bookStore.isDirty) {
     console.log('[BookGraph] Auto-guardando cambios...');
     void bookStore.saveCurrentBook();
   }
-}, 1000); // Aumentado a 1 segundo para no guardar tan agresivamente
+}, 1000);
 
-// Los eventos 'on...Change' ya no provocan un bucle gracias a la eliminación del 'deep watch'.
-// Su función es actualizar el store con los datos locales del grafo.
 function onNodesChange(changes: NodeChange[]) {
   bookStore.updateNodes(nodes.value);
   bookStore.setDirty();
@@ -100,7 +158,6 @@ function onEdgesChange(changes: EdgeChange[]) {
 }
 
 function onMoveEnd() {
-  // Solo actualizamos y guardamos si el viewport realmente ha cambiado
   if (
     bookStore.activeBook &&
     (bookStore.activeBook.viewport.x !== viewport.value.x ||
@@ -110,6 +167,49 @@ function onMoveEnd() {
     bookStore.updateViewport(viewport.value);
     bookStore.setDirty();
     debouncedSave();
+  }
+}
+
+// --- 6. Lógica del Menú Contextual ---
+
+/**
+ * Se dispara al hacer clic derecho en el panel del grafo.
+ */
+function onPaneContextMenu(event: MouseEvent) {
+  event.preventDefault(); // Prevenir el menú contextual nativo del navegador
+  isMenuOpen.value = false; // Cerrar cualquier menú anterior
+
+  // Guardar el evento para usar sus coordenadas más tarde
+  lastPaneMenuEvent.value = event;
+
+  // Usamos nextTick para asegurar que el DOM se actualice antes de posicionar y mostrar el menú
+  void nextTick(() => {
+    menuPosition.value = { x: event.clientX, y: event.clientY };
+    isMenuOpen.value = true;
+  });
+}
+
+/**
+ * Maneja las acciones emitidas por el componente ContextMenu.
+ */
+function handleMenuAction(action: string) {
+  if (!lastPaneMenuEvent.value) return;
+
+  const flowPosition = project({
+    x: lastPaneMenuEvent.value.clientX,
+    y: lastPaneMenuEvent.value.clientY,
+  });
+
+  let nodeType = '';
+  if (action === 'add-start-node') nodeType = 'start';
+  if (action === 'add-story-node') nodeType = 'story';
+  if (action === 'add-end-node') nodeType = 'end';
+
+  if (nodeType) {
+    bookStore.createNode({
+      position: flowPosition,
+      type: nodeType,
+    });
   }
 }
 </script>

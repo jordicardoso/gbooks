@@ -1,28 +1,29 @@
+<!-- src/components/BookStartNode.vue (CORREGIDO) -->
 <template>
   <div class="book-node book-node-start">
     <div class="node-header">
       <q-icon name="play_arrow" class="q-mr-xs" />
-      <span class="text-weight-bold">Inicio</span>
+      <span class="text-weight-bold">{{ label || 'Inicio' }}</span>
     </div>
     <div class="node-content q-mt-xs">
-      {{ node.description }}
+      <!-- Accedemos a la descripción a través de 'data' -->
+      {{ data.description }}
     </div>
     <Handle type="source" :position="Position.Bottom" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { Handle, Position } from '@vue-flow/core';
-// CORREGIDO: Se usa 'import type'
-import { BookNode } from 'src/stores/book-store';
+import { Handle, Position, type NodeProps } from '@vue-flow/core';
+import type { BookNodeData } from 'src/stores/book-store';
 
-defineProps<{
-  node: BookNode;
-}>();
+// Usamos NodeProps, que es el estándar de Vue Flow.
+// Esto nos da acceso a 'label', 'data', etc., directamente.
+defineProps<NodeProps<BookNodeData>>();
 </script>
 
 <style scoped>
-/* ... tus estilos ... */
+/* ... tus estilos no necesitan cambiar ... */
 .book-node {
   min-width: 150px;
   max-width: 250px;
