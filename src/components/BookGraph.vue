@@ -72,6 +72,7 @@ import {
 import { Background } from '@vue-flow/background';
 import { Controls } from '@vue-flow/controls';
 import { MiniMap } from '@vue-flow/minimap';
+import { useNodesStore } from 'src/stores/nodes-store';
 import { useBookStore } from 'src/stores/book-store';
 import { debounce } from 'quasar';
 import ContextMenu, { type MenuItem } from './ContextMenu.vue';
@@ -82,6 +83,7 @@ import NodeEditorPanel from './NodeEditorPanel.vue';
 import { BookNode } from 'src/stores/book-store';
 import { useAssetsStore } from 'src/stores/assets-store';
 
+const nodesStore = useNodesStore();
 const bookStore = useBookStore();
 const assetsStore = useAssetsStore();
 
@@ -161,7 +163,7 @@ const debouncedSave = debounce(() => {
 }, 1000);
 
 function onNodesChange(changes: NodeChange[]) {
-  bookStore.updateNodes(nodes.value);
+  nodesStore.updateNodes(newNodes);
   bookStore.setDirty();
   debouncedSave();
 }

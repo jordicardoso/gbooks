@@ -6,14 +6,12 @@
       <span class="text-weight-bold">{{ label || 'Inicio' }}</span>
     </div>
     <q-img
-      v-if="data.imageId"
-      :src="getAssetUrlFromId(data.imageId)"
+      v-if="imageUrl"
+      :src="imageUrl"
       fit="cover"
       style="height: 80px;"
     >
-      <div class="absolute-bottom text-subtitle2 text-center">
-        {{ label }}
-      </div>
+      <!-- He eliminado el label de aquí porque ya está en el header, para evitar duplicidad -->
     </q-img>
     <div class="node-content q-mt-xs node-content-truncated">
       {{ data.description }}
@@ -23,20 +21,25 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Handle, Position, type NodeProps } from '@vue-flow/core';
 import type { BookNodeData } from 'src/stores/book-store';
 import { useAssetsStore } from 'src/stores/assets-store';
 
+// ÚNICA LLAMADA A defineProps, que es lo correcto.
+const props = defineProps<NodeProps<BookNodeData>>();
 const assetsStore = useAssetsStore();
 
-// Usamos NodeProps, que es el estándar de Vue Flow.
-// Esto nos da acceso a 'label', 'data', etc., directamente.
-defineProps<NodeProps<BookNodeData>>();
-
-function getAssetUrlFromId(imageId: string): string | null {
-  const asset = assetsStore.assets.find(a => a.id === imageId);
+const imageUrl = computed(() => {
+  if (!props.data.imageId) {
+    return null;
+  }
+  // Usamos los getters del store, que es la forma correcta
+  const asset = assetsStore.getAssetById(props.data.imageId);
   return asset ? assetsStore.getAssetUrl(asset.filename) : null;
-}
+});
+
+// La segunda llamada a defineProps ha sido eliminada.
 </script>
 
 <style scoped>

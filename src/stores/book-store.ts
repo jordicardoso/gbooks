@@ -1,88 +1,37 @@
 // src/stores/book-store.ts
+
 import { defineStore } from 'pinia';
-import {
-  Node,
-  Edge,
-  Viewport,
-} from '@vue-flow/core';
-import { uid } from 'quasar';
-
-export interface BookNodeData {
-  description: string;
-  imageId?: string;
-  tag?: string[];
-  color?: string;
-  size?: 'small' | 'medium' | 'large';
-}
-
-// 2. Define un BookNode como un Nodo de Vue Flow que usa tus datos personalizados
-export type BookNode = Node<BookNodeData>;
-
-export interface BookData {
-  meta: BookMeta;
-  chapters: BookNode[]; // Usa el tipo BookNode que acabamos de definir
-  // ... resto de la interfaz
-}
-
-// Interfaces para la estructura de datos de un libro
-export interface BookMeta {
-  title: string;
-  description: string;
-  author: string;
-}
-
-export interface BookVariable {
-  id: string;
-  name: string;
-  initialValue: string | number | boolean;
-}
-
-export interface BookData {
-  meta: BookMeta;
-  chapters: Node[];
-  edges: Edge[]; // <-- 1. AÑADIR EDGES AL MODELO
-  assets: string[];
-  variables: BookVariable[];
-  viewport: Viewport;
-}
+import { useNodesStore } from './nodes-store'; // Importamos los stores módulo
+import { useAssetsStore } from './assets-store';
+import { type BookData, type BookMeta } from './types'; // Importamos tipos
 
 export interface BookState {
   activeBook: BookData | null;
   activeBookId: string | null;
   isLoading: boolean;
-  isDirty: boolean; // Para saber si hay cambios sin guardar
+  isDirty: boolean;
 }
 
-/**
- * SOLUCIÓN CLAVE: Esta función toma los datos crudos del fichero JSON
- * y se asegura de que todas las propiedades necesarias existan,
- * añadiendo valores por defecto si faltan.
- */
+// La función de validación ahora es más simple
 function validateAndRepairBookData(data: any): BookData {
-  const defaults = {
+  const defaults: BookData = {
     meta: { title: 'Sin Título', description: '', author: '' },
     chapters: [],
-    edges: [], // <-- 2. AÑADIR VALOR POR DEFECTO PARA EDGES
+    edges: [],
     assets: [],
     variables: [],
     viewport: { x: 0, y: 0, zoom: 1 },
   };
-
-  if (!data || typeof data !== 'object') {
-    return defaults;
-  }
-
-  // Asegura que cada propiedad principal exista
+  if (!data || typeof data !== 'object') return defaults;
   return {
-    meta: data.meta && typeof data.meta === 'object' ? data.meta : defaults.meta,
+    meta: { ...defaults.meta, ...data.meta },
     chapters: Array.isArray(data.chapters) ? data.chapters : defaults.chapters,
-    edges: Array.isArray(data.edges) ? data.edges : defaults.edges, // <-- 3. VALIDAR Y REPARAR EDGES
+    edges: Array.isArray(data.edges) ? data.edges : defaults.edges,
     assets: Array.isArray(data.assets) ? data.assets : defaults.assets,
     variables: Array.isArray(data.variables) ? data.variables : defaults.variables,
-    viewport: data.viewport && typeof data.viewport === 'object' ? data.viewport : defaults.viewport,
+    viewport: { ...defaults.viewport, ...data.viewport },
   };
 }
-
 
 export const useBookStore = defineStore('book', {
   state: (): BookState => ({
@@ -93,19 +42,29 @@ export const useBookStore = defineStore('book', {
   }),
 
   actions: {
+    /**
+     * Carga el libro y distribuye los datos a los stores correspondientes.
+     */
     async loadBookById(bookId: string) {
       if (!bookId) return;
-
       this.isLoading = true;
       this.isDirty = false;
       try {
-        console.log(`Cargando libro con ID "${bookId}" vía Electron API...`);
         const content = await window.electronAPI.loadBook(bookId);
-        const rawData = JSON.parse(content);
+        const bookData = validateAndRepairBookData(JSON.parse(content));
 
-        // Usamos la función de validación y reparación
-        this.activeBook = validateAndRepairBookData(rawData);
+        this.activeBook = bookData;
         this.activeBookId = bookId;
+
+        // --- DISTRIBUCIÓN DE DATOS ---
+        const nodesStore = useNodesStore();
+        const assetsStore = useAssetsStore();
+
+        nodesStore.setElements(bookData.chapters, bookData.edges);
+        assetsStore.setAssets(bookId, bookData.assets);
+        // Aquí llamarías a otros stores:
+        // characterStore.setCharacters(bookData.characterSheets);
+        // mapsStore.setMaps(bookData.maps);
 
       } catch (error) {
         console.error(`Error al cargar el libro con ID "${bookId}":`, error);
@@ -116,18 +75,25 @@ export const useBookStore = defineStore('book', {
       }
     },
 
+    /**
+     * Recolecta los datos de todos los stores y guarda el libro.
+     */
     async saveCurrentBook() {
-      if (!this.activeBook || !this.activeBookId) {
-        console.warn('No hay un libro activo para guardar.');
+      if (!this.activeBook || !this.activeBookId || !this.isDirty) {
         return;
       }
-      if (!this.isDirty) {
-        // console.log('No hay cambios para guardar.');
-        return;
-      }
-
       this.isLoading = true;
       try {
+        // --- RECOLECCIÓN DE DATOS ---
+        const nodesStore = useNodesStore();
+        const assetsStore = useAssetsStore();
+
+        this.activeBook.chapters = nodesStore.nodes;
+        this.activeBook.edges = nodesStore.edges;
+        this.activeBook.assets = assetsStore.assets;
+        this.activeBook.viewport = nodesStore.viewport;
+        // Aquí recolectarías de otros stores...
+
         const content = JSON.stringify(this.activeBook, null, 2);
         await window.electronAPI.saveBook(this.activeBookId, content);
         this.isDirty = false;
@@ -140,82 +106,27 @@ export const useBookStore = defineStore('book', {
       }
     },
 
+    /**
+     * Limpia este store y notifica a los demás para que se limpien.
+     */
     clearBook() {
       this.activeBook = null;
       this.activeBookId = null;
       this.isDirty = false;
+
+      // Notifica a los stores módulo para que limpien su estado
+      useNodesStore().clearElements();
+      useAssetsStore().clearAssets();
     },
 
-    // --- Acciones para modificar el libro ---
-
+    /**
+     * Marca el libro como "sucio". Esta acción será llamada por los stores módulo.
+     */
     setDirty() {
       if (!this.isDirty) {
         this.isDirty = true;
+        console.log("Book store is now dirty. Changes pending save.");
       }
     },
-
-    createNode(payload: { position: { x: number; y: number }; type: string }) {
-      if (!this.activeBook) return;
-
-      if (payload.type === 'start' && this.activeBook.chapters.some(n => n.type === 'start')) {
-        console.warn('Intento de crear un segundo nodo inicial. Operación cancelada.');
-        // Opcional: Mostrar una notificación al usuario con Quasar.
-        return;
-      }
-      // 3. Crea el nodo siguiendo el nuevo formato
-      const newNode: BookNode = {
-        id: uid(),
-        type: payload.type,
-        position: payload.position,
-        label: `Nuevo Nodo ${this.activeBook.chapters.length + 1}`,
-        // ¡IMPORTANTE! Los datos personalizados van dentro de la propiedad 'data'
-        data: {
-          description: 'Nuevo nodo de historia...',
-        },
-      };
-
-      this.activeBook = {
-        ...this.activeBook,
-        chapters: [...this.activeBook.chapters, newNode],
-      };
-
-      this.setDirty();
-    },
-
-    updateNodeData({ nodeId, updates }: { nodeId: string; updates: Partial<BookNode> }) {
-      if (!this.activeBook) return;
-
-      const nodeIndex = this.activeBook.chapters.findIndex(n => n.id === nodeId);
-      if (nodeIndex > -1) {
-        // Fusionamos los datos existentes con los nuevos
-        this.activeBook.chapters[nodeIndex] = {
-          ...this.activeBook.chapters[nodeIndex],
-          ...updates,
-        };
-        this.setDirty(); // Marcamos que hay cambios sin guardar
-      }
-    },
-
-    updateViewport(viewport: Viewport) {
-      if (this.activeBook) {
-        this.activeBook.viewport = viewport;
-        this.setDirty();
-      }
-    },
-
-    updateNodes(nodes: Node[]) {
-      if (this.activeBook) {
-        this.activeBook.chapters = nodes;
-        this.setDirty();
-      }
-    },
-
-    updateEdges(edges: Edge[]) {
-      // <-- 4. CORREGIR LA LÓGICA DE ESTA ACCIÓN
-      if (this.activeBook) {
-        this.activeBook.edges = edges;
-        this.setDirty();
-      }
-    }
   },
 });

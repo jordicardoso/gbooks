@@ -38,7 +38,7 @@ import { computed } from 'vue';
 // Importa 'NodeProps' para una mejor integración
 import { Handle, Position, type NodeProps } from '@vue-flow/core';
 // Importa solo el tipo de datos, no el nodo completo
-import { type BookNodeData } from 'src/stores/book-store';
+import { type BookNodeData } from 'src/stores/types';
 import { useAssetsStore } from 'src/stores/assets-store';
 
 // Usa NodeProps, que es el estándar de Vue Flow.
@@ -53,7 +53,7 @@ const imageUrl = computed(() => {
     return null;
   }
   const asset = assetsStore.getAssetById(props.data.imageId);
-  return asset ? asset.src : null;
+  return asset ? assetsStore.getAssetUrl(asset.filename) : null;
 });
 
 const nodeStyle = computed(() => {

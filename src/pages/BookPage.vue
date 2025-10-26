@@ -105,9 +105,8 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter} from 'vue-router';
 import { useBookStore } from 'src/stores/book-store';
-import { useAssetsStore } from 'src/stores/assets-store';
 
 // Componentes para las pestañas
 import BookGraph from 'src/components/BookGraph.vue';
@@ -119,21 +118,17 @@ import TestingPage from 'pages/TestingPage.vue';
 const props = defineProps<{ id: string }>();
 const router = useRouter();
 const bookStore = useBookStore();
-const assetsStore = useAssetsStore();
 
 const tab = ref('design'); // La pestaña inicial ahora es 'design'
 
 // Carga el libro y los assets cuando el ID cambia
-watch(
-  () => props.id,
-  async (newId) => {
-    if (newId) {
-      await bookStore.loadBookById(newId);
-      await assetsStore.loadAssets(newId);
-    }
-  },
-  { immediate: true }
-);
+watch(() => props.id, (newBookId) => {
+  if (newBookId) {
+    bookStore.loadBookById(newBookId);
+  } else {
+    bookStore.clearBook();
+  }
+}, { immediate: true });
 
 // Limpia los stores cuando el componente se destruye (al salir de la página)
 onUnmounted(() => {
@@ -142,7 +137,6 @@ onUnmounted(() => {
     void bookStore.saveCurrentBook();
   }
   bookStore.clearBook();
-  assetsStore.clearAssets();
 });
 
 function goBack() {
