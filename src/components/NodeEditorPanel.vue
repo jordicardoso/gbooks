@@ -1,76 +1,83 @@
 <!-- src/components/NodeEditorPanel.vue -->
 <template>
-  <q-card class="node-editor-panel bg-grey-9 text-white no-shadow">
-    <q-card-section class="row items-center q-pb-none">
-      <div class="">{{ node?.id }}</div>
-      <q-space />
-      <q-btn icon="close" flat round dense @click="emit('close')" />
-    </q-card-section>
+  <q-card class="node-editor-panel bg-grey-9 text-white no-shadow column no-wrap">
+    <q-card-section class="col q-pt-md q-gutter-y-md scroll">
+      <!-- 3. CAMPO AÑADIDO: Input para editar el nombre (label) -->
 
-    <q-card-section class="q-pt-md q-gutter-y-md scroll">
-      <!-- Descripción -->
-      <q-input
-        v-model="editedDescription"
-        label="Descripción del Pasaje"
-        type="textarea"
-        autogrow
-        dark
-        dense
-      />
-
-      <!-- Campo para Etiqueta -->
-      <q-input
-        v-model="editedTag"
-        label="Etiqueta"
-        placeholder="Ej: Evento, Lugar Clave"
+        <q-input
+        v-model="editedLabel"
+        label="Nombre del Nodo"
         dark
         dense
         clearable
-      />
+        />
 
-      <!-- Selector de Tamaño -->
       <q-select
-        v-model="editedSize"
-        :options="sizeOptions"
-        label="Tamaño del Nodo"
+        v-model="editedTags"
+        label="Etiquetas"
         dark
         dense
-        emit-value
-        map-options
-      />
+        multiple
+        use-chips
+        use-input
+        hide-dropdown-icon
+        new-value-mode="add-unique"
+        :options="allTagsOptions"
+        @new-value="createTag"
+      >
+        <template #no-option>
+          <q-item>
+            <q-item-section class="text-grey">
+              Escribe para añadir una nueva etiqueta
+            </q-item-section>
+          </q-item>
+        </template>
+      </q-select>
+      <q-input
+        v-model="editedColor"
+        label="Color del Nodo"
+        dark
+        dense
+        clearable
+        readonly
+        class="color-input"
+      >
+        <!-- Muestra un círculo con el color actual -->
+        <template #prepend>
+          <q-icon name="circle" :style="{ color: editedColor || '#455a64' }" />
+        </template>
 
-      <!-- Selector de Color -->
-      <q-input v-model="editedColor" label="Color del Nodo" dark dense clearable>
+        <!-- Icono que abre el popup con el selector de color -->
         <template #append>
           <q-icon name="colorize" class="cursor-pointer">
             <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-              <q-color v-model="editedColor" />
+              <q-color
+                v-model="editedColor"
+                dark
+                no-header
+                no-footer
+                default-view="palette"
+              />
             </q-popup-proxy>
           </q-icon>
         </template>
-        <template #prepend>
-          <div :style="{ backgroundColor: editedColor, width: '16px', height: '16px', borderRadius: '50%' }"></div>
-        </template>
       </q-input>
-
-      <!-- Selector de Imagen -->
       <q-select
         v-model="editedImageId"
-        :options="assetOptions"
+        :options="imageAssetOptions"
         option-value="id"
         option-label="name"
         emit-value
         map-options
-        label="Imagen del Pasaje"
+        label="Imagen del Nodo"
         dark
         dense
         clearable
       >
-        <!-- ... (templates de q-select de imagen sin cambios) ... -->
         <template #option="scope">
           <q-item v-bind="scope.itemProps">
             <q-item-section avatar>
-              <q-img :src="scope.opt.src" style="width: 40px; height: 40px; border-radius: 4px;" fit="cover" />
+              <q-img :src="scope.opt.src" fit="cover" />
             </q-item-section>
             <q-item-section>
               <q-item-label>{{ scope.opt.name }}</q-item-label>
@@ -78,24 +85,40 @@
             </q-item-section>
           </q-item>
         </template>
-        <template #selected-item="scope">
-          <q-item v-if="scope.opt">
-            <q-item-section avatar>
-              <q-img :src="scope.opt.src" style="width: 30px; height: 30px; border-radius: 3px;" fit="cover" />
-            </q-item-section>
-            <q-item-section>
-              <q-item-label>{{ scope.opt.name }}</q-item-label>
+        <!-- Mensaje si no hay imágenes -->
+        <template #no-option>
+          <q-item>
+            <q-item-section class="text-grey">
+              No hay imágenes en los assets.
             </q-item-section>
           </q-item>
-          <span v-else class="text-grey-6">Ninguna imagen seleccionada</span>
         </template>
       </q-select>
 
-      <!-- Previsualización de Imagen -->
-      <div v-if="currentImageUrl" class="q-mt-md text-center">
-        <q-img :src="currentImageUrl" style="max-width: 100%; max-height: 200px; border-radius: 8px;" fit="contain" />
+      <!-- Previsualización de la imagen seleccionada -->
+      <div class="image-preview-container">
+        <q-img
+          v-if="currentImageUrl"
+          :src="currentImageUrl"
+          fit="contain"
+          style="max-height: 400px; border-radius: 4px;"
+        />
+        <div v-else class="text-center text-grey-6 q-pa-md">
+          <q-icon name="image" size="2rem" />
+          <p class="q-mt-sm text-caption">Sin imagen seleccionada</p>
+        </div>
       </div>
-
+      <div class="q-pa-none node-content">
+        <q-input
+          v-model="editedDescription"
+          label="TEXTO"
+          type="textarea"
+          autogrow
+          dark
+          dense
+          borderless
+        />
+      </div>
     </q-card-section>
 
     <q-card-actions align="right" class="q-pa-md">
@@ -107,7 +130,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
-import { BookNode } from 'src/stores/book-store';
+import { BookNode, useBookStore } from 'src/stores/book-store';
 import { useAssetsStore } from 'src/stores/assets-store';
 import { storeToRefs } from 'pinia';
 
@@ -120,57 +143,107 @@ const emit = defineEmits(['save', 'close']);
 
 const assetsStore = useAssetsStore();
 const { assets } = storeToRefs(assetsStore);
+const bookStore = useBookStore();
 
 // Refs para los campos del formulario
+const editedLabel = ref(''); // 3. Ref para el nombre del nodo
 const editedDescription = ref('');
 const editedImageId = ref<string | null>(null);
-const editedTag = ref('');
+const editedTags = ref<string[]>([]);
 const editedColor = ref('');
 const editedSize = ref<'small' | 'medium' | 'large'>('medium');
 
-// Opciones para el selector de tamaño
-const sizeOptions = [
-  { label: 'Pequeño', value: 'small' },
-  { label: 'Mediano', value: 'medium' },
-  { label: 'Grande', value: 'large' },
-];
+// --- LÓGICA PARA LAS ETIQUETAS ---
+// Opciones para el q-select, se inicializa vacío y se llena dinámicamente
+const allTagsOptions = ref<string[]>([]);
 
-const assetOptions = computed(() => assets.value.filter(asset => asset.type === 'image'));
+// Propiedad computada que obtiene TODAS las etiquetas únicas de todo el libro
+const allBookTags = computed(() => {
+  if (!bookStore.activeBook) return [];
+  const all = bookStore.activeBook.chapters.flatMap(node => node.data.tag || []);
+  // Usamos Set para obtener valores únicos
+  return [...new Set(all)];
+});
 
+// Función para crear una nueva etiqueta y añadirla a las opciones
+function createTag(inputValue: string, doneFn: (item: string, mode: 'add-unique') => void) {
+  const newTag = inputValue.trim();
+  if (newTag && !allTagsOptions.value.includes(newTag)) {
+    allTagsOptions.value.push(newTag);
+  }
+  doneFn(newTag, 'add-unique');
+}
+
+// Filtra los assets para obtener solo imágenes y prepara las opciones para el q-select
+const imageAssetOptions = computed(() =>
+  assets.value
+    .filter(asset => asset.type === 'image')
+    .map(asset => ({
+      id: asset.id,
+      name: asset.name,
+      category: asset.category,
+      // Usamos el getter del store para generar la URL correcta que Electron entiende
+      src: assetsStore.getAssetUrl(asset.filename)
+    }))
+);
+
+// Obtiene la URL de la imagen actualmente seleccionada para la previsualización
 const currentImageUrl = computed(() => {
   if (!editedImageId.value) return null;
-  const asset = assetsStore.getAssetById(editedImageId.value);
-  return asset ? asset.src : null;
+  // Buscamos la opción ya procesada para no recalcular la URL
+  const selectedOption = imageAssetOptions.value.find(opt => opt.id === editedImageId.value);
+  return selectedOption ? selectedOption.src : null;
 });
 
 // Sincronizar los datos del nodo con los campos del formulario
 watch(() => props.node, (newNode) => {
   if (newNode) {
-    editedDescription.value = newNode.description;
-    editedImageId.value = newNode.imageId || null;
-    editedTag.value = newNode.tag || '';
-    editedColor.value = newNode.color || ''; // Default a string vacío
-    editedSize.value = newNode.size || 'medium'; // Default a 'medium'
+    editedLabel.value = newNode.label || ''; // 3. Sincronizar el label
+    editedDescription.value = newNode.data.description; // Corregido para usar `data`
+    editedImageId.value = newNode.data.imageId || null;
+    editedTags.value = newNode.data.tag || [];
+    editedColor.value = newNode.data.color || '';
+    editedSize.value = newNode.data.size || 'medium';
+    allTagsOptions.value = [...allBookTags.value];
+
   } else {
     // Resetear
+    editedLabel.value = '';
     editedDescription.value = '';
     editedImageId.value = null;
-    editedTag.value = '';
+    editedTags.value = [];
     editedColor.value = '';
     editedSize.value = 'medium';
   }
-}, { immediate: true });
+}, { immediate: true, deep: true }); // Usar deep: true para reaccionar a cambios en `data`
 
 function saveChanges() {
   if (props.node) {
-    const updatedNodeData: Partial<BookNode> = {
+    // Los datos personalizados van dentro de `data`
+    const updatedData: Partial<BookNode['data']> = {
       description: editedDescription.value,
       imageId: editedImageId.value,
-      tag: editedTag.value || undefined, // Guardar undefined si está vacío
-      color: editedColor.value || undefined, // Guardar undefined si está vacío
+      tag: editedTags.value.length > 0 ? editedTags.value : undefined,
+      color: editedColor.value || undefined,
       size: editedSize.value,
     };
-    emit('save', { nodeId: props.node.id, updates: updatedNodeData });
+
+    // El `label` es una propiedad de primer nivel del nodo
+    const updatedNodeShell: Partial<BookNode> = {
+      label: editedLabel.value,
+    };
+
+    // Emitimos un solo evento con todos los cambios
+    emit('save', {
+      nodeId: props.node.id,
+      updates: {
+        ...updatedNodeShell,
+        data: {
+          ...props.node.data, // Mantenemos los datos existentes
+          ...updatedData,     // Sobrescribimos con los cambios
+        }
+      }
+    });
     emit('close');
   }
 }
@@ -182,11 +255,11 @@ function saveChanges() {
   display: flex;
   flex-direction: column;
 }
-.q-card-section.scroll {
-  flex-grow: 1;
-  overflow-y: auto;
-}
-.q-card-actions {
-  flex-shrink: 0;
+
+.node-content {
+  white-space: pre-wrap;
+  width: 100%;
+  text-overflow: ellipsis;
+  word-break: break-word;
 }
 </style>

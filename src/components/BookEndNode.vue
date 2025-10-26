@@ -6,8 +6,7 @@
       <!-- Usamos la prop 'label' que nos da Vue Flow -->
       <span class="text-weight-bold">{{ label || 'Fin' }}</span>
     </div>
-    <div class="node-content q-mt-xs">
-      <!-- Accedemos a la descripción a través de 'data' -->
+    <div class="node-content q-mt-xs node-content-truncated">
       {{ data.description }}
     </div>
     <Handle type="target" :position="Position.Top" />
@@ -53,6 +52,15 @@ defineProps<NodeProps<BookNodeData>>();
 }
 .node-content {
   white-space: pre-wrap;
+}
+
+.node-content-truncated {
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* El número de líneas que quieres mostrar */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word; /* Ayuda a evitar que palabras largas rompan el layout */
 }
 
 .vue-flow__handle {

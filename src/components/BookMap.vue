@@ -46,12 +46,22 @@
 
     <!-- Esta sección ahora usa "col" para crecer y llenar el espacio restante -->
     <q-card-section class="col map-display-section">
-      <div v-if="currentMapUrl" class="map-container">
+      <div v-if="currentMapUrl" class="map-container" @contextmenu.prevent="handleContextMenu">
         <q-img
           :src="currentMapUrl"
           fit="contain"
           class="map-image"
         />
+        <q-menu context-menu>
+          <q-list dense style="min-width: 150px">
+            <q-item clickable v-close-popup @click="onAddNode">
+              <q-item-section avatar>
+                <q-icon name="add_location_alt" />
+              </q-item-section>
+              <q-item-section>Insertar Nodo</q-item-section>
+            </q-item>
+          </q-list>
+        </q-menu>
       </div>
       <div v-else class="text-center text-grey-6 fit column items-center justify-center">
         <q-icon name="map" size="4rem" />
@@ -77,6 +87,7 @@ const { assets } = storeToRefs(assetsStore);
 const { mapId } = storeToRefs(bookStore);
 
 const selectedMapId = ref<string | null>(null);
+const contextMenuCoords = ref({ x: 0, y: 0 });
 
 // Filtrar assets para obtener solo los que son mapas
 const mapAssetOptions = computed(() =>
@@ -104,10 +115,30 @@ function updateBookMap(newMapId: string | null) {
     icon: 'info',
   });
 }
+
+function handleContextMenu(event: MouseEvent) {
+  const target = event.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
+  contextMenuCoords.value = {
+    x: event.clientX - rect.left,
+    y: event.clientY - rect.top,
+  };
+}
+
+function onAddNode() {
+  const { x, y } = contextMenuCoords.value;
+  $q.notify({
+    message: `Añadir nodo en coordenadas: (${Math.round(x)}, ${Math.round(y)})`,
+    color: 'primary',
+    icon: 'add_circle_outline',
+    caption: 'Funcionalidad en desarrollo.'
+  });
+  console.log('Intento de añadir un nodo en:', contextMenuCoords.value);
+}
+
 </script>
 
 <style lang="scss" scoped>
-/* El layout ahora es mucho más simple y robusto */
 .map-display-section {
   display: flex;
   align-items: center;

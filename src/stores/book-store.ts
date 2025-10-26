@@ -10,7 +10,7 @@ import { uid } from 'quasar';
 export interface BookNodeData {
   description: string;
   imageId?: string;
-  tag?: string;
+  tag?: string[];
   color?: string;
   size?: 'small' | 'medium' | 'large';
 }
@@ -180,6 +180,20 @@ export const useBookStore = defineStore('book', {
       };
 
       this.setDirty();
+    },
+
+    updateNodeData({ nodeId, updates }: { nodeId: string; updates: Partial<BookNode> }) {
+      if (!this.activeBook) return;
+
+      const nodeIndex = this.activeBook.chapters.findIndex(n => n.id === nodeId);
+      if (nodeIndex > -1) {
+        // Fusionamos los datos existentes con los nuevos
+        this.activeBook.chapters[nodeIndex] = {
+          ...this.activeBook.chapters[nodeIndex],
+          ...updates,
+        };
+        this.setDirty(); // Marcamos que hay cambios sin guardar
+      }
     },
 
     updateViewport(viewport: Viewport) {

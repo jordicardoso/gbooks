@@ -24,8 +24,9 @@
         class="q-mb-sm node-image"
         fit="cover"
       />
-      <!-- Accedemos a la descripción a través de 'data' -->
-      <div>{{ data.description }}</div>
+      <div class="node-content q-mt-xs node-content-truncated">
+        {{ data.description }}
+      </div>
     </div>
     <Handle type="target" :position="Position.Top" />
     <Handle type="source" :position="Position.Bottom" />
@@ -101,6 +102,16 @@ const nodeStyle = computed(() => {
   border-radius: 4px;
   max-height: 120px;
 }
+
+.node-content-truncated {
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* El número de líneas que quieres mostrar */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-word; /* Ayuda a evitar que palabras largas rompan el layout */
+}
+
 .vue-flow__handle {
   width: 10px;
   height: 10px;

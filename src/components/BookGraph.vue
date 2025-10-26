@@ -14,6 +14,7 @@
       @connect="onConnect"
       @move-end="onMoveEnd"
       @pane-context-menu="onPaneContextMenu"
+      @node-click="onNodeClick"
     >
       <Background />
       <MiniMap />
@@ -38,6 +39,15 @@
       @close="isMenuOpen = false"
       @action="handleMenuAction"
     />
+    <Transition name="slide-fade-right">
+      <NodeEditorPanel
+        v-if="isEditorOpen"
+        :node="selectedNode"
+        class="node-editor-container"
+        @close="handleEditorClose"
+        @save="handleEditorSave"
+      />
+    </Transition>
   </div>
 </template>
 
@@ -57,6 +67,7 @@ import {
   NodeChange,
   EdgeChange,
   Viewport,
+  NodeMouseEvent,
 } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 import { Controls } from '@vue-flow/controls';
@@ -67,9 +78,13 @@ import ContextMenu, { type MenuItem } from './ContextMenu.vue';
 import BookStartNode from './BookStartNode.vue';
 import BookStoryNode from './BookStoryNode.vue';
 import BookEndNode from './BookEndNode.vue';
+import NodeEditorPanel from './NodeEditorPanel.vue';
+import { BookNode } from 'src/stores/book-store';
+import { useAssetsStore } from 'src/stores/assets-store';
 
 const bookStore = useBookStore();
-// 4. Obtener 'project' de useVueFlow para convertir coordenadas de pantalla a grafo
+const assetsStore = useAssetsStore();
+
 const { onConnect, addEdges, project } = useVueFlow();
 
 const nodes = ref<Node[]>([]);
@@ -79,6 +94,9 @@ const viewport = ref<Viewport>({ x: 0, y: 0, zoom: 1 });
 // --- 5. State para el menú contextual ---
 const isMenuOpen = ref(false);
 const menuPosition = ref({ x: 0, y: 0 });
+// --- 6. State para el panel edición ---
+const isEditorOpen = ref(false);
+const selectedNode = ref<BookNode | null>(null);
 // Guardamos el evento para tener acceso a las coordenadas al crear el nodo
 const lastPaneMenuEvent = ref<MouseEvent | null>(null);
 
@@ -116,9 +134,6 @@ watch(
   () => bookStore.activeBook,
   (newBook) => {
     if (newBook) {
-      console.log(
-        '[BookGraph] Libro cambiado. Sincronizando grafo desde el store...'
-      );
       nodes.value = newBook.chapters;
       edges.value = newBook.edges;
       viewport.value = newBook.viewport || { x: 0, y: 0, zoom: 1 };
@@ -170,7 +185,41 @@ function onMoveEnd() {
   }
 }
 
-// --- 6. Lógica del Menú Contextual ---
+function onNodeClick(event: NodeMouseEvent) {
+  // Asegurarnos de que el nodo existe en nuestro store antes de abrir
+  const nodeInData = bookStore.activeBook?.chapters.find(n => n.id === event.node.id);
+  if (nodeInData) {
+    selectedNode.value = nodeInData;
+    isEditorOpen.value = true;
+    isMenuOpen.value = false; // Cerramos el menú contextual si estuviera abierto
+  }
+}
+
+function handleEditorClose() {
+  isEditorOpen.value = false;
+  selectedNode.value = null;
+}
+
+function handleEditorSave({ nodeId, updates }: { nodeId: string; updates: Partial<BookNode> }) {
+  // 1. Actualiza el store. Esta sigue siendo la fuente de la verdad.
+  bookStore.updateNodeData({ nodeId, updates });
+
+  // 2. Ahora, sincroniza el estado local del grafo (`nodes.value`) con el store
+  //    para forzar la reactividad inmediata en Vue Flow.
+  if (bookStore.activeBook) {
+    const nodeIndex = nodes.value.findIndex(n => n.id === nodeId);
+    if (nodeIndex > -1) {
+      // Busca el nodo completamente actualizado desde el store
+      const updatedNodeFromStore = bookStore.activeBook.chapters.find(n => n.id === nodeId);
+      if (updatedNodeFromStore) {
+        // Reemplaza el nodo en el array local.
+        // Esto es crucial para que Vue Flow detecte el cambio y re-renderice el nodo.
+        nodes.value[nodeIndex] = updatedNodeFromStore;
+      }
+    }
+  }
+  // El debouncedSave se activará automáticamente porque el store se marca como 'dirty'
+}
 
 /**
  * Se dispara al hacer clic derecho en el panel del grafo.
@@ -213,3 +262,35 @@ function handleMenuAction(action: string) {
   }
 }
 </script>
+<style lang="scss" scoped>
+.node-editor-container {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  width: 350px;
+  z-index: 10; /* Asegura que esté por encima del grafo */
+  border-radius: 8px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2), 0 6px 6px rgba(0, 0, 0, 0.25);
+}
+/*
+  Clases para la transición de entrada y salida.
+  Definimos la duración y el tipo de curva de la animación.
+*/
+.slide-fade-right-enter-active,
+.slide-fade-right-leave-active {
+  transition: all 0.4s ease-out;
+}
+
+/*
+  Estado inicial de la entrada (antes de aparecer) y
+  estado final de la salida (cuando ya ha desaparecido).
+  - Lo movemos 100% de su ancho hacia la derecha (fuera de la pantalla).
+  - Lo hacemos completamente transparente.
+*/
+.slide-fade-right-enter-from,
+.slide-fade-right-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
+</style>
