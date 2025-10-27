@@ -174,6 +174,17 @@ void app.whenReady().then(async () => {
     }
   );
 
+  ipcMain.handle(
+    'book:update',
+    async (event, bookId: string, data: { name: string; description: string }) => {
+      const fileContent = await fs.readFile(libraryFilePath, 'utf-8'); // Lee library.json
+      const books = JSON.parse(fileContent);
+      // ... encuentra el libro y lo actualiza
+      await fs.writeFile(libraryFilePath, JSON.stringify(books, null, 2), 'utf-8'); // Guarda library.json
+      // ...
+    }
+  );
+
   // Cargar el contenido de un libro (book.json)
   ipcMain.handle('load-book', async (event, bookId: string) => {
     const bookJsonPath = path.join(getBookDir(bookId), 'book.json');
@@ -183,6 +194,42 @@ void app.whenReady().then(async () => {
     } catch (error) {
       console.error(`[Electron Main] Error al leer el archivo ${bookJsonPath}:`, error);
       throw error;
+    }
+  });
+
+  ipcMain.handle(
+    'get-asset-path',
+    async (event, bookId: string, filename: string) => {
+      if (!bookId || !filename) {
+        console.error('[Electron Main] get-asset-path llamado sin bookId o filename.');
+        return null;
+      }
+      // Construye y devuelve la URL con tu protocolo personalizado.
+      return `gbooks-asset://${bookId}/${filename}`;
+    }
+  );
+
+  ipcMain.handle('book:get-cover-info', async (event, bookId: string) => {
+    const bookJsonPath = path.join(getBookDir(bookId), 'book.json');
+    try {
+      const content = await fs.readFile(bookJsonPath, 'utf-8');
+      const bookData = JSON.parse(content);
+
+      const imageId = bookData.meta?.imageId;
+      if (!imageId) {
+        return null; // El libro no tiene portada asignada
+      }
+
+      const asset = bookData.assets?.find((a: { id: string }) => a.id === imageId);
+      if (!asset?.filename) {
+        return null; // El asset de la portada no se encontró o es inválido
+      }
+
+      // Devolvemos solo el nombre del fichero, que es lo único que necesita el frontend
+      return { filename: asset.filename };
+    } catch (error) {
+      console.error(`[Electron Main] Error al obtener info de portada para ${bookId}:`, error);
+      return null; // Devuelve null en caso de error
     }
   });
 

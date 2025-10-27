@@ -6,6 +6,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveLibrary: (books) => ipcRenderer.invoke('library:save', books),
   createBook: (data) => ipcRenderer.invoke('book:create', data),
 
+  updateBook: (bookId: string, data: { name: string, description: string }) =>
+    ipcRenderer.invoke('book:update', bookId, data),
+
   saveBook: (
     bookId: string, // Ahora saveBook también recibe bookId
     content: string
@@ -14,6 +17,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   loadBook: (bookId: string): Promise<string> => // Ahora loadBook también recibe bookId
     ipcRenderer.invoke('load-book', bookId),
+
+  getAssetPath: (bookId: string, filename: string): Promise<string | null> =>
+    ipcRenderer.invoke('get-asset-path', bookId, filename),
+
+  getCoverInfo: (bookId: string): Promise<{ filename: string } | null> =>
+    ipcRenderer.invoke('book:get-cover-info', bookId),
 
   deleteBook: (bookId: string) => ipcRenderer.invoke('book:delete', bookId),
 
