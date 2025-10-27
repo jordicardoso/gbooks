@@ -1,9 +1,9 @@
 // src/stores/types.ts
 
-import type { Node, Edge, Viewport } from '@vue-flow/core';
+import type { Node, Edge, ViewPort } from '@vue-flow/core';
 
 // --- TIPOS DE ASSETS ---
-export interface Asset {
+export interface BookAsset {
   id: string;
   name: string;
   category: string;
@@ -22,12 +22,13 @@ export interface BookNodeData {
 }
 
 export type BookNode = Node<BookNodeData>;
+export type BookEdge = Edge<BookNodeData>;
 
 export interface BookMeta {
   title: string;
   description: string;
   author: string;
-  // Añade aquí otros metadatos que necesites
+  imageId?: string;
 }
 
 export interface BookVariable {
@@ -41,10 +42,10 @@ export interface BookVariable {
 export interface BookData {
   meta: BookMeta;
   nodes: BookNode[];
-  edges: Edge[];
+  edges: BookEdge[];
   assets: Asset[]; // Ahora es un array de objetos Asset completos
   // characterSheets: CharacterSheet[]; // Ejemplo para el futuro
   // maps: MapData[]; // Ejemplo para el futuro
   variables: BookVariable[];
-  viewport: Viewport;
+  viewport: ViewPort;
 }

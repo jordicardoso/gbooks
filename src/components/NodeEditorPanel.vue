@@ -123,7 +123,6 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
-// CAMBIO: Importaciones corregidas y añadidas
 import { useAssetsStore } from 'src/stores/assets-store';
 import { useNodesStore } from 'src/stores/nodes-store';
 import { storeToRefs } from 'pinia';
@@ -136,32 +135,30 @@ interface Props {
 const props = defineProps<Props>();
 const emit = defineEmits(['save', 'close']);
 
+// --- STORES ---
 const assetsStore = useAssetsStore();
 const nodesStore = useNodesStore();
 const { assets } = storeToRefs(assetsStore);
 const { nodes } = storeToRefs(nodesStore);
 
+// --- ESTADO LOCAL DEL FORMULARIO ---
 const editedLabel = ref('');
 const editedDescription = ref('');
 const editedImageId = ref<string | null>(null);
 const editedTags = ref<string[]>([]);
 const editedColor = ref('');
 const editedSize = ref<'small' | 'medium' | 'large'>('medium');
-
 const allTagsOptions = ref<string[]>([]);
+
+// --- PROPIEDADES COMPUTADAS ---
+
+// [CORREGIDO] Obtiene todas las etiquetas únicas de todos los nodos del libro.
 const allBookTags = computed(() => {
   const all = nodes.value.flatMap(node => node.data.tags || []);
   return [...new Set(all)];
 });
 
-function createTag(inputValue: string, doneFn: (item: string, mode: 'add-unique') => void) {
-  const newTag = inputValue.trim();
-  if (newTag && !allTagsOptions.value.includes(newTag)) {
-    allTagsOptions.value.push(newTag);
-  }
-  doneFn(newTag, 'add-unique');
-}
-
+// Opciones para el selector de imágenes, basadas en los assets.
 const imageAssetOptions = computed(() =>
   assets.value
     .filter(asset => asset.type === 'image')
@@ -173,34 +170,52 @@ const imageAssetOptions = computed(() =>
     }))
 );
 
+// URL de la imagen seleccionada para la vista previa.
 const currentImageUrl = computed(() => {
   if (!editedImageId.value) return null;
   const selectedOption = imageAssetOptions.value.find(opt => opt.id === editedImageId.value);
   return selectedOption ? selectedOption.src : null;
 });
 
-watch(() => props.node, (newNode) => {
-  if (newNode) {
-    editedLabel.value = newNode.label || '';
-    editedDescription.value = newNode.data.description || '';
-    editedImageId.value = newNode.data.imageId || null;
-    editedTags.value = newNode.data.tags || [];
-    editedColor.value = newNode.data.color || '';
-    editedSize.value = newNode.data.size || 'medium';
-    allTagsOptions.value = [...allBookTags.value];
+// --- FUNCIONES ---
+
+// Permite crear nuevas etiquetas desde el QSelect.
+function createTag(inputValue: string, doneFn: (item: string, mode: 'add-unique') => void) {
+  const newTag = inputValue.trim();
+  if (newTag && !allTagsOptions.value.includes(newTag)) {
+    allTagsOptions.value.unshift(newTag); // Añade al principio para visibilidad
+  }
+  doneFn(newTag, 'add-unique');
+}
+
+// [REFACTORIZADO] Carga los datos del nodo en el formulario o lo resetea si no hay nodo.
+function resetAndLoadNode(node: BookNode | null) {
+  if (node) {
+    editedLabel.value = node.label || '';
+    editedDescription.value = node.data.description || '';
+    editedImageId.value = node.data.imageId || null;
+    editedTags.value = [...(node.data.tags || [])];
+    editedColor.value = node.data.color || '';
+    editedSize.value = node.data.size || 'medium';
+    // Asegura que las opciones incluyan todas las etiquetas del libro más las del nodo actual.
+    allTagsOptions.value = [...new Set([...allBookTags.value, ...editedTags.value])];
   } else {
-    // Resetear (sin cambios)
+    // Resetea el formulario a sus valores por defecto.
     editedLabel.value = '';
     editedDescription.value = '';
     editedImageId.value = null;
     editedTags.value = [];
     editedColor.value = '';
     editedSize.value = 'medium';
+    allTagsOptions.value = [...allBookTags.value];
   }
-}, { immediate: true, deep: true });
+}
 
+// Guarda los cambios y emite los eventos correspondientes.
 function saveChanges() {
   if (props.node) {
+    // Construye el objeto de datos con solo los valores que tienen contenido.
+    // Usar 'undefined' es una buena práctica para indicar "no cambiar" en actualizaciones parciales.
     const dataUpdates: Partial<BookNode['data']> = {
       description: editedDescription.value,
       imageId: editedImageId.value || undefined,
@@ -219,6 +234,12 @@ function saveChanges() {
     emit('close');
   }
 }
+
+// --- WATCHERS ---
+
+// Observa el nodo de entrada y actualiza el formulario.
+watch(() => props.node, resetAndLoadNode, { immediate: true, deep: true });
+
 </script>
 
 <style scoped>

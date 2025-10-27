@@ -3,11 +3,11 @@
 import { defineStore } from 'pinia';
 import { uid } from 'quasar';
 import { useBookStore } from './book-store';
-import { type BookNode, type Edge, type Viewport } from './types';
+import type { BookNode, BookEdge, BookData, Viewport } from './types';
 
 export interface NodesState {
   nodes: BookNode[];
-  edges: Edge[];
+  edges: BookEdge[];
   viewport: Viewport;
 }
 
@@ -19,7 +19,12 @@ export const useNodesStore = defineStore('nodes', {
   }),
 
   actions: {
-    setElements(nodes: BookNode[], edges: Edge[], viewport?: Viewport) {
+    setBookData(data: BookData) {
+      this.nodes = data.nodes || [];
+      this.edges = data.edges || [];
+    },
+
+    setElements(nodes: BookNode[], edges: BookEdge[], viewport?: Viewport) {
       this.nodes = nodes;
       this.edges = edges;
       this.viewport = viewport || { x: 0, y: 0, zoom: 1 };
@@ -49,28 +54,40 @@ export const useNodesStore = defineStore('nodes', {
       useBookStore().setDirty();
     },
 
-    // --- ACCIONES NUEVAS/ACTUALIZADAS ---
+    updateNode(nodeId: string, updates: { label?: string; data?: Partial<BookNode['data']> }) {
+      const nodeIndex = this.nodes.findIndex((n) => n.id === nodeId);
+
+      if (nodeIndex > -1) {
+        const oldNode = this.nodes[nodeIndex];
+
+        // 1. Creamos un objeto de nodo completamente nuevo
+        const newNode: BookNode = {
+          ...oldNode, // Copiamos todas las propiedades antiguas
+          // 2. Sobrescribimos las que han cambiado
+          label: updates.label ?? oldNode.label, // Si `updates.label` es undefined, mantenemos el antiguo
+          data: {
+            ...oldNode.data, // Copiamos los datos antiguos
+            ...(updates.data || {}), // Sobrescribimos con los nuevos datos
+          },
+        };
+
+        // 3. Reemplazamos el objeto antiguo por el nuevo en el array.
+        // ¡Esta es la operación que dispara la reactividad de Vue!
+        this.nodes[nodeIndex] = newNode;
+
+        // 4. Notificamos que hay cambios para guardar
+        useBookStore().setDirty();
+      }
+    },
+
     updateNodes(nodes: BookNode[]) {
       this.nodes = nodes;
       useBookStore().setDirty();
     },
 
-    updateEdges(edges: Edge[]) {
+    updateEdges(edges: BookEdge[]) {
       this.edges = edges;
       useBookStore().setDirty();
-    },
-
-    updateNode(nodeId: string, updates: { label?: string; data?: Partial<BookNode['data']> }) {
-      const node = this.nodes.find((n) => n.id === nodeId);
-      if (node) {
-        if (typeof updates.label === 'string') {
-          node.label = updates.label;
-        }
-        if (updates.data) {
-          node.data = { ...node.data, ...updates.data };
-        }
-        useBookStore().setDirty();
-      }
     },
 
     updateViewport(viewport: Viewport) {

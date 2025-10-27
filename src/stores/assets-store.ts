@@ -2,10 +2,10 @@
 
 import { defineStore } from 'pinia';
 import { useBookStore } from './book-store';
-import { type Asset } from './types'; // Importamos tipos
+import type { BookAsset } from './types'; // Importamos tipos
 
 export interface AssetState {
-  assets: Asset[];
+  assets: BookAsset[];
   currentBookId: string | null;
   isLoading: boolean;
 }
@@ -23,7 +23,7 @@ export const useAssetsStore = defineStore('assets', {
       if (!state.currentBookId || !filename) return '';
       return `gbooks-asset://${state.currentBookId}/${filename}`;
     },
-    getAssetById: (state) => (assetId: string): Asset | undefined => {
+    getAssetById: (state) => (assetId: string): BookAsset | undefined => {
       return state.assets.find(asset => asset.id === assetId);
     },
     getUniqueCategories: (state): string[] => {
@@ -37,7 +37,7 @@ export const useAssetsStore = defineStore('assets', {
     /**
      * Acción de inicialización. Llamada por book-store.
      */
-    setAssets(bookId: string, assets: Asset[]) {
+    setAssets(bookId: string, assets: BookAsset[]) {
       this.currentBookId = bookId;
       this.assets = assets;
     },
@@ -53,7 +53,7 @@ export const useAssetsStore = defineStore('assets', {
     /**
      * Añade un nuevo asset, lo guarda en disco, y notifica al book-store.
      */
-    async addAsset(file: File, name: string, category: string): Promise<Asset | null> {
+    async addAsset(file: File, name: string, category: string): Promise<BookAsset | null> {
       if (!this.currentBookId) return null;
       this.isLoading = true;
       try {

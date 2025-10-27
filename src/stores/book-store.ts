@@ -3,7 +3,9 @@
 import { defineStore } from 'pinia';
 import { useNodesStore } from './nodes-store'; // Importamos los stores módulo
 import { useAssetsStore } from './assets-store';
-import { type BookData, type BookMeta } from './types'; // Importamos tipos
+import type { BookData, BookMeta } from './types'; // Importamos tipos
+
+let debounceSaveTimer: NodeJS.Timeout | null = null;
 
 export interface BookState {
   activeBook: BookData | null;
@@ -25,7 +27,7 @@ function validateAndRepairBookData(data: any): BookData {
   if (!data || typeof data !== 'object') return defaults;
   return {
     meta: { ...defaults.meta, ...data.meta },
-    nodes: Array.isArray(data.chapters) ? data.chapters : defaults.nodes,
+    nodes: Array.isArray(data.nodes) ? data.nodes : defaults.nodes,
     edges: Array.isArray(data.edges) ? data.edges : defaults.edges,
     assets: Array.isArray(data.assets) ? data.assets : defaults.assets,
     variables: Array.isArray(data.variables) ? data.variables : defaults.variables,
@@ -46,6 +48,9 @@ export const useBookStore = defineStore('book', {
       if (!bookId) return;
       this.isLoading = true;
       this.isDirty = false;
+
+      if (debounceSaveTimer) clearTimeout(debounceSaveTimer);
+
       try {
         const content = await window.electronAPI.loadBook(bookId);
         const bookData = validateAndRepairBookData(JSON.parse(content));
@@ -76,6 +81,8 @@ export const useBookStore = defineStore('book', {
      * Recolecta los datos de todos los stores y guarda el libro.
      */
     async saveCurrentBook() {
+      if (debounceSaveTimer) clearTimeout(debounceSaveTimer);
+
       if (!this.activeBook || !this.activeBookId || !this.isDirty) {
         return;
       }
@@ -90,7 +97,7 @@ export const useBookStore = defineStore('book', {
         this.activeBook.assets = assetsStore.assets;
         this.activeBook.viewport = nodesStore.viewport;
         // Aquí recolectarías de otros stores...
-
+        console.log(this.activeBook);
         const content = JSON.stringify(this.activeBook, null, 2);
         await window.electronAPI.saveBook(this.activeBookId, content);
         this.isDirty = false;
@@ -124,6 +131,14 @@ export const useBookStore = defineStore('book', {
         this.isDirty = true;
         console.log("Book store is now dirty. Changes pending save.");
       }
+      if (debounceSaveTimer) {
+        clearTimeout(debounceSaveTimer);
+      }
+
+      // 2. Programamos un nuevo guardado para dentro de 1500ms (1.5 segundos).
+      debounceSaveTimer = setTimeout(() => {
+        this.saveCurrentBook();
+      }, 1500);
     },
   },
 });
