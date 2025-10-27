@@ -2,15 +2,13 @@
 <template>
   <q-card class="node-editor-panel bg-grey-9 text-white no-shadow column no-wrap">
     <q-card-section class="col q-pt-md q-gutter-y-md scroll">
-      <!-- 3. CAMPO AÑADIDO: Input para editar el nombre (label) -->
-
-        <q-input
+      <q-input
         v-model="editedLabel"
         label="Nombre del Nodo"
         dark
         dense
         clearable
-        />
+      />
 
       <q-select
         v-model="editedTags"
@@ -42,12 +40,9 @@
         readonly
         class="color-input"
       >
-        <!-- Muestra un círculo con el color actual -->
         <template #prepend>
           <q-icon name="circle" :style="{ color: editedColor || '#455a64' }" />
         </template>
-
-        <!-- Icono que abre el popup con el selector de color -->
         <template #append>
           <q-icon name="colorize" class="cursor-pointer">
             <q-popup-proxy cover transition-show="scale" transition-hide="scale">
@@ -85,7 +80,6 @@
             </q-item-section>
           </q-item>
         </template>
-        <!-- Mensaje si no hay imágenes -->
         <template #no-option>
           <q-item>
             <q-item-section class="text-grey">
@@ -95,7 +89,6 @@
         </template>
       </q-select>
 
-      <!-- Previsualización de la imagen seleccionada -->
       <div class="image-preview-container">
         <q-img
           v-if="currentImageUrl"
@@ -130,9 +123,11 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
-import { BookNode, useBookStore } from 'src/stores/book-store';
+// CAMBIO: Importaciones corregidas y añadidas
 import { useAssetsStore } from 'src/stores/assets-store';
+import { useNodesStore } from 'src/stores/nodes-store';
 import { storeToRefs } from 'pinia';
+import type { BookNode } from 'src/stores/types';
 
 interface Props {
   node: BookNode | null;
@@ -142,30 +137,23 @@ const props = defineProps<Props>();
 const emit = defineEmits(['save', 'close']);
 
 const assetsStore = useAssetsStore();
+const nodesStore = useNodesStore();
 const { assets } = storeToRefs(assetsStore);
-const bookStore = useBookStore();
+const { nodes } = storeToRefs(nodesStore);
 
-// Refs para los campos del formulario
-const editedLabel = ref(''); // 3. Ref para el nombre del nodo
+const editedLabel = ref('');
 const editedDescription = ref('');
 const editedImageId = ref<string | null>(null);
 const editedTags = ref<string[]>([]);
 const editedColor = ref('');
 const editedSize = ref<'small' | 'medium' | 'large'>('medium');
 
-// --- LÓGICA PARA LAS ETIQUETAS ---
-// Opciones para el q-select, se inicializa vacío y se llena dinámicamente
 const allTagsOptions = ref<string[]>([]);
-
-// Propiedad computada que obtiene TODAS las etiquetas únicas de todo el libro
 const allBookTags = computed(() => {
-  if (!bookStore.activeBook) return [];
-  const all = bookStore.activeBook.chapters.flatMap(node => node.data.tag || []);
-  // Usamos Set para obtener valores únicos
+  const all = nodes.value.flatMap(node => node.data.tags || []);
   return [...new Set(all)];
 });
 
-// Función para crear una nueva etiqueta y añadirla a las opciones
 function createTag(inputValue: string, doneFn: (item: string, mode: 'add-unique') => void) {
   const newTag = inputValue.trim();
   if (newTag && !allTagsOptions.value.includes(newTag)) {
@@ -174,7 +162,6 @@ function createTag(inputValue: string, doneFn: (item: string, mode: 'add-unique'
   doneFn(newTag, 'add-unique');
 }
 
-// Filtra los assets para obtener solo imágenes y prepara las opciones para el q-select
 const imageAssetOptions = computed(() =>
   assets.value
     .filter(asset => asset.type === 'image')
@@ -182,32 +169,27 @@ const imageAssetOptions = computed(() =>
       id: asset.id,
       name: asset.name,
       category: asset.category,
-      // Usamos el getter del store para generar la URL correcta que Electron entiende
       src: assetsStore.getAssetUrl(asset.filename)
     }))
 );
 
-// Obtiene la URL de la imagen actualmente seleccionada para la previsualización
 const currentImageUrl = computed(() => {
   if (!editedImageId.value) return null;
-  // Buscamos la opción ya procesada para no recalcular la URL
   const selectedOption = imageAssetOptions.value.find(opt => opt.id === editedImageId.value);
   return selectedOption ? selectedOption.src : null;
 });
 
-// Sincronizar los datos del nodo con los campos del formulario
 watch(() => props.node, (newNode) => {
   if (newNode) {
-    editedLabel.value = newNode.label || ''; // 3. Sincronizar el label
-    editedDescription.value = newNode.data.description; // Corregido para usar `data`
+    editedLabel.value = newNode.label || '';
+    editedDescription.value = newNode.data.description || '';
     editedImageId.value = newNode.data.imageId || null;
-    editedTags.value = newNode.data.tag || [];
+    editedTags.value = newNode.data.tags || [];
     editedColor.value = newNode.data.color || '';
     editedSize.value = newNode.data.size || 'medium';
     allTagsOptions.value = [...allBookTags.value];
-
   } else {
-    // Resetear
+    // Resetear (sin cambios)
     editedLabel.value = '';
     editedDescription.value = '';
     editedImageId.value = null;
@@ -215,33 +197,23 @@ watch(() => props.node, (newNode) => {
     editedColor.value = '';
     editedSize.value = 'medium';
   }
-}, { immediate: true, deep: true }); // Usar deep: true para reaccionar a cambios en `data`
+}, { immediate: true, deep: true });
 
 function saveChanges() {
   if (props.node) {
-    // Los datos personalizados van dentro de `data`
-    const updatedData: Partial<BookNode['data']> = {
+    const dataUpdates: Partial<BookNode['data']> = {
       description: editedDescription.value,
-      imageId: editedImageId.value,
-      tag: editedTags.value.length > 0 ? editedTags.value : undefined,
+      imageId: editedImageId.value || undefined,
+      tags: editedTags.value.length > 0 ? editedTags.value : undefined,
       color: editedColor.value || undefined,
       size: editedSize.value,
     };
 
-    // El `label` es una propiedad de primer nivel del nodo
-    const updatedNodeShell: Partial<BookNode> = {
-      label: editedLabel.value,
-    };
-
-    // Emitimos un solo evento con todos los cambios
     emit('save', {
       nodeId: props.node.id,
       updates: {
-        ...updatedNodeShell,
-        data: {
-          ...props.node.data, // Mantenemos los datos existentes
-          ...updatedData,     // Sobrescribimos con los cambios
-        }
+        label: editedLabel.value,
+        data: dataUpdates,
       }
     });
     emit('close');

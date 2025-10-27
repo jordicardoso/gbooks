@@ -60,10 +60,15 @@ export const useNodesStore = defineStore('nodes', {
       useBookStore().setDirty();
     },
 
-    updateNodeData(nodeId: string, data: Partial<BookNode['data']>) {
-      const node = this.nodes.find(n => n.id === nodeId);
+    updateNode(nodeId: string, updates: { label?: string; data?: Partial<BookNode['data']> }) {
+      const node = this.nodes.find((n) => n.id === nodeId);
       if (node) {
-        node.data = { ...node.data, ...data };
+        if (typeof updates.label === 'string') {
+          node.label = updates.label;
+        }
+        if (updates.data) {
+          node.data = { ...node.data, ...updates.data };
+        }
         useBookStore().setDirty();
       }
     },
