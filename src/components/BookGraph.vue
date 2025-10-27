@@ -68,6 +68,8 @@ import {
   EdgeChange,
   Viewport,
   NodeMouseEvent,
+  applyNodeChanges,
+  applyEdgeChanges,
 } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 import { Controls } from '@vue-flow/controls';
@@ -80,7 +82,7 @@ import BookStartNode from './BookStartNode.vue';
 import BookStoryNode from './BookStoryNode.vue';
 import BookEndNode from './BookEndNode.vue';
 import NodeEditorPanel from './NodeEditorPanel.vue';
-import { BookNode } from 'src/stores/book-store';
+import { BookNode } from 'src/stores/types';
 import { useAssetsStore } from 'src/stores/assets-store';
 
 const nodesStore = useNodesStore();
@@ -136,7 +138,7 @@ watch(
   () => bookStore.activeBook,
   (newBook) => {
     if (newBook) {
-      nodes.value = newBook.chapters;
+      nodes.value = newBook.nodes;
       edges.value = newBook.edges;
       viewport.value = newBook.viewport || { x: 0, y: 0, zoom: 1 };
     } else {
@@ -163,14 +165,12 @@ const debouncedSave = debounce(() => {
 }, 1000);
 
 function onNodesChange(changes: NodeChange[]) {
-  nodesStore.updateNodes(newNodes);
-  bookStore.setDirty();
+  nodes.value = applyNodeChanges(changes, nodes.value);
   debouncedSave();
 }
 
 function onEdgesChange(changes: EdgeChange[]) {
-  bookStore.updateEdges(edges.value);
-  bookStore.setDirty();
+  edges.value = applyEdgeChanges(changes, edges.value);
   debouncedSave();
 }
 
@@ -189,7 +189,7 @@ function onMoveEnd() {
 
 function onNodeClick(event: NodeMouseEvent) {
   // Asegurarnos de que el nodo existe en nuestro store antes de abrir
-  const nodeInData = bookStore.activeBook?.chapters.find(n => n.id === event.node.id);
+  const nodeInData = bookStore.activeBook?.nodes.find(n => n.id === event.node.id);
   if (nodeInData) {
     selectedNode.value = nodeInData;
     isEditorOpen.value = true;
@@ -212,7 +212,7 @@ function handleEditorSave({ nodeId, updates }: { nodeId: string; updates: Partia
     const nodeIndex = nodes.value.findIndex(n => n.id === nodeId);
     if (nodeIndex > -1) {
       // Busca el nodo completamente actualizado desde el store
-      const updatedNodeFromStore = bookStore.activeBook.chapters.find(n => n.id === nodeId);
+      const updatedNodeFromStore = bookStore.activeBook.nodes.find(n => n.id === nodeId);
       if (updatedNodeFromStore) {
         // Reemplaza el nodo en el array local.
         // Esto es crucial para que Vue Flow detecte el cambio y re-renderice el nodo.
@@ -257,7 +257,7 @@ function handleMenuAction(action: string) {
   if (action === 'add-end-node') nodeType = 'end';
 
   if (nodeType) {
-    bookStore.createNode({
+    nodesStore.createNode({
       position: flowPosition,
       type: nodeType,
     });

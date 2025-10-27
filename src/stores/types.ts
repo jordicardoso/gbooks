@@ -40,7 +40,7 @@ export interface BookVariable {
 // Esta es la "fuente de la verdad" que se guarda en disco.
 export interface BookData {
   meta: BookMeta;
-  chapters: BookNode[];
+  nodes: BookNode[];
   edges: Edge[];
   assets: Asset[]; // Ahora es un array de objetos Asset completos
   // characterSheets: CharacterSheet[]; // Ejemplo para el futuro

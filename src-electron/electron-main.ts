@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { uid } from 'quasar';
 
+app.commandLine.appendSwitch('touch-events', 'disabled');
 // needed in case process is undefined under Linux
 const platform = process.platform || os.platform();
 

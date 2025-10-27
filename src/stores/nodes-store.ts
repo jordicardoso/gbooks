@@ -19,26 +19,18 @@ export const useNodesStore = defineStore('nodes', {
   }),
 
   actions: {
-    /**
-     * Acción de inicialización. Llamada por book-store al cargar un libro.
-     */
-    setElements(nodes: BookNode[], edges: Edge[]) {
+    setElements(nodes: BookNode[], edges: Edge[], viewport?: Viewport) {
       this.nodes = nodes;
       this.edges = edges;
+      this.viewport = viewport || { x: 0, y: 0, zoom: 1 };
     },
 
-    /**
-     * Limpia el estado del store.
-     */
     clearElements() {
       this.nodes = [];
       this.edges = [];
       this.viewport = { x: 0, y: 0, zoom: 1 };
     },
 
-    /**
-     * Crea un nuevo nodo, lo añade al estado y marca el libro como sucio.
-     */
     createNode(payload: { position: { x: number; y: number }; type: string }) {
       if (payload.type === 'start' && this.nodes.some(n => n.type === 'start')) {
         console.warn('Intento de crear un segundo nodo inicial. Operación cancelada.');
@@ -54,15 +46,10 @@ export const useNodesStore = defineStore('nodes', {
       };
 
       this.nodes.push(newNode);
-
-      // Notifica al orquestador que hay cambios
       useBookStore().setDirty();
     },
 
-    // Aquí irían el resto de tus acciones: updateNode, removeNode, addEdge, etc.
-    // Cada una de ellas debe terminar con:
-    // useBookStore().setDirty();
-
+    // --- ACCIONES NUEVAS/ACTUALIZADAS ---
     updateNodes(nodes: BookNode[]) {
       this.nodes = nodes;
       useBookStore().setDirty();
@@ -71,6 +58,14 @@ export const useNodesStore = defineStore('nodes', {
     updateEdges(edges: Edge[]) {
       this.edges = edges;
       useBookStore().setDirty();
+    },
+
+    updateNodeData(nodeId: string, data: Partial<BookNode['data']>) {
+      const node = this.nodes.find(n => n.id === nodeId);
+      if (node) {
+        node.data = { ...node.data, ...data };
+        useBookStore().setDirty();
+      }
     },
 
     updateViewport(viewport: Viewport) {

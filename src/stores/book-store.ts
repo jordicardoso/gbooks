@@ -16,7 +16,7 @@ export interface BookState {
 function validateAndRepairBookData(data: any): BookData {
   const defaults: BookData = {
     meta: { title: 'Sin Título', description: '', author: '' },
-    chapters: [],
+    nodes: [],
     edges: [],
     assets: [],
     variables: [],
@@ -25,7 +25,7 @@ function validateAndRepairBookData(data: any): BookData {
   if (!data || typeof data !== 'object') return defaults;
   return {
     meta: { ...defaults.meta, ...data.meta },
-    chapters: Array.isArray(data.chapters) ? data.chapters : defaults.chapters,
+    nodes: Array.isArray(data.chapters) ? data.chapters : defaults.nodes,
     edges: Array.isArray(data.edges) ? data.edges : defaults.edges,
     assets: Array.isArray(data.assets) ? data.assets : defaults.assets,
     variables: Array.isArray(data.variables) ? data.variables : defaults.variables,
@@ -42,9 +42,6 @@ export const useBookStore = defineStore('book', {
   }),
 
   actions: {
-    /**
-     * Carga el libro y distribuye los datos a los stores correspondientes.
-     */
     async loadBookById(bookId: string) {
       if (!bookId) return;
       this.isLoading = true;
@@ -60,7 +57,7 @@ export const useBookStore = defineStore('book', {
         const nodesStore = useNodesStore();
         const assetsStore = useAssetsStore();
 
-        nodesStore.setElements(bookData.chapters, bookData.edges);
+        nodesStore.setElements(bookData.nodes, bookData.edges);
         assetsStore.setAssets(bookId, bookData.assets);
         // Aquí llamarías a otros stores:
         // characterStore.setCharacters(bookData.characterSheets);
@@ -88,7 +85,7 @@ export const useBookStore = defineStore('book', {
         const nodesStore = useNodesStore();
         const assetsStore = useAssetsStore();
 
-        this.activeBook.chapters = nodesStore.nodes;
+        this.activeBook.nodes = nodesStore.nodes;
         this.activeBook.edges = nodesStore.edges;
         this.activeBook.assets = assetsStore.assets;
         this.activeBook.viewport = nodesStore.viewport;
