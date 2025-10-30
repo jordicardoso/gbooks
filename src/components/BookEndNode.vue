@@ -1,31 +1,39 @@
-<!-- src/components/BookEndNode.vue (CORREGIDO) -->
+<!-- src/components/BookEndNode.vue -->
 <template>
-  <div class="book-node book-node-end">
+  <div class="book-node" :style="nodeStyle">
     <div class="node-header">
       <q-icon name="flag" class="q-mr-xs" />
-      <!-- Usamos la prop 'label' que nos da Vue Flow -->
       <span class="text-weight-bold">{{ label || 'Fin' }}</span>
     </div>
     <div class="node-content q-mt-xs node-content-truncated">
-      {{ data.description }}
+      <!-- El valor por defecto ya estaba bien -->
+      {{ description || 'Nodo final sin descripción.' }}
     </div>
     <Handle type="target" :position="Position.Top" />
   </div>
 </template>
 
 <script setup lang="ts">
-// 1. Importamos NodeProps
-import { Handle, Position, type NodeProps } from '@vue-flow/core';
-// 2. Importamos el tipo de nuestros datos personalizados
-import type { BookNodeData } from 'src/stores/book-store';
+import { computed } from 'vue';
+import { Handle, Position } from '@vue-flow/core';
+import type { BookNode } from 'src/stores/types';
 
-// 3. Usamos NodeProps para definir las props.
-// Esto nos da acceso a 'label', 'data', 'id', etc.
-defineProps<NodeProps<BookNodeData>>();
+const props = defineProps<{
+  label?: string;
+  description?: string;
+  color?: string;
+}>();
+
+const nodeStyle = computed(() => {
+  const style: Record<string, string> = {};
+  // Usa el color de la prop, o un color por defecto si no existe.
+  style.backgroundColor = props.color || '#d32f2f';
+  return style;
+});
 </script>
 
 <style scoped>
-/* Tus estilos están perfectos y no necesitan cambios */
+/* El CSS ya estaba correcto, con el color de fondo dinámico */
 .book-node {
   min-width: 150px;
   max-width: 250px;
@@ -36,11 +44,8 @@ defineProps<NodeProps<BookNodeData>>();
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
   position: relative;
+  transition: background-color 0.3s ease;
 }
-
-.book-node-start { background-color: #388e3c; }
-.book-node-story { background-color: #455a64; }
-.book-node-end { background-color: #d32f2f; }
 
 .node-header {
   display: flex;
@@ -56,11 +61,11 @@ defineProps<NodeProps<BookNodeData>>();
 
 .node-content-truncated {
   display: -webkit-box;
-  -webkit-line-clamp: 3; /* El número de líneas que quieres mostrar */
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  word-break: break-word; /* Ayuda a evitar que palabras largas rompan el layout */
+  word-break: break-word;
 }
 
 .vue-flow__handle {

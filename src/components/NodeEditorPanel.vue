@@ -154,7 +154,7 @@ const allTagsOptions = ref<string[]>([]);
 
 // [CORREGIDO] Obtiene todas las etiquetas únicas de todos los nodos del libro.
 const allBookTags = computed(() => {
-  const all = nodes.value.flatMap(node => node.data.tags || []);
+  const all = nodes.value.flatMap(node => node.tags || []);
   return [...new Set(all)];
 });
 
@@ -188,15 +188,14 @@ function createTag(inputValue: string, doneFn: (item: string, mode: 'add-unique'
   doneFn(newTag, 'add-unique');
 }
 
-// [REFACTORIZADO] Carga los datos del nodo en el formulario o lo resetea si no hay nodo.
 function resetAndLoadNode(node: BookNode | null) {
   if (node) {
     editedLabel.value = node.label || '';
-    editedDescription.value = node.data.description || '';
-    editedImageId.value = node.data.imageId || null;
-    editedTags.value = [...(node.data.tags || [])];
-    editedColor.value = node.data.color || '';
-    editedSize.value = node.data.size || 'medium';
+    editedDescription.value = node.description || '';
+    editedImageId.value = node.imageId || null;
+    editedTags.value = [...(node.tags || [])];
+    editedColor.value = node.color || '';
+    editedSize.value = node.size || 'medium';
     // Asegura que las opciones incluyan todas las etiquetas del libro más las del nodo actual.
     allTagsOptions.value = [...new Set([...allBookTags.value, ...editedTags.value])];
   } else {
@@ -214,9 +213,9 @@ function resetAndLoadNode(node: BookNode | null) {
 // Guarda los cambios y emite los eventos correspondientes.
 function saveChanges() {
   if (props.node) {
-    // Construye el objeto de datos con solo los valores que tienen contenido.
-    // Usar 'undefined' es una buena práctica para indicar "no cambiar" en actualizaciones parciales.
-    const dataUpdates: Partial<BookNode['data']> = {
+    // Creamos un único objeto de actualizaciones.
+    const updates: Partial<Omit<BookNode, 'id' | 'position'>> = {
+      label: editedLabel.value,
       description: editedDescription.value,
       imageId: editedImageId.value || undefined,
       tags: editedTags.value.length > 0 ? editedTags.value : undefined,
@@ -224,20 +223,15 @@ function saveChanges() {
       size: editedSize.value,
     };
 
+    // Emitimos un payload más simple.
     emit('save', {
       nodeId: props.node.id,
-      updates: {
-        label: editedLabel.value,
-        data: dataUpdates,
-      }
+      updates: updates, // El objeto de actualizaciones es plano
     });
     emit('close');
   }
 }
 
-// --- WATCHERS ---
-
-// Observa el nodo de entrada y actualiza el formulario.
 watch(() => props.node, resetAndLoadNode, { immediate: true, deep: true });
 
 </script>

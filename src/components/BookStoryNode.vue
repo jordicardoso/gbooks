@@ -1,21 +1,22 @@
 <!-- src/components/BookStoryNode.vue -->
 <template>
-  <!-- La etiqueta del nodo ahora viene de la prop 'label' estándar -->
-  <div class="book-node book-node-story" :style="nodeStyle">
+  <div class="book-node" :style="nodeStyle">
     <div class="node-header">
       <div class="row items-center no-wrap">
         <q-icon name="menu_book" class="q-mr-xs" />
         <span class="text-weight-bold">{{ label || 'Pasaje' }}</span>
       </div>
-      <q-chip
-        v-if="data.tag"
-        :label="data.tag"
-        color="primary"
-        text-color="white"
-        dense
-        size="sm"
-        class="q-ml-sm"
-      />
+      <div v-if="tags && tags.length > 0" class="row items-center q-ml-sm gap-xs">
+        <q-chip
+          v-for="tag in tags"
+          :key="tag"
+          :label="tag"
+          color="primary"
+          text-color="white"
+          dense
+          size="sm"
+        />
+      </div>
     </div>
     <div class="node-content q-mt-xs">
       <q-img
@@ -25,7 +26,8 @@
         fit="cover"
       />
       <div class="node-content q-mt-xs node-content-truncated">
-        {{ data.description }}
+        <!-- [CORREGIDO] Añadido valor por defecto para robustez -->
+        {{ description || 'Sin texto' }}
       </div>
     </div>
     <Handle type="target" :position="Position.Top" />
@@ -35,41 +37,38 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-// Importa 'NodeProps' para una mejor integración
-import { Handle, Position, type NodeProps } from '@vue-flow/core';
-// Importa solo el tipo de datos, no el nodo completo
-import { type BookNodeData } from 'src/stores/types';
+import { Handle, Position } from '@vue-flow/core';
 import { useAssetsStore } from 'src/stores/assets-store';
+import type { BookNode } from 'src/stores/types';
 
-// Usa NodeProps, que es el estándar de Vue Flow.
-// Te da acceso a 'id', 'label', 'data', 'position', etc.
-const props = defineProps<NodeProps<BookNodeData>>();
+// [UNIFICADO] Patrón de props opcionales para máxima robustez
+const props = defineProps<{
+  label?: string;
+  description?: string;
+  color?: string;
+  tags?: string[];
+  imageId?: string;
+}>();
 
 const assetsStore = useAssetsStore();
 
 const imageUrl = computed(() => {
-  // Accede a las propiedades personalizadas a través de `props.data`
-  if (!props.data.imageId) {
-    return null;
-  }
-  const asset = assetsStore.getAssetById(props.data.imageId);
+  if (!props.imageId) return null;
+  const asset = assetsStore.getAssetById(props.imageId);
   return asset ? assetsStore.getAssetUrl(asset.filename) : null;
 });
 
 const nodeStyle = computed(() => {
   const style: Record<string, string> = {};
-  if (props.data.color) {
-    style.backgroundColor = props.data.color;
-  }
-  // ... resto de tu lógica de estilos usando props.data.size
+  // Usa el color de la prop, o un color por defecto si no existe.
+  style.backgroundColor = props.color || '#455a64';
   return style;
 });
 </script>
 
-<!-- Los estilos no cambian -->
 <style scoped>
+/* Se elimina la clase estática .book-node-story para permitir el color dinámico */
 .book-node {
-  /* min-width y max-width ahora se controlan por JS */
   padding: 10px;
   border-radius: 8px;
   color: white;
@@ -80,20 +79,15 @@ const nodeStyle = computed(() => {
   transition: background-color 0.3s, min-width 0.3s, max-width 0.3s;
 }
 
-.book-node-story {
-  /* El color de fondo por defecto si no hay uno personalizado */
-  background-color: #455a64;
-}
-
 .node-header {
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Para alinear el chip a la derecha */
+  justify-content: space-between;
   font-size: 0.9rem;
   margin-bottom: 5px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding-bottom: 5px;
-  gap: 8px; /* Espacio entre elementos del header */
+  gap: 8px;
 }
 .node-content {
   white-space: pre-wrap;
@@ -105,11 +99,11 @@ const nodeStyle = computed(() => {
 
 .node-content-truncated {
   display: -webkit-box;
-  -webkit-line-clamp: 3; /* El número de líneas que quieres mostrar */
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
-  word-break: break-word; /* Ayuda a evitar que palabras largas rompan el layout */
+  word-break: break-word;
 }
 
 .vue-flow__handle {
@@ -117,5 +111,9 @@ const nodeStyle = computed(() => {
   height: 10px;
   background: var(--q-primary);
   border: 1px solid white;
+}
+
+.gap-xs {
+  gap: 4px;
 }
 </style>

@@ -199,7 +199,7 @@ void app.whenReady().then(async () => {
 
   ipcMain.handle(
     'get-asset-path',
-    async (event, bookId: string, filename: string) => {
+    (event, bookId: string, filename: string) => {
       if (!bookId || !filename) {
         console.error('[Electron Main] get-asset-path llamado sin bookId o filename.');
         return null;

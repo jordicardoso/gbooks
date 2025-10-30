@@ -101,7 +101,6 @@ import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useLibraryStore } from 'src/stores/library-store';
 import type { Book } from 'src/components/models';
-import type { BookData } from 'src/stores/types';
 import AddBookDialog from 'src/components/AddBookDialog.vue';
 import EditBookDialog from 'src/components/EditBookDialog.vue';
 

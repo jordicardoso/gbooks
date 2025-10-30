@@ -120,7 +120,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useQuasar } from 'quasar';
 import { type Asset } from 'src/stores/types';
 import { useAssetsStore } from 'src/stores/assets-store';

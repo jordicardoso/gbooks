@@ -12,17 +12,16 @@ export interface BookAsset {
   creationDate: string;
 }
 
-// --- TIPOS DEL LIBRO ---
-export interface BookNodeData {
+export interface BookNode extends Node {
+  label: string;
   description: string;
   imageId?: string;
-  tag?: string[];
+  tags?: string[];
   color?: string;
   size?: 'small' | 'medium' | 'large';
 }
 
-export type BookNode = Node<BookNodeData>;
-export type BookEdge = Edge<BookNodeData>;
+export type BookEdge = Edge;
 
 export interface BookMeta {
   title: string;
@@ -43,9 +42,7 @@ export interface BookData {
   meta: BookMeta;
   nodes: BookNode[];
   edges: BookEdge[];
-  assets: Asset[]; // Ahora es un array de objetos Asset completos
-  // characterSheets: CharacterSheet[]; // Ejemplo para el futuro
-  // maps: MapData[]; // Ejemplo para el futuro
+  assets: Asset[];
   variables: BookVariable[];
   viewport: ViewPort;
 }

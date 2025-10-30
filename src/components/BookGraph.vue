@@ -20,13 +20,36 @@
       <Controls />
 
       <template #node-start="props">
-        <BookStartNode v-bind="props" />
+        <BookStartNode
+          :label="props.label"
+          :description="props.data.description"
+          :color="props.data.color"
+          :imageId="props.data.imageId"
+          :tags="props.data.tags"
+          :selected="props.selected"
+        />
       </template>
+
       <template #node-story="props">
-        <BookStoryNode v-bind="props" />
+        <BookStoryNode
+          :label="props.label"
+          :description="props.data.description"
+          :color="props.data.color"
+          :imageId="props.data.imageId"
+          :tags="props.data.tags"
+          :selected="props.selected"
+        />
       </template>
+
       <template #node-end="props">
-        <BookEndNode v-bind="props" />
+        <BookEndNode
+          :label="props.label"
+          :description="props.data.description"
+          :color="props.data.color"
+          :imageId="props.data.imageId"
+          :tags="props.data.tags"
+          :selected="props.selected"
+        />
       </template>
     </VueFlow>
 
@@ -50,43 +73,31 @@
 </template>
 
 <script setup lang="ts">
+// El resto del script no necesita cambios, ya que la lógica es correcta.
 // CSS imports
 import '@vue-flow/core/dist/style.css';
 import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/controls/dist/style.css';
 
 import { ref, nextTick, computed } from 'vue';
-import {
-  VueFlow,
-  useVueFlow,
-  Connection,
-  NodeChange,
-  EdgeChange,
-  NodeMouseEvent,
-  applyNodeChanges, // ¡Importado!
-  applyEdgeChanges, // ¡Importado!
-  FlowEvents,
-} from '@vue-flow/core';
+import { VueFlow, useVueFlow, applyNodeChanges, applyEdgeChanges } from '@vue-flow/core';
+import type { Connection, NodeChange, EdgeChange, NodeMouseEvent, FlowEvents, Viewport } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 import { Controls } from '@vue-flow/controls';
 import { MiniMap } from '@vue-flow/minimap';
 import { useNodesStore } from 'src/stores/nodes-store';
-import { storeToRefs } from 'pinia'; // ¡Importante!
-import ContextMenu, { type MenuItem } from './ContextMenu.vue';
+import { storeToRefs } from 'pinia';
+import ContextMenu from './ContextMenu.vue';
+import type { MenuItem } from './ContextMenu.vue';
 import BookStartNode from './BookStartNode.vue';
 import BookStoryNode from './BookStoryNode.vue';
 import BookEndNode from './BookEndNode.vue';
 import NodeEditorPanel from './NodeEditorPanel.vue';
-import { type BookNode } from 'src/stores/types';
+import type { BookNode } from 'src/stores/types';
 
 const nodesStore = useNodesStore();
-
-// --- LA MAGIA DE storeToRefs ---
-// `nodes` y `edges` ahora son refs reactivas directamente conectadas al store.
-// Cuando el store cambie, estos refs se actualizarán automáticamente.
 const { nodes, edges, viewport } = storeToRefs(nodesStore);
-
-const { addEdges, project } = useVueFlow();
+const { project } = useVueFlow();
 
 // --- State para la UI (sin cambios) ---
 const isMenuOpen = ref(false);
@@ -97,7 +108,6 @@ const lastPaneMenuEvent = ref<MouseEvent | null>(null);
 
 // --- Propiedades Computadas (ahora leen directamente del ref del store) ---
 const hasStartNode = computed(() => nodes.value.some((node) => node.type === 'start'));
-
 const contextMenuItems = computed<MenuItem[]>(() => {
   if (!hasStartNode.value) {
     return [{ action: 'add-start-node', label: 'Crear Nodo Inicial', icon: 'play_arrow', color: 'positive' }];
@@ -108,33 +118,32 @@ const contextMenuItems = computed<MenuItem[]>(() => {
   ];
 });
 
-// --- Ya no se necesita el `watch` en `bookStore.activeBook` ---
-
-// --- Handlers de Vue Flow (ahora llaman a acciones del store) ---
 function onNodesChange(changes: NodeChange[]) {
-  const newNodes = applyNodeChanges(changes, nodes.value);
-  nodesStore.updateNodes(newNodes);
+  nodesStore.applyNodeChanges(changes);
 }
 
 function onEdgesChange(changes: EdgeChange[]) {
-  const newEdges = applyEdgeChanges(changes, edges.value);
-  nodesStore.updateEdges(newEdges);
+  nodesStore.applyEdgeChanges(changes);
 }
 
 function onConnect(params: Connection) {
-  addEdges([params]); // Esto dispara onEdgesChange, que actualiza el store.
+  nodesStore.addConnection(params);
 }
+
+function onMoveEnd(viewport: Viewport | undefined) {
+  if (viewport) {
+    nodesStore.updateViewport(viewport);
+  }
+}
+
 
 function onMove(flowEvent: FlowEvents['move']) {
   viewport.value = flowEvent;
 }
 
-function onMoveEnd() {
-  nodesStore.updateViewport(viewport.value);
-}
-
 // --- Handlers de UI (simplificados) ---
 function onNodeClick(event: NodeMouseEvent) {
+  // El `event.node` aquí es el objeto aplanado original, por eso el editor funciona.
   selectedNode.value = event.node as BookNode;
   isEditorOpen.value = true;
   isMenuOpen.value = false;
@@ -145,8 +154,13 @@ function handleEditorClose() {
   selectedNode.value = null;
 }
 
-function handleEditorSave({ nodeId, updates }: { nodeId: string; updates: Partial<BookNode['data']> }) {
-  nodesStore.updateNode(nodeId, updates);
+function handleEditorSave(payload: {
+  nodeId: string;
+  updates: Partial<Omit<BookNode, 'id' | 'position'>>;
+}) {
+  nodesStore.updateNode(payload.nodeId, payload.updates);
+
+  handleEditorClose();
 }
 
 function onPaneContextMenu(event: MouseEvent) {

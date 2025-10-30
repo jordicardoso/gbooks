@@ -1,9 +1,11 @@
 // src/stores/nodes-store.ts
 
 import { defineStore } from 'pinia';
+import { applyNodeChanges, applyEdgeChanges, addEdge } from '@vue-flow/core';
+import type { Node, Edge, Connection, NodeChange, EdgeChange, Viewport } from '@vue-flow/core';
 import { uid } from 'quasar';
 import { useBookStore } from './book-store';
-import type { BookNode, BookEdge, BookData, Viewport } from './types';
+import type { BookNode, BookEdge } from './types';
 
 export interface NodesState {
   nodes: BookNode[];
@@ -19,9 +21,18 @@ export const useNodesStore = defineStore('nodes', {
   }),
 
   actions: {
-    setBookData(data: BookData) {
-      this.nodes = data.nodes || [];
-      this.edges = data.edges || [];
+    applyNodeChanges(changes: NodeChange[]) {
+      this.nodes = applyNodeChanges(changes, this.nodes);
+      useBookStore().setDirty();
+    },
+    applyEdgeChanges(changes: EdgeChange[]) {
+      this.edges = applyEdgeChanges(changes, this.edges);
+      useBookStore().setDirty();
+    },
+
+    addConnection(connection: Connection) {
+      this.edges = addEdge(connection, this.edges);
+      useBookStore().setDirty();
     },
 
     setElements(nodes: BookNode[], edges: BookEdge[], viewport?: Viewport) {
@@ -47,52 +58,33 @@ export const useNodesStore = defineStore('nodes', {
         type: payload.type,
         position: payload.position,
         label: `Nuevo Nodo ${this.nodes.length + 1}`,
-        data: { description: 'Nuevo nodo de historia...' },
+        description: 'Escribe aquí el párrafo...',
+        color: payload.type === 'start' ? '#388e3c' : (payload.type === 'end' ? '#d32f2f' : '#455a64'),
+        tags: [],
+        size: 'medium'
       };
 
       this.nodes.push(newNode);
       useBookStore().setDirty();
     },
 
-    updateNode(nodeId: string, updates: { label?: string; data?: Partial<BookNode['data']> }) {
+    updateNode(nodeId: string, updates: Partial<Omit<BookNode, 'id' | 'position'>>) {
       const nodeIndex = this.nodes.findIndex((n) => n.id === nodeId);
 
       if (nodeIndex > -1) {
-        const oldNode = this.nodes[nodeIndex];
-
-        // 1. Creamos un objeto de nodo completamente nuevo
-        const newNode: BookNode = {
-          ...oldNode, // Copiamos todas las propiedades antiguas
-          // 2. Sobrescribimos las que han cambiado
-          label: updates.label ?? oldNode.label, // Si `updates.label` es undefined, mantenemos el antiguo
-          data: {
-            ...oldNode.data, // Copiamos los datos antiguos
-            ...(updates.data || {}), // Sobrescribimos con los nuevos datos
-          },
+        // [CORRECCIÓN FINAL] La lógica de actualización ahora es mucho más simple.
+        this.nodes[nodeIndex] = {
+          ...this.nodes[nodeIndex],
+          ...updates,
         };
 
-        // 3. Reemplazamos el objeto antiguo por el nuevo en el array.
-        // ¡Esta es la operación que dispara la reactividad de Vue!
-        this.nodes[nodeIndex] = newNode;
-
-        // 4. Notificamos que hay cambios para guardar
         useBookStore().setDirty();
       }
-    },
-
-    updateNodes(nodes: BookNode[]) {
-      this.nodes = nodes;
-      useBookStore().setDirty();
-    },
-
-    updateEdges(edges: BookEdge[]) {
-      this.edges = edges;
-      useBookStore().setDirty();
     },
 
     updateViewport(viewport: Viewport) {
       this.viewport = viewport;
       useBookStore().setDirty();
-    }
+    },
   },
 });

@@ -1,9 +1,9 @@
 // src/stores/book-store.ts
 
 import { defineStore } from 'pinia';
-import { useNodesStore } from './nodes-store'; // Importamos los stores módulo
+import { useNodesStore } from './nodes-store';
 import { useAssetsStore } from './assets-store';
-import type { BookData, BookMeta } from './types'; // Importamos tipos
+import type { BookData, BookNode } from './types';
 
 let debounceSaveTimer: NodeJS.Timeout | null = null;
 
@@ -14,7 +14,10 @@ export interface BookState {
   isDirty: boolean;
 }
 
-// La función de validación ahora es más simple
+/**
+ * [MEJORA] Valida, repara y migra los datos del libro a la estructura más reciente.
+ * Esta función ahora también se encarga de "aplanar" los nodos que vienen con la estructura antigua.
+ */
 function validateAndRepairBookData(data: any): BookData {
   const defaults: BookData = {
     meta: { title: 'Sin Título', description: '', author: '' },
@@ -24,10 +27,29 @@ function validateAndRepairBookData(data: any): BookData {
     variables: [],
     viewport: { x: 0, y: 0, zoom: 1 },
   };
+
   if (!data || typeof data !== 'object') return defaults;
+
+  // 1. Validar y obtener los nodos, usando los por defecto si no existen.
+  const nodesToMigrate = Array.isArray(data.nodes) ? data.nodes : defaults.nodes;
+
+  // 2. [CLAVE] Mapear cada nodo para asegurar la estructura aplanada.
+  const migratedNodes: BookNode[] = nodesToMigrate.map((node: any) => {
+    // Si el nodo tiene un objeto 'data', es la estructura antigua.
+    if (node && node.data && typeof node.data === 'object') {
+      const { data: nodeData, ...restOfNode } = node;
+      // Fusionamos las propiedades de 'data' en el nivel superior del nodo.
+      // Las propiedades de 'restOfNode' (id, type, position) prevalecen si hay conflicto.
+      return { ...nodeData, ...restOfNode };
+    }
+    // Si no, asumimos que ya tiene la estructura correcta.
+    return node;
+  });
+
+  // 3. Devolver la estructura del libro completa con los nodos ya migrados.
   return {
     meta: { ...defaults.meta, ...data.meta },
-    nodes: Array.isArray(data.nodes) ? data.nodes : defaults.nodes,
+    nodes: migratedNodes,
     edges: Array.isArray(data.edges) ? data.edges : defaults.edges,
     assets: Array.isArray(data.assets) ? data.assets : defaults.assets,
     variables: Array.isArray(data.variables) ? data.variables : defaults.variables,
@@ -53,20 +75,18 @@ export const useBookStore = defineStore('book', {
 
       try {
         const content = await window.electronAPI.loadBook(bookId);
+        // Ahora esta función también migra los datos a la última versión.
         const bookData = validateAndRepairBookData(JSON.parse(content));
 
         this.activeBook = bookData;
         this.activeBookId = bookId;
 
-        // --- DISTRIBUCIÓN DE DATOS ---
         const nodesStore = useNodesStore();
         const assetsStore = useAssetsStore();
 
-        nodesStore.setElements(bookData.nodes, bookData.edges);
+        // [CORREGIDO] Pasamos también el viewport al store de nodos.
+        nodesStore.setElements(bookData.nodes, bookData.edges, bookData.viewport);
         assetsStore.setAssets(bookId, bookData.assets);
-        // Aquí llamarías a otros stores:
-        // characterStore.setCharacters(bookData.characterSheets);
-        // mapsStore.setMaps(bookData.maps);
 
       } catch (error) {
         console.error(`Error al cargar el libro con ID "${bookId}":`, error);
@@ -77,9 +97,6 @@ export const useBookStore = defineStore('book', {
       }
     },
 
-    /**
-     * Recolecta los datos de todos los stores y guarda el libro.
-     */
     async saveCurrentBook() {
       if (debounceSaveTimer) clearTimeout(debounceSaveTimer);
 
@@ -88,16 +105,17 @@ export const useBookStore = defineStore('book', {
       }
       this.isLoading = true;
       try {
-        // --- RECOLECCIÓN DE DATOS ---
         const nodesStore = useNodesStore();
         const assetsStore = useAssetsStore();
 
+        // La recolección de datos ya es correcta, ya que los stores
+        // internos siempre trabajan con la estructura aplanada.
         this.activeBook.nodes = nodesStore.nodes;
         this.activeBook.edges = nodesStore.edges;
         this.activeBook.assets = assetsStore.assets;
         this.activeBook.viewport = nodesStore.viewport;
-        // Aquí recolectarías de otros stores...
-        console.log(this.activeBook);
+
+        console.log('Guardando libro con estructura aplanada:', this.activeBook);
         const content = JSON.stringify(this.activeBook, null, 2);
         await window.electronAPI.saveBook(this.activeBookId, content);
         this.isDirty = false;
@@ -110,22 +128,15 @@ export const useBookStore = defineStore('book', {
       }
     },
 
-    /**
-     * Limpia este store y notifica a los demás para que se limpien.
-     */
     clearBook() {
       this.activeBook = null;
       this.activeBookId = null;
       this.isDirty = false;
 
-      // Notifica a los stores módulo para que limpien su estado
       useNodesStore().clearElements();
       useAssetsStore().clearAssets();
     },
 
-    /**
-     * Marca el libro como "sucio". Esta acción será llamada por los stores módulo.
-     */
     setDirty() {
       if (!this.isDirty) {
         this.isDirty = true;
@@ -134,8 +145,6 @@ export const useBookStore = defineStore('book', {
       if (debounceSaveTimer) {
         clearTimeout(debounceSaveTimer);
       }
-
-      // 2. Programamos un nuevo guardado para dentro de 1500ms (1.5 segundos).
       debounceSaveTimer = setTimeout(() => {
         this.saveCurrentBook();
       }, 1500);
