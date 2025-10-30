@@ -14,10 +14,6 @@ export interface BookState {
   isDirty: boolean;
 }
 
-/**
- * [MEJORA] Valida, repara y migra los datos del libro a la estructura más reciente.
- * Esta función ahora también se encarga de "aplanar" los nodos que vienen con la estructura antigua.
- */
 function validateAndRepairBookData(data: any): BookData {
   const defaults: BookData = {
     meta: { title: 'Sin Título', description: '', author: '' },
@@ -30,23 +26,36 @@ function validateAndRepairBookData(data: any): BookData {
 
   if (!data || typeof data !== 'object') return defaults;
 
-  // 1. Validar y obtener los nodos, usando los por defecto si no existen.
   const nodesToMigrate = Array.isArray(data.nodes) ? data.nodes : defaults.nodes;
 
-  // 2. [CLAVE] Mapear cada nodo para asegurar la estructura aplanada.
+  // 🔧 Convertir cada nodo para que sus propiedades extra estén dentro de `data`
   const migratedNodes: BookNode[] = nodesToMigrate.map((node: any) => {
-    // Si el nodo tiene un objeto 'data', es la estructura antigua.
-    if (node && node.data && typeof node.data === 'object') {
-      const { data: nodeData, ...restOfNode } = node;
-      // Fusionamos las propiedades de 'data' en el nivel superior del nodo.
-      // Las propiedades de 'restOfNode' (id, type, position) prevalecen si hay conflicto.
-      return { ...nodeData, ...restOfNode };
-    }
-    // Si no, asumimos que ya tiene la estructura correcta.
-    return node;
+    if (!node) return node;
+
+    // Si el nodo ya tiene un `data`, lo dejamos igual
+    if (node.data && typeof node.data === 'object') return node;
+
+    // Extraemos las propiedades que deben ir dentro de `data`
+    const {
+      id,
+      type,
+      position,
+      label,
+      selected,
+      // todo lo demás se agrupa en "rest"
+      ...rest
+    } = node;
+
+    return {
+      id,
+      type,
+      position,
+      label,
+      selected: !!selected,
+      data: { ...rest }, // ← aquí van color, description, imageId, etc.
+    };
   });
 
-  // 3. Devolver la estructura del libro completa con los nodos ya migrados.
   return {
     meta: { ...defaults.meta, ...data.meta },
     nodes: migratedNodes,

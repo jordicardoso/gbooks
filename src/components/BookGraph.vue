@@ -12,7 +12,6 @@
       @move-end="onMoveEnd"
       @pane-context-menu="onPaneContextMenu"
       @node-click="onNodeClick"
-      @move="onMove"
     >
       <Background />
       <MiniMap />
@@ -20,33 +19,24 @@
 
       <template #node-start="props">
         <BookStartNode
+          v-bind="props.data"
           :label="props.label"
-          :description="props.description"
-          :color="props.color"
-          :imageId="props.imageId"
-          :tags="props.tags"
           :selected="props.selected"
         />
       </template>
 
       <template #node-story="props">
         <BookStoryNode
+          v-bind="props.data"
           :label="props.label"
-          :description="props.data.description"
-          :color="props.data.color"
-          :imageId="props.data.imageId"
-          :tags="props.data.tags"
           :selected="props.selected"
         />
       </template>
 
       <template #node-end="props">
         <BookEndNode
+          v-bind="props.data"
           :label="props.label"
-          :description="props.data.description"
-          :color="props.data.color"
-          :imageId="props.data.imageId"
-          :tags="props.data.tags"
           :selected="props.selected"
         />
       </template>
@@ -135,11 +125,6 @@ function onMoveEnd(viewport: Viewport | undefined) {
   if (viewport) {
     nodesStore.updateViewport(viewport);
   }
-}
-
-
-function onMove(flowEvent: FlowEvents['move']) {
-  viewport.value = flowEvent;
 }
 
 // --- Handlers de UI (simplificados) ---
