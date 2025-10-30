@@ -1,7 +1,7 @@
 // src/boot/library-persistence.ts
 
 import { boot } from 'quasar/wrappers';
-import { useLibraryStore, LibraryState } from 'src/stores/library-store';
+import type { useLibraryStore, LibraryState } from 'src/stores/library-store';
 import { watch } from 'vue';
 
 export default boot(async ({ store }) => {

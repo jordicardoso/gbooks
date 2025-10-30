@@ -14,7 +14,6 @@
       @node-click="onNodeClick"
       @move="onMove"
     >
-      <!-- ... componentes de VueFlow ... -->
       <Background />
       <MiniMap />
       <Controls />
@@ -22,10 +21,10 @@
       <template #node-start="props">
         <BookStartNode
           :label="props.label"
-          :description="props.data.description"
-          :color="props.data.color"
-          :imageId="props.data.imageId"
-          :tags="props.data.tags"
+          :description="props.description"
+          :color="props.color"
+          :imageId="props.imageId"
+          :tags="props.tags"
           :selected="props.selected"
         />
       </template>
@@ -98,6 +97,8 @@ import type { BookNode } from 'src/stores/types';
 const nodesStore = useNodesStore();
 const { nodes, edges, viewport } = storeToRefs(nodesStore);
 const { project } = useVueFlow();
+
+console.log('Nodos en BookGraph:', JSON.parse(JSON.stringify(nodesStore.nodes)));
 
 // --- State para la UI (sin cambios) ---
 const isMenuOpen = ref(false);
