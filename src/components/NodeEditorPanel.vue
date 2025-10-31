@@ -150,9 +150,7 @@ const editedColor = ref('');
 const editedSize = ref<'small' | 'medium' | 'large'>('medium');
 const allTagsOptions = ref<string[]>([]);
 
-// --- PROPIEDADES COMPUTADAS ---
-
-// [CORREGIDO] Obtiene todas las etiquetas únicas de todos los nodos del libro.
+// Obtiene todas las etiquetas únicas de todos los nodos del libro.
 const allBookTags = computed(() => {
   const all = nodes.value.flatMap(node => node.tags || []);
   return [...new Set(all)];
@@ -191,15 +189,15 @@ function createTag(inputValue: string, doneFn: (item: string, mode: 'add-unique'
 function resetAndLoadNode(node: BookNode | null) {
   if (node) {
     editedLabel.value = node.label || '';
-    editedDescription.value = node.description || '';
-    editedImageId.value = node.imageId || null;
-    editedTags.value = [...(node.tags || [])];
-    editedColor.value = node.color || '';
-    editedSize.value = node.size || 'medium';
-    // Asegura que las opciones incluyan todas las etiquetas del libro más las del nodo actual.
+    editedDescription.value = node.data.description || '';
+    editedImageId.value = node.data.imageId || null;
+    editedTags.value = [...(node.data.tags || [])];
+    editedColor.value = node.data.color || '';
+    editedSize.value = node.data.size || 'medium';
+
     allTagsOptions.value = [...new Set([...allBookTags.value, ...editedTags.value])];
   } else {
-    // Resetea el formulario a sus valores por defecto.
+
     editedLabel.value = '';
     editedDescription.value = '';
     editedImageId.value = null;
@@ -210,23 +208,24 @@ function resetAndLoadNode(node: BookNode | null) {
   }
 }
 
-// Guarda los cambios y emite los eventos correspondientes.
 function saveChanges() {
   if (props.node) {
-    // Creamos un único objeto de actualizaciones.
-    const updates: Partial<Omit<BookNode, 'id' | 'position'>> = {
+    // Creamos un objeto de actualizaciones que coincide con la estructura de BookNode.
+    const updates = {
       label: editedLabel.value,
-      description: editedDescription.value,
-      imageId: editedImageId.value || undefined,
-      tags: editedTags.value.length > 0 ? editedTags.value : undefined,
-      color: editedColor.value || undefined,
-      size: editedSize.value,
+      data: {
+        description: editedDescription.value,
+        imageId: editedImageId.value || undefined,
+        tags: editedTags.value.length > 0 ? editedTags.value : undefined,
+        color: editedColor.value || undefined,
+        size: editedSize.value,
+      }
     };
 
-    // Emitimos un payload más simple.
+    // Emitimos el payload para que el store lo procese.
     emit('save', {
       nodeId: props.node.id,
-      updates: updates, // El objeto de actualizaciones es plano
+      updates: updates,
     });
     emit('close');
   }

@@ -33,7 +33,8 @@
     <q-separator />
 
     <!-- Paneles de contenido para cada pestaña -->
-    <q-tab-panels v-model="tab" animated class="col bg-blue-grey-10">
+    <!-- [!code focus:2] ESTE ES EL CAMBIO CLAVE: Añadimos 'keep-alive' -->
+    <q-tab-panels v-model="tab" animated keep-alive class="col bg-blue-grey-10">
       <!-- Panel de Diseño (Grafo) -->
       <q-tab-panel name="design" class="q-pa-none">
         <BookGraph

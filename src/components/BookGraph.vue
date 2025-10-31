@@ -2,8 +2,10 @@
 <template>
   <div class="fit absolute">
     <VueFlow
+      v-if="isGraphReady"
       :nodes="nodes"
       :edges="edges"
+      :viewport="viewport"
       :min-zoom="0.2"
       :max-zoom="4"
       @nodes-change="onNodesChange"
@@ -68,9 +70,9 @@ import '@vue-flow/core/dist/style.css';
 import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/controls/dist/style.css';
 
-import { ref, nextTick, computed } from 'vue';
-import { VueFlow, useVueFlow, applyNodeChanges, applyEdgeChanges } from '@vue-flow/core';
-import type { Connection, NodeChange, EdgeChange, NodeMouseEvent, FlowEvents, Viewport } from '@vue-flow/core';
+import { ref, nextTick, computed, onMounted } from 'vue';
+import { VueFlow, useVueFlow } from '@vue-flow/core';
+import type { Connection, NodeChange, EdgeChange, NodeMouseEvent, Viewport } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 import { Controls } from '@vue-flow/controls';
 import { MiniMap } from '@vue-flow/minimap';
@@ -88,16 +90,16 @@ const nodesStore = useNodesStore();
 const { nodes, edges, viewport } = storeToRefs(nodesStore);
 const { project } = useVueFlow();
 
+const isGraphReady = ref(false);
+
 console.log('Nodos en BookGraph:', JSON.parse(JSON.stringify(nodesStore.nodes)));
 
-// --- State para la UI (sin cambios) ---
 const isMenuOpen = ref(false);
 const menuPosition = ref({ x: 0, y: 0 });
 const isEditorOpen = ref(false);
 const selectedNode = ref<BookNode | null>(null);
 const lastPaneMenuEvent = ref<MouseEvent | null>(null);
 
-// --- Propiedades Computadas (ahora leen directamente del ref del store) ---
 const hasStartNode = computed(() => nodes.value.some((node) => node.type === 'start'));
 const contextMenuItems = computed<MenuItem[]>(() => {
   if (!hasStartNode.value) {
@@ -107,6 +109,14 @@ const contextMenuItems = computed<MenuItem[]>(() => {
     { action: 'add-story-node', label: 'Crear Nodo de Historia', icon: 'article' },
     { action: 'add-end-node', label: 'Crear Nodo Final', icon: 'flag', color: 'negative' },
   ];
+});
+
+onMounted(() => {
+  nodesStore.init();
+  nextTick(() => {
+    isGraphReady.value = true;
+    console.log('[LOG BookGraph] El grafo está listo para renderizarse.');
+  });
 });
 
 function onNodesChange(changes: NodeChange[]) {
@@ -121,15 +131,14 @@ function onConnect(params: Connection) {
   nodesStore.addConnection(params);
 }
 
-function onMoveEnd(viewport: Viewport | undefined) {
-  if (viewport) {
-    nodesStore.updateViewport(viewport);
+function onMoveEnd(event: Viewport | undefined) {
+  if (event) {
+    console.log('[LOG BookGraph] Move End detectado. Llamando a la acción updateViewport con:', event);
+    nodesStore.updateViewport(event);
   }
 }
 
-// --- Handlers de UI (simplificados) ---
 function onNodeClick(event: NodeMouseEvent) {
-  // El `event.node` aquí es el objeto aplanado original, por eso el editor funciona.
   selectedNode.value = event.node as BookNode;
   isEditorOpen.value = true;
   isMenuOpen.value = false;
@@ -145,7 +154,6 @@ function handleEditorSave(payload: {
   updates: Partial<Omit<BookNode, 'id' | 'position'>>;
 }) {
   nodesStore.updateNode(payload.nodeId, payload.updates);
-
   handleEditorClose();
 }
 

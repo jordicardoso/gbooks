@@ -21,12 +21,25 @@ export const useNodesStore = defineStore('nodes', {
   }),
 
   actions: {
+    init() {
+      this.$subscribe((mutation) => {
+        if (mutation.type === 'patch object' && mutation.payload.viewport) {
+          return;
+        }
+        console.log('[LOG nodes-store] Store ha cambiado:', {
+          type: mutation.type,
+          storeId: mutation.storeId,
+          payload: mutation.payload,
+        });
+      });
+      console.log('[LOG nodes-store] Store inicializado y suscrito a cambios.');
+    },
     setElements(nodes: BookNode[], edges: BookEdge[], viewport?: Viewport) {
+      console.log('[LOG nodes-store] setElements llamado con:', { numNodes: nodes.length, numEdges: edges.length, viewport });
       this.nodes = nodes;
       this.edges = edges;
       this.viewport = viewport || { x: 0, y: 0, zoom: 1 };
     },
-
     clearElements() {
       this.nodes = [];
       this.edges = [];
@@ -75,7 +88,6 @@ export const useNodesStore = defineStore('nodes', {
 
       const baseNode = {
         id: uid(),
-        position,
         label: `Nuevo Nodo`,
         data: {
           description: '',
