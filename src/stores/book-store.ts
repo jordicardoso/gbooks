@@ -117,15 +117,14 @@ export const useBookStore = defineStore('book', {
         const nodesStore = useNodesStore();
         const assetsStore = useAssetsStore();
 
-        // [MEJORA] Aplanar la estructura de nodos antes de guardar.
-        // Esto hace que el formato de guardado sea limpio e independiente de la librería.
         const flattenedNodes = nodesStore.nodes.map(node => {
           const { data, ...restOfNode } = node;
           return { ...restOfNode, ...data };
         });
 
         const bookToSave: BookData = {
-          ...this.activeBook,
+          meta: this.activeBook.meta,
+          variables: this.activeBook.variables,
           nodes: flattenedNodes,
           edges: nodesStore.edges,
           assets: assetsStore.assets,
@@ -135,6 +134,9 @@ export const useBookStore = defineStore('book', {
         console.log('Guardando libro con estructura aplanada:', bookToSave);
         const content = JSON.stringify(bookToSave, null, 2);
         await window.electronAPI.saveBook(this.activeBookId, content);
+
+        this.activeBook = bookToSave;
+
         this.isDirty = false;
         console.log(`Libro "${this.activeBookId}" guardado.`);
       } catch (error) {
