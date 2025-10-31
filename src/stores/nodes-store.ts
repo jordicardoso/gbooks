@@ -33,6 +33,7 @@ export const useNodesStore = defineStore('nodes', {
         });
       });
       console.log('[LOG nodes-store] Store inicializado y suscrito a cambios.');
+      useBookStore().setDirty();
     },
     setElements(nodes: BookNode[], edges: BookEdge[], viewport?: Viewport) {
       console.log('[LOG nodes-store] setElements llamado con:', { numNodes: nodes.length, numEdges: edges.length, viewport });
@@ -47,30 +48,8 @@ export const useNodesStore = defineStore('nodes', {
     },
 
     updateViewport(viewport: Viewport) {
+      console.log('[LOG nodes-store] 2. Actualizando viewport en el store.', viewport);
       this.viewport = viewport;
-      useBookStore().setDirty();
-    },
-
-    applyNodeChanges(changes: NodeChange[]) {
-      const removedNodeIds = new Set(
-        changes
-          .filter((change): change is { type: 'remove'; id: string } => change.type === 'remove')
-          .map(change => change.id)
-      );
-
-      this.nodes = applyNodeChanges(changes, this.nodes);
-
-      if (removedNodeIds.size > 0) {
-        this.edges = this.edges.filter(edge =>
-          !removedNodeIds.has(edge.source) && !removedNodeIds.has(edge.target)
-        );
-      }
-
-      useBookStore().setDirty();
-    },
-
-    applyEdgeChanges(changes: EdgeChange[]) {
-      this.edges = applyEdgeChanges(changes, this.edges);
       useBookStore().setDirty();
     },
 

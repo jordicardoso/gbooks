@@ -125,7 +125,7 @@ export const useBookStore = defineStore('book', {
         const bookToSave: BookData = {
           meta: this.activeBook.meta,
           variables: this.activeBook.variables,
-          nodes: flattenedNodes,
+          nodes: nodesStore.nodes,
           edges: nodesStore.edges,
           assets: assetsStore.assets,
           viewport: nodesStore.viewport,

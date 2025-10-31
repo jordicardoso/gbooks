@@ -198,7 +198,6 @@ watch(() => props.id, (newBookId) => {
 
 // Limpia los stores cuando el componente se destruye (al salir de la página)
 onUnmounted(() => {
-  // Opcional: auto-guardar al salir
   if (bookStore.isDirty) {
     void bookStore.saveCurrentBook();
   }

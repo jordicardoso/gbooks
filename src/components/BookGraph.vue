@@ -3,13 +3,11 @@
   <div class="fit absolute">
     <VueFlow
       v-if="isGraphReady"
-      :nodes="nodes"
-      :edges="edges"
+      v-model:nodes="nodes"
+      v-model:edges="edges"
       :viewport="viewport"
       :min-zoom="0.2"
       :max-zoom="4"
-      @nodes-change="onNodesChange"
-      @edges-change="onEdgesChange"
       @connect="onConnect"
       @move-end="onMoveEnd"
       @pane-context-menu="onPaneContextMenu"
@@ -113,19 +111,12 @@ const contextMenuItems = computed<MenuItem[]>(() => {
 
 onMounted(() => {
   nodesStore.init();
+
   nextTick(() => {
     isGraphReady.value = true;
     console.log('[LOG BookGraph] El grafo está listo para renderizarse.');
   });
 });
-
-function onNodesChange(changes: NodeChange[]) {
-  nodesStore.applyNodeChanges(changes);
-}
-
-function onEdgesChange(changes: EdgeChange[]) {
-  nodesStore.applyEdgeChanges(changes);
-}
 
 function onConnect(params: Connection) {
   nodesStore.addConnection(params);
