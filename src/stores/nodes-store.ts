@@ -26,14 +26,12 @@ export const useNodesStore = defineStore('nodes', {
         if (mutation.type === 'patch object' && mutation.payload.viewport) {
           return;
         }
-        console.log('[LOG nodes-store] Store ha cambiado:', {
-          type: mutation.type,
-          storeId: mutation.storeId,
-          payload: mutation.payload,
-        });
-      });
+
+        console.log('[LOG nodes-store] Store ha cambiado, marcando como sucio.');
+        useBookStore().setDirty();
+      }, { detached: true }); // 'detached: true' es una buena práctica para que la suscripción sobreviva a los cambios de pestaña.
+
       console.log('[LOG nodes-store] Store inicializado y suscrito a cambios.');
-      useBookStore().setDirty();
     },
     setElements(nodes: BookNode[], edges: BookEdge[], viewport?: Viewport) {
       console.log('[LOG nodes-store] setElements llamado con:', { numNodes: nodes.length, numEdges: edges.length, viewport });
@@ -62,31 +60,24 @@ export const useNodesStore = defineStore('nodes', {
     },
 
     createNode(options: { position: { x: number; y: number }; type: string }) {
-      const { position, type } = options;
-      let newNode: BookNode;
+      if (options.type === 'start' && this.nodes.some(n => n.type === 'start')) {
+        console.warn('Intento de crear un segundo nodo inicial. Operación cancelada.');
+        return;
+      }
 
-      const baseNode = {
+      // Esta implementación ya es correcta y ahora coincide con el tipo BookNode actualizado.
+      const newNode: BookNode = {
         id: uid(),
-        label: `Nuevo Nodo`,
+        type: options.type,
+        position: options.position,
+        label: `Nuevo Nodo ${this.nodes.length + 1}`,
         data: {
-          description: '',
-          imageId: null,
+          description: 'Escribe aquí el párrafo...',
+          color: options.type === 'start' ? '#388e3c' : (options.type === 'end' ? '#d32f2f' : '#455a64'),
           tags: [],
-          size: 'medium' as const,
+          size: 'medium'
         }
       };
-
-      switch (type) {
-        case 'start':
-          newNode = { ...baseNode, type: 'start', color: '#388e3c' };
-          break;
-        case 'end':
-          newNode = { ...baseNode, type: 'end', color: '#c62828' };
-          break;
-        default:
-          newNode = { ...baseNode, type: 'story', color: '#455a64' };
-          break;
-      }
 
       this.nodes.push(newNode);
       useBookStore().setDirty();

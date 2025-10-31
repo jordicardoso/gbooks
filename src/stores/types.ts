@@ -42,7 +42,7 @@ export interface BookData {
   meta: BookMeta;
   nodes: BookNode[];
   edges: BookEdge[];
-  assets: Asset[];
+  assets: BookAsset[];
   variables: BookVariable[];
   viewport: ViewPort;
 }

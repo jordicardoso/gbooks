@@ -5,13 +5,12 @@ import { useNodesStore } from './nodes-store';
 import { useAssetsStore } from './assets-store';
 import type { BookData, BookNode } from './types';
 
-let debounceSaveTimer: NodeJS.Timeout | null = null;
-
 export interface BookState {
   activeBook: BookData | null;
   activeBookId: string | null;
   isLoading: boolean;
   isDirty: boolean;
+  debounceSaveTimer: NodeJS.Timeout | null;
 }
 
 function validateAndRepairBookData(data: any): BookData {
@@ -72,6 +71,7 @@ export const useBookStore = defineStore('book', {
     activeBookId: null,
     isLoading: false,
     isDirty: false,
+    debounceSaveTimer: null,
   }),
 
   actions: {
@@ -80,7 +80,7 @@ export const useBookStore = defineStore('book', {
       this.isLoading = true;
       this.isDirty = false;
 
-      if (debounceSaveTimer) clearTimeout(debounceSaveTimer);
+      if (this.debounceSaveTimer) clearTimeout(this.debounceSaveTimer);
 
       try {
         const content = await window.electronAPI.loadBook(bookId);
@@ -107,7 +107,7 @@ export const useBookStore = defineStore('book', {
     },
 
     async saveCurrentBook() {
-      if (debounceSaveTimer) clearTimeout(debounceSaveTimer);
+      if (this.debounceSaveTimer) clearTimeout(this.debounceSaveTimer);
 
       if (!this.activeBook || !this.activeBookId || !this.isDirty) {
         return;
@@ -116,11 +116,6 @@ export const useBookStore = defineStore('book', {
       try {
         const nodesStore = useNodesStore();
         const assetsStore = useAssetsStore();
-
-        const flattenedNodes = nodesStore.nodes.map(node => {
-          const { data, ...restOfNode } = node;
-          return { ...restOfNode, ...data };
-        });
 
         const bookToSave: BookData = {
           meta: this.activeBook.meta,
@@ -148,6 +143,9 @@ export const useBookStore = defineStore('book', {
     },
 
     clearBook() {
+      if (this.debounceSaveTimer) clearTimeout(this.debounceSaveTimer);
+      this.debounceSaveTimer = null;
+
       this.activeBook = null;
       this.activeBookId = null;
       this.isDirty = false;
@@ -161,10 +159,10 @@ export const useBookStore = defineStore('book', {
         this.isDirty = true;
         console.log("Book store is now dirty. Changes pending save.");
       }
-      if (debounceSaveTimer) {
-        clearTimeout(debounceSaveTimer);
+      if (this.debounceSaveTimer) {
+        clearTimeout(this.debounceSaveTimer);
       }
-      debounceSaveTimer = setTimeout(() => {
+      this.debounceSaveTimer = setTimeout(() => {
         this.saveCurrentBook();
       }, 1500);
     },
