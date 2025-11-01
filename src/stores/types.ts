@@ -1,6 +1,6 @@
 // src/stores/types.ts
 
-import type { Node, Edge, ViewPort } from '@vue-flow/core';
+import type { Node, Edge, ViewPort as VueFlowViewport } from '@vue-flow/core';
 
 // --- TIPOS DE ASSETS ---
 export interface BookAsset {
@@ -12,6 +12,28 @@ export interface BookAsset {
   creationDate: string;
 }
 
+export interface EdgeActionCondition {
+  type: 'dice' | 'stat' | 'flag'; // Tipo de condición
+  expression: string; // Ej: "1d6 > 3", "strength > 10", "has_found_key"
+  successTargetNodeId: string;
+  failureTargetNodeId: string;
+}
+
+export interface EdgeAction {
+  id: string;
+  description: string; // "Exploras la cueva..."
+  condition?: EdgeActionCondition; // Si es una acción condicional
+  directTargetNodeId?: string; // Si es una acción directa (sin condición)
+}
+
+export interface BookEdge extends Edge {
+  label?: string;
+  data?: {
+    description?: string;
+    actions?: EdgeAction[];
+  };
+}
+
 export interface BookNode extends Node {
   label: string;
   description: string;
@@ -20,8 +42,6 @@ export interface BookNode extends Node {
   color?: string;
   size?: 'small' | 'medium' | 'large';
 }
-
-export type BookEdge = Edge;
 
 export interface BookMeta {
   title: string;

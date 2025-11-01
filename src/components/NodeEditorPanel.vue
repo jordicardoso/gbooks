@@ -1,6 +1,12 @@
 <!-- src/components/NodeEditorPanel.vue -->
 <template>
   <q-card class="node-editor-panel bg-grey-9 text-white no-shadow column no-wrap">
+    <q-toolbar class="bg-grey-10">
+      <q-toolbar-title class="text-subtitle1">
+        Editar Nodo
+      </q-toolbar-title>
+      <q-btn flat round dense icon="close" @click="emit('close')" />
+    </q-toolbar>
     <q-card-section class="col q-pt-md q-gutter-y-md scroll">
       <q-input
         v-model="editedLabel"

@@ -12,6 +12,7 @@
       @move-end="onMoveEnd"
       @pane-context-menu="onPaneContextMenu"
       @node-click="onNodeClick"
+      @edge-click="onEdgeClick"
     >
       <Background />
       <MiniMap />
@@ -58,6 +59,15 @@
         @save="handleEditorSave"
       />
     </Transition>
+    <Transition name="slide-fade-right">
+      <EdgeEditorPanel
+        v-if="isEdgeEditorOpen"
+        :edge="selectedEdge"
+        class="node-editor-container"
+        @close="handleEdgeEditorClose"
+        @save="handleEdgeEditorSave"
+      />
+    </Transition>
   </div>
 </template>
 
@@ -82,6 +92,7 @@ import BookStartNode from './BookStartNode.vue';
 import BookStoryNode from './BookStoryNode.vue';
 import BookEndNode from './BookEndNode.vue';
 import NodeEditorPanel from './NodeEditorPanel.vue';
+import EdgeEditorPanel from './EdgeEditorPanel.vue';
 import type { BookNode } from 'src/stores/types';
 
 const nodesStore = useNodesStore();
@@ -96,6 +107,8 @@ const isMenuOpen = ref(false);
 const menuPosition = ref({ x: 0, y: 0 });
 const isEditorOpen = ref(false);
 const selectedNode = ref<BookNode | null>(null);
+const isEdgeEditorOpen = ref(false);
+const selectedEdge = ref<BookEdge | null>(null);
 const lastPaneMenuEvent = ref<MouseEvent | null>(null);
 
 const hasStartNode = computed(() => nodes.value.some((node) => node.type === 'start'));
@@ -133,11 +146,24 @@ function onNodeClick(event: NodeMouseEvent) {
   selectedNode.value = event.node as BookNode;
   isEditorOpen.value = true;
   isMenuOpen.value = false;
+  isEdgeEditorOpen.value = false;
+}
+
+function onEdgeClick(event: { edge: BookEdge }) {
+  selectedEdge.value = event.edge;
+  isEdgeEditorOpen.value = true;
+  isMenuOpen.value = false;
+  isEditorOpen.value = false; // Cerramos el otro panel
 }
 
 function handleEditorClose() {
   isEditorOpen.value = false;
   selectedNode.value = null;
+}
+
+function handleEdgeEditorClose() {
+  isEdgeEditorOpen.value = false;
+  selectedEdge.value = null;
 }
 
 function handleEditorSave(payload: {
@@ -146,6 +172,14 @@ function handleEditorSave(payload: {
 }) {
   nodesStore.updateNode(payload.nodeId, payload.updates);
   handleEditorClose();
+}
+
+function handleEdgeEditorSave(payload: {
+  edgeId: string;
+  updates: Partial<Omit<BookEdge, 'id'>>;
+}) {
+  nodesStore.updateEdge(payload.edgeId, payload.updates);
+  handleEdgeEditorClose();
 }
 
 function onPaneContextMenu(event: MouseEvent) {

@@ -90,5 +90,24 @@ export const useNodesStore = defineStore('nodes', {
         useBookStore().setDirty();
       }
     },
+
+    updateEdge(edgeId: string, updates: Partial<Omit<BookEdge, 'id'>>) {
+      const edge = this.edges.find(e => e.id === edgeId);
+      if (edge) {
+        // Hacemos una fusión inteligente para no sobreescribir el objeto `data` completo.
+        const { data: dataUpdates, ...otherUpdates } = updates;
+
+        // Aplicamos cambios de nivel superior (como 'label')
+        Object.assign(edge, otherUpdates);
+
+        // Si hay actualizaciones en 'data', las fusionamos.
+        if (dataUpdates) {
+          if (!edge.data) edge.data = {}; // Nos aseguramos de que `data` exista
+          Object.assign(edge.data, dataUpdates);
+        }
+
+        useBookStore().setDirty();
+      }
+    },
   },
 });
