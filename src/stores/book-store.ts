@@ -1,9 +1,10 @@
 // src/stores/book-store.ts
 
 import { defineStore } from 'pinia';
+import { toRaw } from 'vue';
 import { useNodesStore } from './nodes-store';
 import { useAssetsStore } from './assets-store';
-import type { BookData, BookNode } from './types';
+import type { BookData, BookNode, CharacterSheet, CharacterSheetSchema } from './types';
 
 export interface BookState {
   activeBook: BookData | null;
@@ -11,6 +12,24 @@ export interface BookState {
   isLoading: boolean;
   isDirty: boolean;
   debounceSaveTimer: NodeJS.Timeout | null;
+}
+
+function generateDefaultSheetFromSchema(schema: CharacterSheetSchema): CharacterSheet {
+  const newSheet: Partial<CharacterSheet> = {};
+  for (const section of schema.layout) {
+    switch (section.type) {
+      case 'stats':
+        newSheet.stats = {};
+        break;
+      case 'equipment':
+        newSheet.equipment = {};
+        break;
+      case 'itemList':
+        newSheet.items = {};
+        break;
+    }
+  }
+  return newSheet as CharacterSheet;
 }
 
 function validateAndRepairBookData(data: any): BookData {
@@ -21,13 +40,13 @@ function validateAndRepairBookData(data: any): BookData {
     assets: [],
     variables: [],
     viewport: { x: 0, y: 0, zoom: 1 },
+    characterSheetSchema: null,
+    characterSheet: null,
   };
 
   if (!data || typeof data !== 'object') return defaults;
 
   const nodesToMigrate = Array.isArray(data.nodes) ? data.nodes : defaults.nodes;
-
-  // 🔧 Convertir cada nodo para que sus propiedades extra estén dentro de `data`
   const migratedNodes: BookNode[] = nodesToMigrate.map((node: any) => {
     if (!node) return node;
 
@@ -62,6 +81,8 @@ function validateAndRepairBookData(data: any): BookData {
     assets: Array.isArray(data.assets) ? data.assets : defaults.assets,
     variables: Array.isArray(data.variables) ? data.variables : defaults.variables,
     viewport: { ...defaults.viewport, ...data.viewport },
+    characterSheetSchema: data.characterSheetSchema || defaults.characterSheetSchema,
+    characterSheet: data.characterSheet || defaults.characterSheet,
   };
 }
 
@@ -74,7 +95,79 @@ export const useBookStore = defineStore('book', {
     debounceSaveTimer: null,
   }),
 
+  getters: {
+    characterSheet(state): CharacterSheet | null | undefined {
+      return state.activeBook?.characterSheet;
+    },
+    characterSheetSchema(state): CharacterSheetSchema | null | undefined {
+      return state.activeBook?.characterSheetSchema;
+    },
+  },
+
   actions: {
+    createInitialCharacterSheet() {
+      if (!this.activeBook) return;
+
+      // 1. Definimos un schema inicial súper básico.
+      const initialSchema: CharacterSheetSchema = {
+        layout: [
+          {
+            type: 'stats',
+            title: 'Estadísticas Principales',
+            icon: 'o_analytics',
+            dataKey: 'stats',
+          },
+        ],
+      };
+
+      // 2. Asignamos el nuevo schema al libro activo.
+      this.activeBook.characterSheetSchema = initialSchema;
+
+      // 3. Generamos la ficha de datos vacía a partir de este schema.
+      this.activeBook.characterSheet = generateDefaultSheetFromSchema(initialSchema);
+
+      // 4. Marcamos el libro como modificado para que se guarde.
+      this.setDirty();
+      console.log('Ficha de personaje inicial creada.');
+    },
+
+    setCharacterSheet(newSheet: CharacterSheet) {
+      if (this.activeBook) {
+        this.activeBook.characterSheet = newSheet;
+        this.setDirty();
+      }
+    },
+    updateCharacterSheetSchema(newSchema: CharacterSheetSchema) {
+      if (!this.activeBook || !this.activeBook.characterSheet) return;
+
+      const oldSheet = this.activeBook.characterSheet;
+
+      // 1. Asignamos el nuevo schema al libro activo.
+      this.activeBook.characterSheetSchema = newSchema;
+
+      // 2. Reconciliación de datos:
+      //    - Creamos una nueva ficha vacía basada en el NUEVO schema.
+      const reconciledSheet = generateDefaultSheetFromSchema(newSchema);
+
+      //    - Copiamos los datos de la ficha ANTIGUA a la NUEVA solo para las
+      //      secciones que todavía existen en el nuevo schema.
+      for (const section of newSchema.layout) {
+        const key = section.dataKey;
+        if (oldSheet[key] !== undefined) {
+          (reconciledSheet[key] as any) = oldSheet[key];
+        }
+      }
+
+      // 3. Asignamos la ficha reconciliada. Esto elimina automáticamente los datos
+      //    de las secciones que ya no existen en el schema.
+      this.activeBook.characterSheet = reconciledSheet;
+
+      // 4. Marcamos el libro como modificado para que se guarde.
+      this.setDirty();
+      console.log('Schema de la ficha actualizado y datos reconciliados.');
+    },
+
+
     async loadBookById(bookId: string) {
       if (!bookId) return;
       this.isLoading = true;
@@ -116,6 +209,19 @@ export const useBookStore = defineStore('book', {
       try {
         const nodesStore = useNodesStore();
         const assetsStore = useAssetsStore();
+        const cleanEdges = toRaw(nodesStore.edges).map(edge => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          label: edge.label,
+          data: edge.data,
+        }));
+
+        const graphContent = {
+          nodes: toRaw(nodesStore.nodes),
+          edges: cleanEdges,
+          viewport: toRaw(nodesStore.viewport),
+        };
 
         const bookToSave: BookData = {
           meta: this.activeBook.meta,
@@ -124,16 +230,16 @@ export const useBookStore = defineStore('book', {
           edges: nodesStore.edges,
           assets: assetsStore.assets,
           viewport: nodesStore.viewport,
+          characterSheet: this.activeBook.characterSheet,
+          characterSheetSchema: this.activeBook.characterSheetSchema,
         };
 
-        console.log('Guardando libro con estructura aplanada:', bookToSave);
         const content = JSON.stringify(bookToSave, null, 2);
         await window.electronAPI.saveBook(this.activeBookId, content);
 
         this.activeBook = bookToSave;
 
         this.isDirty = false;
-        console.log(`Libro "${this.activeBookId}" guardado.`);
       } catch (error) {
         console.error('Error al guardar el libro:', error);
         throw error;
@@ -157,7 +263,6 @@ export const useBookStore = defineStore('book', {
     setDirty() {
       if (!this.isDirty) {
         this.isDirty = true;
-        console.log("Book store is now dirty. Changes pending save.");
       }
       if (this.debounceSaveTimer) {
         clearTimeout(this.debounceSaveTimer);

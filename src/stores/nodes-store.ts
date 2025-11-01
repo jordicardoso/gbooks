@@ -27,14 +27,11 @@ export const useNodesStore = defineStore('nodes', {
           return;
         }
 
-        console.log('[LOG nodes-store] Store ha cambiado, marcando como sucio.');
         useBookStore().setDirty();
       }, { detached: true }); // 'detached: true' es una buena práctica para que la suscripción sobreviva a los cambios de pestaña.
 
-      console.log('[LOG nodes-store] Store inicializado y suscrito a cambios.');
     },
     setElements(nodes: BookNode[], edges: BookEdge[], viewport?: Viewport) {
-      console.log('[LOG nodes-store] setElements llamado con:', { numNodes: nodes.length, numEdges: edges.length, viewport });
       this.nodes = nodes;
       this.edges = edges;
       this.viewport = viewport || { x: 0, y: 0, zoom: 1 };
@@ -46,7 +43,6 @@ export const useNodesStore = defineStore('nodes', {
     },
 
     updateViewport(viewport: Viewport) {
-      console.log('[LOG nodes-store] 2. Actualizando viewport en el store.', viewport);
       this.viewport = viewport;
       useBookStore().setDirty();
     },

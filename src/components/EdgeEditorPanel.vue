@@ -29,13 +29,59 @@
         dense
       />
 
-      <!-- Aquí iría el editor avanzado para las acciones -->
+      <!-- SECCIÓN DE ACCIONES -->
       <div class="q-mt-lg">
-        <p class="text-subtitle2 text-grey-5">Acciones (Próximamente)</p>
-        <div class="bg-grey-8 q-pa-md rounded-borders text-center text-grey-6">
-          <q-icon name="construction" size="sm" />
-          <p class="q-mt-sm text-caption">El editor de acciones condicionales se añadirá aquí.</p>
+        <div class="row items-center justify-between">
+          <p class="text-subtitle2 text-grey-5 q-mb-sm">Acciones</p>
+          <q-btn-dropdown
+            dense
+            flat
+            color="primary"
+            label="Añadir Acción"
+            icon="add"
+          >
+            <q-list dense>
+              <q-item clickable v-close-popup @click="addAction('diceRoll')">
+                <q-item-section avatar><q-icon name="casino" /></q-item-section>
+                <q-item-section>Tirada de Dados</q-item-section>
+              </q-item>
+              <!-- Aquí añadirías más tipos de acción -->
+            </q-list>
+          </q-btn-dropdown>
         </div>
+
+        <!-- Lista de bloques de acción -->
+        <q-list separator dark class="rounded-borders">
+          <div v-if="!editedActions.length" class="text-center text-grey-6 q-pa-md">
+            No hay acciones definidas para este conector.
+          </div>
+          <q-expansion-item
+            v-for="(action, index) in editedActions"
+            :key="action.id"
+            :label="`Acción: ${action.type}`"
+            dark
+            header-class="bg-blue-grey-10"
+            class="action-block"
+          >
+            <template #header>
+              <q-item-section>
+                <q-item-label>{{ action.type === 'diceRoll' ? 'Tirada de Dados' : action.type }}</q-item-label>
+                <q-item-label caption lines="1">{{ action.description }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-btn flat round dense icon="delete" color="negative" @click.stop="removeAction(index)" />
+              </q-item-section>
+            </template>
+
+            <q-card class="bg-grey-9">
+              <q-card-section>
+                <!-- Renderizado condicional del editor correcto -->
+                <ActionDiceRollEditor v-if="action.type === 'diceRoll'" :action="action" />
+                <!-- <ActionModifyStatEditor v-if="action.type === 'modifyStat'" :action="action" /> -->
+              </q-card-section>
+            </q-card>
+          </q-expansion-item>
+        </q-list>
       </div>
 
     </q-card-section>
@@ -49,7 +95,9 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import type { BookEdge } from 'src/stores/types';
+import type { BookEdge, AnyAction, DiceRollAction } from 'src/stores/types';
+import { uid } from 'quasar';
+import ActionDiceRollEditor from 'components/ActionDiceRollEditor.vue';
 
 interface Props {
   edge: BookEdge | null;
@@ -60,19 +108,7 @@ const emit = defineEmits(['save', 'close']);
 
 const editedLabel = ref('');
 const editedDescription = ref('');
-// const editedActions = ref<EdgeAction[]>([]); // Para el futuro
-
-function resetAndLoadEdge(edge: BookEdge | null) {
-  if (edge) {
-    editedLabel.value = edge.label || '';
-    editedDescription.value = edge.data?.description || '';
-    // editedActions.value = edge.data?.actions ? JSON.parse(JSON.stringify(edge.data.actions)) : [];
-  } else {
-    editedLabel.value = '';
-    editedDescription.value = '';
-    // editedActions.value = [];
-  }
-}
+const editedActions = ref<AnyAction[]>([]);
 
 function saveChanges() {
   if (props.edge) {
@@ -80,7 +116,7 @@ function saveChanges() {
       label: editedLabel.value || undefined, // Si está vacío, lo quitamos
       data: {
         description: editedDescription.value || undefined,
-        // actions: editedActions.value, // Para el futuro
+        actions: editedActions.value.length > 0 ? editedActions.value : undefined,
       }
     };
 
@@ -90,6 +126,42 @@ function saveChanges() {
     });
     emit('close');
   }
+}
+
+// --- EDGE ACTIONS ---
+function resetAndLoadEdge(edge: BookEdge | null) {
+  if (edge) {
+    editedLabel.value = edge.label || '';
+    editedDescription.value = edge.data?.description || '';
+    // Hacemos una copia profunda para no mutar el store directamente
+    editedActions.value = edge.data?.actions ? JSON.parse(JSON.stringify(edge.data.actions)) : [];
+  } else {
+    editedLabel.value = '';
+    editedDescription.value = '';
+    editedActions.value = [];
+  }
+}
+
+// [!code focus:14]
+function addAction(type: 'diceRoll' /* | 'modifyStat' etc. */) {
+  let newAction: AnyAction;
+  if (type === 'diceRoll') {
+    newAction = {
+      id: uid(),
+      type: 'diceRoll',
+      dice: '1d6',
+      description: 'Nueva tirada de dados',
+      outcomes: []
+    } as DiceRollAction;
+  } else {
+    // Lógica para otros tipos de acción
+    return;
+  }
+  editedActions.value.push(newAction);
+}
+
+function removeAction(index: number) {
+  editedActions.value.splice(index, 1);
 }
 
 watch(() => props.edge, resetAndLoadEdge, { immediate: true, deep: true });
