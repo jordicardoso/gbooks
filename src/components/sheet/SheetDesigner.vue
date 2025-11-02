@@ -25,23 +25,23 @@
       </q-list>
 
       <div class="q-mt-md">
-        <q-btn-dropdown split color="primary" label="Añadir Sección" @click="addSection('stats')">
-          <q-list dark>
+        <q-btn-dropdown split dark color="primary" label="Añadir Sección" @click="addSection('stats')">
+          <q-list>
             <q-item clickable v-close-popup @click="addSection('stats')">
-              <q-item-section avatar><q-icon name="o_analytics" /></q-item-section>
+              <q-item-section avatar><q-icon name="analytics" /></q-item-section>
               <q-item-section>
                 <q-item-label>Estadísticas</q-item-label>
               </q-item-section>
             </q-item>
             <!-- Descomenta cuando tengas los componentes para estas secciones -->
             <q-item clickable v-close-popup @click="addSection('equipment')">
-              <q-item-section avatar><q-icon name="o_checkroom" /></q-item-section>
+              <q-item-section avatar><q-icon name="checkroom" /></q-item-section>
               <q-item-section>
                 <q-item-label>Equipamiento</q-item-label>
               </q-item-section>
             </q-item>
             <q-item clickable v-close-popup @click="addSection('itemList')">
-              <q-item-section avatar><q-icon name="o_inventory_2" /></q-item-section>
+              <q-item-section avatar><q-icon name="inventory_2" /></q-item-section>
               <q-item-section>
                 <q-item-label>Inventario</q-item-label>
               </q-item-section>

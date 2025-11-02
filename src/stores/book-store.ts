@@ -4,7 +4,7 @@ import { defineStore } from 'pinia';
 import { toRaw } from 'vue';
 import { useNodesStore } from './nodes-store';
 import { useAssetsStore } from './assets-store';
-import type { BookData, BookNode, CharacterSheet, CharacterSheetSchema } from './types';
+import type { BookData, BookNode, CharacterSheet, CharacterSheetSchema, CharacterSheetSectionSchema } from './types';
 
 export interface BookState {
   activeBook: BookData | null;
