@@ -35,7 +35,7 @@
             </q-item>
             <!-- Descomenta cuando tengas los componentes para estas secciones -->
             <q-item clickable v-close-popup @click="addSection('equipment')">
-              <q-item-section avatar><q-icon name="checkroom" /></q-item-section>
+              <!--<q-item-section avatar><q-icon name="checkroom" /></q-item-section>-->
               <q-item-section>
                 <q-item-label>Equipamiento</q-item-label>
               </q-item-section>

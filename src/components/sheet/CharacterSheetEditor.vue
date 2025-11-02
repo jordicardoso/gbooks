@@ -1,7 +1,8 @@
 <!-- src/components/sheet/CharacterSheetEditor.vue -->
 <template>
   <q-card class="bg-grey-9 text-white column no-wrap fit">
-    <div v-if="characterSheetSchema?.layout" class="q-gutter-y-lg q-pa-md">
+    <!-- El v-if ahora comprueba el schema, que es más fiable -->
+    <div v-if="characterSheetSchema?.layout.length" class="q-gutter-y-lg q-pa-md">
       <!-- CABECERA CON EL NUEVO BOTÓN -->
       <div class="row items-center q-mb-md">
         <div class="text-h5">Editor de Ficha</div>
@@ -18,8 +19,11 @@
 
       <!-- Renderizado de las secciones -->
       <div class="q-gutter-y-lg">
-        <div v-for="(section, index) in characterSheetSchema.layout" :key="index">
+        <!-- Iteramos sobre el schema, que es reactivo -->
+        <div v-for="section in characterSheetSchema.layout" :key="section.dataKey">
+          <!-- El v-if asegura que solo renderizamos si tenemos el componente y los datos -->
           <component
+            v-if="componentMap[section.type] && editableSheet[section.dataKey] !== undefined"
             :is="componentMap[section.type]"
             :title="section.title"
             :icon="section.icon"
@@ -35,7 +39,6 @@
       <q-icon name="person_add" size="4rem" />
       <p class="q-mt-md text-body1">Este libro aún no tiene una ficha de personaje.</p>
       <p class="text-caption">Crea una para empezar a definir las estadísticas y el inventario.</p>
-      <!-- El botón ahora llama a una acción para crear la ficha -->
       <q-btn
         label="Crear Ficha de Personaje"
         color="primary"
@@ -44,6 +47,7 @@
       />
     </div>
 
+    <!-- El diálogo del diseñador -->
     <q-dialog v-model="isDesignerOpen" persistent>
       <SheetDesigner @close="isDesignerOpen = false" />
     </q-dialog>
@@ -51,38 +55,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, shallowRef, nextTick } from 'vue';
+import { ref, watch, shallowRef, nextTick, type Component } from 'vue';
 import { debounce } from 'quasar';
 import { useBookStore, type CharacterSheet } from 'src/stores/book-store';
 import { storeToRefs } from 'pinia';
 
+// --- CAMBIO 1: Descomentar las importaciones ---
 import StatsSection from 'src/components/sheet/StatsSection.vue';
 import SheetDesigner from 'src/components/sheet/SheetDesigner.vue';
-//import EquipmentSection from 'src/components/sheet/EquipmentSection.vue';
-//import ItemListSection from 'src/components/sheet/ItemListSection.vue';
+import EquipmentSection from 'src/components/sheet/EquipmentSection.vue';
+import ItemListSection from 'src/components/sheet/ItemListSection.vue';
 
 const bookStore = useBookStore();
+// storeToRefs mantiene la reactividad de las propiedades del store
 const { characterSheet, characterSheetSchema } = storeToRefs(bookStore);
 
 const isDesignerOpen = ref(false);
 const editableSheet = ref<Partial<CharacterSheet>>({});
 const isInitialized = ref(false);
 
-const componentMap = shallowRef({
+// --- CAMBIO 2: Añadir los componentes al mapa ---
+const componentMap = shallowRef<Record<string, Component>>({
   stats: StatsSection,
-  //equipment: EquipmentSection,
-  //itemList: ItemListSection,
+  equipment: EquipmentSection,
+  itemList: ItemListSection,
 });
 
-watch(characterSheet,(newSheet) => {
+// Este watch es el corazón de la reactividad. ¡Ya lo tenías bien!
+// Sincroniza la copia local (editableSheet) cuando la ficha del store cambia.
+watch(characterSheet, (newSheet) => {
+    // Reseteamos el flag para evitar que el otro watch se dispare prematuramente
     isInitialized.value = false;
 
     if (newSheet) {
+      // Creamos una copia profunda para la edición local
       editableSheet.value = JSON.parse(JSON.stringify(newSheet));
     } else {
       editableSheet.value = {};
     }
 
+    // Usamos nextTick para asegurar que el DOM se ha actualizado antes de
+    // reactivar el guardado automático.
     void nextTick(() => {
       isInitialized.value = true;
     });
@@ -90,13 +103,14 @@ watch(characterSheet,(newSheet) => {
   { immediate: true, deep: true }
 );
 
+// Guardado automático con debounce cuando se edita la ficha localmente
 const debouncedUpdateStore = debounce(() => {
-  if (bookStore.activeBook) {
+  if (bookStore.activeBook && isInitialized.value) {
     bookStore.setCharacterSheet(editableSheet.value as CharacterSheet);
-    console.log('Cambios de la ficha aplicados al store. Listos para guardar.');
   }
 }, 750);
 
+// Este watch dispara el guardado automático
 watch(
   editableSheet,
   () => {
@@ -107,12 +121,14 @@ watch(
   { deep: true }
 );
 
+// Actualiza una porción de nuestra copia local
 function updateSectionData(key: keyof CharacterSheet, newData: any) {
   if (editableSheet.value) {
-    (editableSheet.value[key] as any) = newData;
+    (editableSheet.value as any)[key] = newData;
   }
 }
 
+// Llama a la acción del store para crear la ficha inicial
 function createSheet() {
   bookStore.createInitialCharacterSheet();
 }

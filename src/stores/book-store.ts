@@ -14,20 +14,25 @@ export interface BookState {
   debounceSaveTimer: NodeJS.Timeout | null;
 }
 
+function getInitialDataForSection(type: CharacterSheetSectionSchema['type']) {
+  switch (type) {
+    case 'stats':
+      return []; // Las estadísticas son una lista de objetos
+    case 'itemList':
+      return []; // El inventario es una lista de objetos
+    case 'equipment':
+      return {}; // El equipamiento es un mapa de slots a objetos
+    case 'enfermedades':
+      return {}; //
+    default:
+      return null; // Fallback para tipos desconocidos
+  }
+}
+
 function generateDefaultSheetFromSchema(schema: CharacterSheetSchema): CharacterSheet {
   const newSheet: Partial<CharacterSheet> = {};
   for (const section of schema.layout) {
-    switch (section.type) {
-      case 'stats':
-        newSheet.stats = {};
-        break;
-      case 'equipment':
-        newSheet.equipment = {};
-        break;
-      case 'itemList':
-        newSheet.items = {};
-        break;
-    }
+    (newSheet as any)[section.dataKey] = getInitialDataForSection(section.type);
   }
   return newSheet as CharacterSheet;
 }
@@ -137,34 +142,58 @@ export const useBookStore = defineStore('book', {
         this.setDirty();
       }
     },
+
     updateCharacterSheetSchema(newSchema: CharacterSheetSchema) {
-      if (!this.activeBook || !this.activeBook.characterSheet) return;
+      if (!this.activeBook) return;
 
-      const oldSheet = this.activeBook.characterSheet;
+      const oldSheet = this.activeBook.characterSheet ?? {};
+      const newSheet: Partial<CharacterSheet> = {};
 
-      // 1. Asignamos el nuevo schema al libro activo.
-      this.activeBook.characterSheetSchema = newSchema;
-
-      // 2. Reconciliación de datos:
-      //    - Creamos una nueva ficha vacía basada en el NUEVO schema.
-      const reconciledSheet = generateDefaultSheetFromSchema(newSchema);
-
-      //    - Copiamos los datos de la ficha ANTIGUA a la NUEVA solo para las
-      //      secciones que todavía existen en el nuevo schema.
       for (const section of newSchema.layout) {
-        const key = section.dataKey;
-        if (oldSheet[key] !== undefined) {
-          (reconciledSheet[key] as any) = oldSheet[key];
+        const key = section.dataKey as keyof CharacterSheet;
+
+        if (Object.prototype.hasOwnProperty.call(oldSheet, key)) {
+          (newSheet as any)[key] = oldSheet[key];
+        } else {
+          (newSheet as any)[key] = getInitialDataForSection(section.type);
         }
       }
 
-      // 3. Asignamos la ficha reconciliada. Esto elimina automáticamente los datos
-      //    de las secciones que ya no existen en el schema.
-      this.activeBook.characterSheet = reconciledSheet;
+      // Asignamos el nuevo esquema y la ficha reconciliada
+      this.activeBook.characterSheetSchema = newSchema;
+      this.activeBook.characterSheet = newSheet as CharacterSheet;
 
-      // 4. Marcamos el libro como modificado para que se guarde.
       this.setDirty();
       console.log('Schema de la ficha actualizado y datos reconciliados.');
+    },
+
+    async loadBookById(bookId: string) {
+      if (!bookId) return;
+      this.isLoading = true;
+      this.isDirty = false;
+
+      if (this.debounceSaveTimer) clearTimeout(this.debounceSaveTimer);
+
+      try {
+        const content = await window.electronAPI.loadBook(bookId);
+        const bookData = validateAndRepairBookData(JSON.parse(content));
+
+        this.activeBook = bookData;
+        this.activeBookId = bookId;
+
+        const nodesStore = useNodesStore();
+        const assetsStore = useAssetsStore();
+
+        nodesStore.setElements(bookData.nodes, bookData.edges, bookData.viewport);
+        assetsStore.setAssets(bookId, bookData.assets);
+
+      } catch (error) {
+        console.error(`Error al cargar el libro con ID "${bookId}":`, error);
+        this.clearBook();
+        throw error;
+      } finally {
+        this.isLoading = false;
+      }
     },
 
 
@@ -217,17 +246,11 @@ export const useBookStore = defineStore('book', {
           data: edge.data,
         }));
 
-        const graphContent = {
-          nodes: toRaw(nodesStore.nodes),
-          edges: cleanEdges,
-          viewport: toRaw(nodesStore.viewport),
-        };
-
         const bookToSave: BookData = {
           meta: this.activeBook.meta,
           variables: this.activeBook.variables,
           nodes: nodesStore.nodes,
-          edges: nodesStore.edges,
+          edges: cleanEdges,
           assets: assetsStore.assets,
           viewport: nodesStore.viewport,
           characterSheet: this.activeBook.characterSheet,

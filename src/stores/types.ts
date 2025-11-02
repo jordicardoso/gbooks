@@ -134,7 +134,7 @@ export interface BookEdge extends Edge {
  * Define la estructura de una sección en el layout de la ficha.
  */
 export interface CharacterSheetSectionSchema {
-  type: 'stats' | 'equipment' | 'itemList'; // Tipo de componente a renderizar
+  type: 'stats' | 'equipment' | 'itemList' | 'enfermedades'; // Tipo de componente a renderizar
   title: string; // Título de la sección (ej: "Atributos Principales")
   icon?: string; // Icono opcional
   dataKey: keyof CharacterSheet; // Clave en el objeto CharacterSheet donde se guardan los datos
