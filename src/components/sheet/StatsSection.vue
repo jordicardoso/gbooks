@@ -2,6 +2,7 @@
 <template>
   <q-card class="bg-grey-9">
     <q-card-section class="row items-center">
+      <q-icon v-if="icon" :name="icon" class="q-mr-sm" size="sm" />
       <div class="text-h6">{{ title }}</div>
       <q-space />
       <!-- Botón para añadir una nueva estadística -->

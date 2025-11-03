@@ -11,9 +11,9 @@
     <q-card-section>
       <q-list dark separator>
         <q-item v-for="(section, index) in localSchema.layout" :key="index">
-          <!--<q-item-section avatar>
-            <q-icon :name="section.icon || 'o_view_quilt'" />
-          </q-item-section>-->
+          <q-item-section avatar>
+            <q-icon :name="section.icon || 'view_quilt'" />
+          </q-item-section>
           <q-item-section>
             <q-item-label>{{ section.title }}</q-item-label>
             <q-item-label caption class="text-grey-5">Tipo: {{ section.type }} / Clave: {{ section.dataKey }}</q-item-label>
@@ -35,7 +35,7 @@
             </q-item>
             <!-- Descomenta cuando tengas los componentes para estas secciones -->
             <q-item clickable v-close-popup @click="addSection('equipment')">
-              <!--<q-item-section avatar><q-icon name="checkroom" /></q-item-section>-->
+              <q-item-section avatar><q-icon name="checkroom" /></q-item-section>
               <q-item-section>
                 <q-item-label>Equipamiento</q-item-label>
               </q-item-section>
@@ -115,9 +115,12 @@ function addSection(type: CharacterSheetSectionSchema['type']) {
 
 function getIconForType(type: CharacterSheetSectionSchema['type']): string {
   switch (type) {
-    case 'stats': return 'o_analytics';
-    case 'equipment': return 'o_checkroom';
-    case 'itemList': return 'o_inventory_2';
+    case 'stats': return 'analytics';
+    case 'clothes': return 'checkroom';
+    case 'tools': return 'construction';
+    case 'itemList': return 'inventory_2';
+    case 'aflictions': return 'sick';
+    case 'events': return 'event_available';
     default: return 'o_view_quilt';
   }
 }

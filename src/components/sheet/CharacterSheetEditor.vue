@@ -5,7 +5,7 @@
     <div v-if="characterSheetSchema?.layout.length" class="q-gutter-y-lg q-pa-md">
       <!-- CABECERA CON EL NUEVO BOTÓN -->
       <div class="row items-center q-mb-md">
-        <div class="text-h5">Editor de Ficha</div>
+        <div class="text-h5">Editor de Ficha de Personaje</div>
         <q-space />
         <q-btn
           label="Diseñar Ficha"
@@ -29,6 +29,7 @@
             :icon="section.icon"
             :data="editableSheet[section.dataKey]"
             @update:data="updateSectionData(section.dataKey, $event)"
+            :available-stats="editableSheet.stats ? Object.keys(editableSheet.stats) : []"
           />
         </div>
       </div>

@@ -147,32 +147,27 @@ export interface CharacterSheetSchema {
   layout: CharacterSheetSectionSchema[];
 }
 
-/**
- * Define los datos concretos de la ficha de un personaje. Es el "relleno".
- */
-export interface CharacterSheet {
-  stats: {
-    [key: string]: {
-      current: number;
-      max: number;
-    };
-  };
-  equipment: {
-    // Definir estructura para equipo
-    [slot: string]: string | null; // ej: { head: 'casco de cuero', body: null }
-  };
-  items: {
-    // Definir estructura para inventario
-    [itemId: string]: {
-      name: string;
-      quantity: number;
-    };
-  };
-  // ... otras secciones que puedas necesitar
+export interface ItemEffect {
+  target: string;
+  value: number;
 }
 
+export interface EquippedItem {
+  name: string;
+  description?: string;
+  effects: ItemEffect[];
+}
 
-// --- ACTUALIZACIÓN DE BookData ---
+// Asegúrate de que CharacterSheet usa este tipo
+export interface CharacterSheet {
+  stats: { [key: string]: { current: number; max: number } };
+  clothes: { [slot: string]: EquippedItem | null;};
+  equipment: { [slot: string]: EquippedItem | null };
+  tools: { [slot: string]: EquippedItem | null };
+  aflictions: { [slot: string]: EquippedItem | null };
+  events: { [slot: string]: String | null };
+}
+
 // Ahora añadimos la ficha y su schema a la estructura principal del libro.
 export interface BookData {
   meta: BookMeta;
