@@ -120,11 +120,11 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
-import type { EquippedItem, ItemEffect } from 'src/stores/types';
+import type { Item, ItemEffect } from 'src/stores/types';
 
 const props = defineProps<{
   modelValue: boolean; // Para el v-model
-  item: EquippedItem | null;
+  item: Item | null;
   slotName: string;
   availableStats: string[];
 }>();
@@ -132,7 +132,7 @@ const props = defineProps<{
 const emit = defineEmits(['update:modelValue', 'save']);
 
 // --- Estado Interno ---
-const editableItem = ref<EquippedItem>({ name: '', description: '', effects: [] });
+const editableItem = ref<Omit<Item, 'id'>>({ name: '', description: '', effects: [] });
 const newEffect = ref<ItemEffect>({ target: '', value: 0 });
 
 const formTitle = computed(() =>

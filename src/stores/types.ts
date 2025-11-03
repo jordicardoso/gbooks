@@ -134,10 +134,10 @@ export interface BookEdge extends Edge {
  * Define la estructura de una sección en el layout de la ficha.
  */
 export interface CharacterSheetSectionSchema {
-  type: 'stats' | 'equipment' | 'itemList' | 'enfermedades'; // Tipo de componente a renderizar
-  title: string; // Título de la sección (ej: "Atributos Principales")
-  icon?: string; // Icono opcional
-  dataKey: keyof CharacterSheet; // Clave en el objeto CharacterSheet donde se guardan los datos
+  type: 'stats' | 'inventory' | 'events';
+  title: string;
+  icon?: string;
+  dataKey: keyof CharacterSheet;
 }
 
 /**
@@ -152,19 +152,18 @@ export interface ItemEffect {
   value: number;
 }
 
-export interface EquippedItem {
+export interface Item {
+  id: string; // ID único, siempre útil
   name: string;
   description?: string;
+  quantity?: number; // Opcional, para objetos apilables
   effects: ItemEffect[];
 }
 
 // Asegúrate de que CharacterSheet usa este tipo
 export interface CharacterSheet {
   stats: { [key: string]: { current: number; max: number } };
-  clothes: { [slot: string]: EquippedItem | null;};
-  equipment: { [slot: string]: EquippedItem | null };
-  tools: { [slot: string]: EquippedItem | null };
-  aflictions: { [slot: string]: EquippedItem | null };
+  inventory: Item[];
   events: { [slot: string]: String | null };
 }
 

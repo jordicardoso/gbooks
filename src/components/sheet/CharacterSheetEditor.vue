@@ -21,15 +21,16 @@
       <div class="q-gutter-y-lg">
         <!-- Iteramos sobre el schema, que es reactivo -->
         <div v-for="section in characterSheetSchema.layout" :key="section.dataKey">
-          <!-- El v-if asegura que solo renderizamos si tenemos el componente y los datos -->
           <component
             v-if="componentMap[section.type] && editableSheet[section.dataKey] !== undefined"
             :is="componentMap[section.type]"
             :title="section.title"
             :icon="section.icon"
             :data="editableSheet[section.dataKey]"
-            @update:data="updateSectionData(section.dataKey, $event)"
             :available-stats="editableSheet.stats ? Object.keys(editableSheet.stats) : []"
+            :mode="section.mode"
+          @update:data="updateSectionData(section.dataKey, $event)"
+          @apply-effects="handleApplyEffects"
           />
         </div>
       </div>
@@ -60,43 +61,31 @@ import { ref, watch, shallowRef, nextTick, type Component } from 'vue';
 import { debounce } from 'quasar';
 import { useBookStore, type CharacterSheet } from 'src/stores/book-store';
 import { storeToRefs } from 'pinia';
+import type { ItemEffect } from 'src/stores/types';
 
-// --- CAMBIO 1: Descomentar las importaciones ---
 import StatsSection from 'src/components/sheet/StatsSection.vue';
 import SheetDesigner from 'src/components/sheet/SheetDesigner.vue';
-import EquipmentSection from 'src/components/sheet/EquipmentSection.vue';
-import ItemListSection from 'src/components/sheet/ItemListSection.vue';
+import ItemSection from 'src/components/sheet/ItemSection.vue';
 
 const bookStore = useBookStore();
-// storeToRefs mantiene la reactividad de las propiedades del store
 const { characterSheet, characterSheetSchema } = storeToRefs(bookStore);
 
 const isDesignerOpen = ref(false);
 const editableSheet = ref<Partial<CharacterSheet>>({});
 const isInitialized = ref(false);
 
-// --- CAMBIO 2: Añadir los componentes al mapa ---
 const componentMap = shallowRef<Record<string, Component>>({
   stats: StatsSection,
-  equipment: EquipmentSection,
-  itemList: ItemListSection,
+  itemSection: ItemSection, // ¡Nuestro nuevo componente unificado!
 });
 
-// Este watch es el corazón de la reactividad. ¡Ya lo tenías bien!
-// Sincroniza la copia local (editableSheet) cuando la ficha del store cambia.
 watch(characterSheet, (newSheet) => {
-    // Reseteamos el flag para evitar que el otro watch se dispare prematuramente
     isInitialized.value = false;
-
     if (newSheet) {
-      // Creamos una copia profunda para la edición local
       editableSheet.value = JSON.parse(JSON.stringify(newSheet));
     } else {
       editableSheet.value = {};
     }
-
-    // Usamos nextTick para asegurar que el DOM se ha actualizado antes de
-    // reactivar el guardado automático.
     void nextTick(() => {
       isInitialized.value = true;
     });
@@ -104,14 +93,36 @@ watch(characterSheet, (newSheet) => {
   { immediate: true, deep: true }
 );
 
-// Guardado automático con debounce cuando se edita la ficha localmente
 const debouncedUpdateStore = debounce(() => {
   if (bookStore.activeBook && isInitialized.value) {
     bookStore.setCharacterSheet(editableSheet.value as CharacterSheet);
   }
 }, 750);
 
-// Este watch dispara el guardado automático
+function handleApplyEffects(effects: ItemEffect[]) {
+  if (!editableSheet.value || !editableSheet.value.stats) return;
+
+  const stats = editableSheet.value.stats;
+
+  effects.forEach(effect => {
+    const targetStatKey = effect.target.toLowerCase();
+
+    if (stats[targetStatKey]) {
+      const stat = stats[targetStatKey];
+      // Calculamos el nuevo valor
+      let newValue = stat.current + effect.value;
+
+      // Aseguramos que el valor no exceda el máximo ni sea menor que 0
+      newValue = Math.max(0, Math.min(newValue, stat.max));
+
+      stat.current = newValue;
+    } else {
+      console.warn(`Intento de aplicar efecto a una estadística no existente: "${effect.target}"`);
+    }
+  });
+  // El watcher de 'editableSheet' se encargará de disparar el guardado automático.
+}
+
 watch(
   editableSheet,
   () => {
