@@ -11,27 +11,9 @@ export interface BookAsset {
   filename: string;
   creationDate: string;
 }
-
-export interface EdgeActionCondition {
-  type: 'dice' | 'stat' | 'flag'; // Tipo de condición
-  expression: string; // Ej: "1d6 > 3", "strength > 10", "has_found_key"
-  successTargetNodeId: string;
-  failureTargetNodeId: string;
-}
-
-export interface EdgeAction {
-  id: string;
-  description: string; // "Exploras la cueva..."
-  condition?: EdgeActionCondition; // Si es una acción condicional
-  directTargetNodeId?: string; // Si es una acción directa (sin condición)
-}
-
 export interface BookEdge extends Edge {
+
   label?: string;
-  data?: {
-    description?: string;
-    actions?: EdgeAction[];
-  };
 }
 
 export interface BookNode extends Node {
@@ -41,6 +23,8 @@ export interface BookNode extends Node {
   tags?: string[];
   color?: string;
   size?: 'small' | 'medium' | 'large';
+  actions?: AnyAction[];
+  choices?: AnyChoice[];
 }
 
 export interface BookMeta {
@@ -92,7 +76,7 @@ export interface SetFlagAction {
   id: string;
   type: 'setFlag';
   flag: string;
-  value: boolean;
+  value: boolean | string | number;
 }
 
 export interface DiceRollOutcome {
@@ -112,6 +96,62 @@ export interface DiceRollAction {
 }
 
 export type AnyAction = ModifyStatAction | ModifyInventoryAction | SetFlagAction | DiceRollAction;
+export type AnyChoice = SimpleChoice | ConditionalChoice | DiceRollChoice;
+
+// --- OPCIONES DE SALIDA (¡LO NUEVO!) ---
+// Representan las decisiones, pruebas y eventos para SALIR de un nodo.
+
+// 1. Decisión Pura (Elección Táctica)
+export interface SimpleChoice {
+  id: string;
+  type: 'simple';
+  label: string; // "Intentas asustarlo con tu antorcha"
+  targetNodeId: string; // "134"
+}
+
+// 2. y 3. Pruebas de Personaje y Situación
+export type ConditionType = 'stat' | 'item' | 'event';
+export type ConditionOperator = '==' | '!=' | '>' | '>=' | '<' | '<=';
+
+export interface Condition {
+  id: string;
+  type: ConditionType;
+  // Para 'stat': el nombre de la estadística (ej: "fuerza")
+  // Para 'item': el ID del objeto (ej: "gancho-improvisado")
+  // Para 'event': el ID del evento (ej: "E005")
+  subject: string;
+  operator: ConditionOperator;
+  // Para 'stat': el valor a comparar (ej: 10)
+  // Para 'item': la cantidad (ej: 1)
+  // Para 'event': el estado a comprobar (ej: true)
+  value: number | boolean | string;
+}
+
+export interface ConditionalChoice {
+  id: string;
+  type: 'conditional';
+  label: string; // "Si tienes la habilidad Encender Fuego..."
+  condition: Condition;
+  successTargetNodeId: string;
+  failureTargetNodeId: string;
+}
+
+// 4. Veredicto del Azar (Dados)
+export interface DiceOutcome {
+  id: string;
+  range: string; // "1-2", "3-5", "6"
+  label: string; // "¡El hielo cruje y se rompe!"
+  targetNodeId: string;
+}
+
+export interface DiceRollChoice {
+  id: string;
+  type: 'diceRoll';
+  label: string; // "Intentas cruzar el lago helado. Tira un dado."
+  dice: string; // "1d6", "2d10"
+  outcomes: DiceOutcome[];
+}
+
 
 // --- TIPOS DE ARISTAS (Consolidado y mejorado) ---
 export interface BookEdge extends Edge {
@@ -211,6 +251,6 @@ export interface BookData {
   assets: BookAsset[];
   variables: BookVariable[];
   viewport: VueFlowViewport;
-  characterSheetSchema?: CharacterSheetSchema; // Opcional para libros antiguos
-  characterSheet?: CharacterSheet; // Opcional para libros antiguos
+  characterSheetSchema?: CharacterSheetSchema;
+  characterSheet?: CharacterSheet;
 }

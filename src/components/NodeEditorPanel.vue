@@ -1,15 +1,18 @@
-<!-- src/components/NodeEditorPanel.vue -->
+<!-- src/components/NodeEditorPanel.vue (CORREGIDO) -->
 <template>
-  <q-card class="node-editor-panel bg-grey-9 text-white no-shadow column no-wrap">
+  <!-- Usamos v-if para no renderizar nada si no hay un nodo local, evitando errores -->
+  <q-card v-if="localNode" class="node-editor-panel bg-grey-9 text-white no-shadow column no-wrap">
     <q-toolbar class="bg-grey-10">
       <q-toolbar-title class="text-subtitle1">
         Editar Nodo
       </q-toolbar-title>
       <q-btn flat round dense icon="close" @click="emit('close')" />
     </q-toolbar>
+
     <q-card-section class="col q-pt-md q-gutter-y-md scroll">
+      <!-- Los v-model ahora apuntan directamente a las propiedades de localNode -->
       <q-input
-        v-model="editedLabel"
+        v-model="localNode.label"
         label="Nombre del Nodo"
         dark
         dense
@@ -17,7 +20,7 @@
       />
 
       <q-select
-        v-model="editedTags"
+        v-model="localNode.tags"
         label="Etiquetas"
         dark
         dense
@@ -37,8 +40,9 @@
           </q-item>
         </template>
       </q-select>
+
       <q-input
-        v-model="editedColor"
+        v-model="localNode.color"
         label="Color del Nodo"
         dark
         dense
@@ -47,13 +51,13 @@
         class="color-input"
       >
         <template #prepend>
-          <q-icon name="circle" :style="{ color: editedColor || '#455a64' }" />
+          <q-icon name="circle" :style="{ color: localNode.color || '#455a64' }" />
         </template>
         <template #append>
           <q-icon name="colorize" class="cursor-pointer">
             <q-popup-proxy cover transition-show="scale" transition-hide="scale">
               <q-color
-                v-model="editedColor"
+                v-model="localNode.color"
                 dark
                 no-header
                 no-footer
@@ -63,8 +67,9 @@
           </q-icon>
         </template>
       </q-input>
+
       <q-select
-        v-model="editedImageId"
+        v-model="localNode.imageId"
         :options="imageAssetOptions"
         option-value="id"
         option-label="name"
@@ -107,9 +112,10 @@
           <p class="q-mt-sm text-caption">Sin imagen seleccionada</p>
         </div>
       </div>
+
       <div class="q-pa-none node-content">
         <q-input
-          v-model="editedDescription"
+          v-model="localNode.description"
           label="TEXTO"
           type="textarea"
           autogrow
@@ -118,6 +124,24 @@
           borderless
         />
       </div>
+    </q-card-section>
+
+    <!-- El editor de acciones de ENTRADA -->
+    <q-card-section>
+      <ActionsEditor
+        :actions="localNode.actions || []"
+        @update:actions="updateNodeActions"
+      />
+    </q-card-section>
+
+    <q-separator dark />
+
+    <!-- [!code focus:6] El nuevo editor de opciones de SALIDA -->
+    <q-card-section>
+      <ChoicesEditor
+        :choices="localNode.choices || []"
+        @update:choices="updateNodeChoices"
+      />
     </q-card-section>
 
     <q-card-actions align="right" class="q-pa-md">
@@ -132,7 +156,9 @@ import { ref, watch, computed } from 'vue';
 import { useAssetsStore } from 'src/stores/assets-store';
 import { useNodesStore } from 'src/stores/nodes-store';
 import { storeToRefs } from 'pinia';
-import type { BookNode } from 'src/stores/types';
+import type { BookNode, AnyAction } from 'src/stores/types';
+import ActionsEditor from './ActionsEditor.vue';
+import ChoicesEditor from './ChoicesEditor.vue';
 
 interface Props {
   node: BookNode | null;
@@ -148,12 +174,8 @@ const { assets } = storeToRefs(assetsStore);
 const { nodes } = storeToRefs(nodesStore);
 
 // --- ESTADO LOCAL DEL FORMULARIO ---
-const editedLabel = ref('');
-const editedDescription = ref('');
-const editedImageId = ref<string | null>(null);
-const editedTags = ref<string[]>([]);
-const editedColor = ref('');
-const editedSize = ref<'small' | 'medium' | 'large'>('medium');
+// Refactorizamos para usar una única copia local del nodo.
+const localNode = ref<BookNode | null>(null);
 const allTagsOptions = ref<string[]>([]);
 
 // Obtiene todas las etiquetas únicas de todos los nodos del libro.
@@ -176,57 +198,58 @@ const imageAssetOptions = computed(() =>
 
 // URL de la imagen seleccionada para la vista previa.
 const currentImageUrl = computed(() => {
-  if (!editedImageId.value) return null;
-  const selectedOption = imageAssetOptions.value.find(opt => opt.id === editedImageId.value);
+  if (!localNode.value?.imageId) return null;
+  const selectedOption = imageAssetOptions.value.find(opt => opt.id === localNode.value?.imageId);
   return selectedOption ? selectedOption.src : null;
 });
 
 // --- FUNCIONES ---
 
+// Actualiza las acciones en nuestra copia local del nodo.
+function updateNodeActions(newActions: AnyAction[]) {
+  if (localNode.value) {
+    localNode.value.actions = newActions;
+  }
+}
+
+function updateNodeChoices(newChoices: AnyChoice[]) {
+  if (localNode.value) {
+    localNode.value.choices = newChoices;
+  }
+}
+
 // Permite crear nuevas etiquetas desde el QSelect.
 function createTag(inputValue: string, doneFn: (item: string, mode: 'add-unique') => void) {
   const newTag = inputValue.trim();
   if (newTag && !allTagsOptions.value.includes(newTag)) {
-    allTagsOptions.value.unshift(newTag); // Añade al principio para visibilidad
+    allTagsOptions.value.unshift(newTag);
   }
   doneFn(newTag, 'add-unique');
 }
 
-function resetAndLoadNode(node: BookNode | null) {
-  if (node) {
-    editedLabel.value = node.label || '';
-    editedDescription.value = node.data.description || '';
-    editedImageId.value = node.data.imageId || null;
-    editedTags.value = [...(node.data.tags || [])];
-    editedColor.value = node.data.color || '';
-    editedSize.value = node.data.size || 'medium';
+// Carga el nodo en la copia local cuando cambia la prop.
+watch(() => props.node, (newNode) => {
+  if (newNode) {
+    // Creamos una copia profunda para no mutar el estado original.
+    localNode.value = JSON.parse(JSON.stringify(newNode));
 
-    allTagsOptions.value = [...new Set([...allBookTags.value, ...editedTags.value])];
+    // Aseguramos que las propiedades opcionales existan para evitar errores.
+    if (!localNode.value.tags) localNode.value.tags = [];
+    if (!localNode.value.actions) localNode.value.actions = [];
+
+    // Actualizamos las opciones de etiquetas.
+    allTagsOptions.value = [...new Set([...allBookTags.value, ...localNode.value.tags])];
   } else {
-
-    editedLabel.value = '';
-    editedDescription.value = '';
-    editedImageId.value = null;
-    editedTags.value = [];
-    editedColor.value = '';
-    editedSize.value = 'medium';
-    allTagsOptions.value = [...allBookTags.value];
+    localNode.value = null;
   }
-}
+}, { immediate: true, deep: true });
+
 
 function saveChanges() {
-  if (props.node) {
-    // Creamos un objeto de actualizaciones que coincide con la estructura de BookNode.
-    const updates = {
-      label: editedLabel.value,
-      data: {
-        description: editedDescription.value,
-        imageId: editedImageId.value || undefined,
-        tags: editedTags.value.length > 0 ? editedTags.value : undefined,
-        color: editedColor.value || undefined,
-        size: editedSize.value,
-      }
-    };
+  if (props.node && localNode.value) {
+    // Creamos un objeto de actualizaciones a partir de la copia local.
+    // Ya no necesitamos reconstruir un objeto 'data' que no existe.
+    const { id, position, ...updates } = localNode.value;
 
     // Emitimos el payload para que el store lo procese.
     emit('save', {
@@ -236,9 +259,6 @@ function saveChanges() {
     emit('close');
   }
 }
-
-watch(() => props.node, resetAndLoadNode, { immediate: true, deep: true });
-
 </script>
 
 <style scoped>
