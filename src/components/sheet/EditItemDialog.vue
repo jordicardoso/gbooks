@@ -139,8 +139,6 @@ const formTitle = computed(() =>
   props.item ? `Editar Objeto en "${props.slotName}"` : `Equipar Objeto en "${props.slotName}"`
 );
 
-// --- Sincronización con las props ---
-// Cuando el diálogo se abre (o el item cambia), creamos una copia local profunda para editarla.
 watch(
   () => props.item,
   (newItem) => {

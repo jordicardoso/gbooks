@@ -1,142 +1,206 @@
-<!-- src/components/sheet/StatsSection.vue -->
+<!-- src/components/sheet/StatsSection.vue (CON BARRA DE PROGRESO) -->
 <template>
   <q-card class="bg-grey-9">
     <q-card-section class="row items-center">
       <q-icon v-if="icon" :name="icon" class="q-mr-sm" size="sm" />
       <div class="text-h6">{{ title }}</div>
       <q-space />
-      <!-- Botón para añadir una nueva estadística -->
-      <q-btn
-        flat
-        round
-        dense
-        icon="add"
-        @click="promptAddStat"
-        color="positive"
-      >
+      <q-btn flat round dense icon="add" @click="openStatDialog(null)" color="positive">
         <q-tooltip>Añadir estadística</q-tooltip>
       </q-btn>
     </q-card-section>
-    <q-card-section class="q-gutter-y-sm">
-      <div v-if="Object.keys(localData).length > 0">
-      <div v-for="(stat, key) in localData" :key="key" class="stat-row">
-        <div class="text-subtitle1 text-capitalize q-mr-md stat-label">
-          {{ key }}
-        </div>
-        <q-linear-progress
-          :value="stat.max > 0 ? stat.current / stat.max : 0"
-          color="cyan"
-          class="q-mt-xs stat-bar"
-          rounded
-        />
-        <q-input
-          v-model.number="stat.current"
-          type="number"
-          dark
-          dense
-          class="stat-input"
-          @update:model-value="emitUpdate"
-          :min="0"
-        />
-        <span class="q-mx-sm">/</span>
-        <q-input
-          v-model.number="stat.max"
-          type="number"
-          dark
-          dense
-          class="stat-input"
-          @update:model-value="emitUpdate"
-          :min="0"
-        />
-        <q-btn
-          flat
-          round
-          dense
-          icon="delete"
-          size="sm"
-          @click="confirmRemoveStat(String(key))"
-          color="negative"
-          class="q-ml-sm"
-        />
-      </div>
-      </div>
-      <div v-else class="text-grey-6 text-center q-pa-md">
-        (No hay estadísticas definidas. Haz clic en el botón '+' para añadir una.)
-      </div>
+
+    <q-card-section v-if="Object.keys(localData).length === 0" class="text-grey-6 text-center q-pa-md">
+      (No hay estadísticas. Haz clic en '+' para añadir una.)
     </q-card-section>
+
+    <q-list v-else dark separator>
+      <!-- === INICIO DE LA MODIFICACIÓN DEL LAYOUT === -->
+      <q-item v-for="(stat, key) in localData" :key="key" class="q-py-md">
+        <q-item-section>
+          <!-- Fila superior con el nombre y los controles -->
+          <div class="row items-center no-wrap">
+            <div class="col">
+              <q-item-label class="text-capitalize text-body1">{{ key }}</q-item-label>
+            </div>
+            <div class="col-auto row items-center no-wrap q-gutter-x-sm">
+              <q-input
+                v-model.number="stat.current"
+                type="number"
+                dark dense filled
+                style="width: 80px"
+                class="text-center"
+                @update:model-value="validateStat(stat)"
+              />
+              <q-btn flat round dense icon="edit" @click="openStatDialog(String(key))">
+                <q-tooltip>Editar Rango (min/max)</q-tooltip>
+              </q-btn>
+              <q-btn flat round dense icon="delete" color="negative" @click="confirmRemoveStat(String(key))" />
+            </div>
+          </div>
+
+          <!-- Fila inferior con la barra de progreso y el rango -->
+          <div class="q-mt-sm">
+            <q-linear-progress
+              :value="getStatProgress(stat)"
+              dark rounded
+              color="primary"
+              size="10px"
+            >
+              <q-tooltip>
+                {{ stat.current }} / {{ stat.max }}
+              </q-tooltip>
+            </q-linear-progress>
+            <q-item-label caption class="text-grey-5 q-mt-xs text-right">
+              Rango: {{ stat.min ?? 0 }} &harr; {{ stat.max }}
+            </q-item-label>
+          </div>
+        </q-item-section>
+      </q-item>
+      <!-- === FIN DE LA MODIFICACIÓN DEL LAYOUT === -->
+    </q-list>
+
+    <!-- El diálogo para añadir/editar no cambia -->
+    <q-dialog v-model="isStatDialogOpen" persistent>
+      <q-card class="bg-grey-10 text-white" style="width: 400px">
+        <q-card-section>
+          <div class="text-h6">{{ dialogTitle }}</div>
+        </q-card-section>
+        <q-form @submit.prevent="saveStat">
+          <q-card-section class="q-gutter-y-md">
+            <q-input
+              v-model="statForm.name"
+              label="Nombre"
+              filled dark autofocus
+              :readonly="!!editingStatKey"
+              :rules="[
+                val => !!val || 'El nombre es obligatorio',
+                val => !!editingStatKey || !localData[val.toLowerCase()] || 'La estadística ya existe'
+              ]"
+              lazy-rules
+            />
+            <q-input
+              v-model.number="statForm.max"
+              label="Valor Máximo"
+              type="number"
+              filled dark
+              :rules="[val => typeof val === 'number' || 'Debe ser un número']"
+              lazy-rules
+            />
+            <q-input
+              v-model.number="statForm.min"
+              label="Valor Mínimo (opcional)"
+              type="number"
+              filled dark
+              placeholder="Por defecto: 0"
+            />
+          </q-card-section>
+          <q-separator dark />
+          <q-card-actions align="right">
+            <q-btn flat label="Cancelar" v-close-popup />
+            <q-btn type="submit" color="primary" :label="editingStatKey ? 'Guardar' : 'Añadir'" />
+          </q-card-actions>
+        </q-form>
+      </q-card>
+    </q-dialog>
   </q-card>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useQuasar } from 'quasar';
-import type { CharacterSheet } from 'src/stores/book-store';
+import type { Stat } from 'src/stores/types';
 
 const props = defineProps<{
   title: string;
   icon?: string;
-  data?: CharacterSheet['stats'];
+  data: { [key: string]: Stat };
 }>();
 
 const emit = defineEmits(['update:data']);
 const $q = useQuasar();
 
-const localData = ref<CharacterSheet['stats']>(
-  JSON.parse(JSON.stringify(props.data || {}))
-);
+const localData = ref<{ [key: string]: Stat }>(JSON.parse(JSON.stringify(props.data || {})));
+const isStatDialogOpen = ref(false);
+const editingStatKey = ref<string | null>(null);
+const statForm = ref({ name: '', max: 100, min: 0 });
 
-watch(
-  () => props.data,
-  (newData) => {
-    localData.value = JSON.parse(JSON.stringify(newData || {}));
-  },
-  { deep: true }
-);
+const dialogTitle = computed(() => editingStatKey.value ? 'Editar Estadística' : 'Nueva Estadística');
+
+watch(() => props.data, (newData) => {
+  localData.value = JSON.parse(JSON.stringify(newData || {}));
+}, { deep: true });
 
 function emitUpdate() {
   emit('update:data', localData.value);
 }
 
-function promptAddStat() {
+// --- NUEVA FUNCIÓN PARA CALCULAR EL PROGRESO ---
+function getStatProgress(stat: Stat): number {
+  const min = stat.min ?? 0;
+  const range = stat.max - min;
+  if (range <= 0) {
+    return stat.current >= stat.max ? 1 : 0;
+  }
+  const progress = stat.current - min;
+  return Math.max(0, Math.min(1, progress / range));
+}
+
+function validateStat(stat: Stat) {
+  const min = stat.min ?? 0;
+  if (stat.max < min) stat.max = min;
+  if (stat.current < min) stat.current = min;
+  if (stat.current > stat.max) stat.current = stat.max;
+  emitUpdate();
+}
+
+function openStatDialog(key: string | null = null) {
+  editingStatKey.value = key;
+  if (key && localData.value[key]) {
+    const stat = localData.value[key];
+    statForm.value = {
+      name: key,
+      max: stat.max,
+      min: stat.min ?? 0,
+    };
+  } else {
+    statForm.value = { name: '', max: 100, min: 0 };
+  }
+  isStatDialogOpen.value = true;
+}
+
+function saveStat() {
+  const name = statForm.value.name.trim().toLowerCase();
+  if (!name) return;
+
+  if (editingStatKey.value) {
+    const key = editingStatKey.value;
+    localData.value[key].max = statForm.value.max;
+    localData.value[key].min = statForm.value.min;
+    validateStat(localData.value[key]);
+  } else {
+    if (localData.value[name]) return;
+    localData.value[name] = {
+      current: statForm.value.max,
+      max: statForm.value.max,
+      min: statForm.value.min,
+    };
+  }
+
+  isStatDialogOpen.value = false;
+  emitUpdate();
+}
+
+function confirmRemoveStat(key: string) {
   $q.dialog({
-    title: 'Nueva Estadística',
-    message: 'Introduce el nombre para la nueva estadística (ej: Fuerza, Destreza, Magia).',
-    prompt: {
-      model: '',
-      type: 'text',
-      isValid: (val) => val.length > 0 && !localData.value[val.toLowerCase()],
-    },
+    title: 'Confirmar',
+    message: `¿Estás seguro de que quieres eliminar la estadística "${key}"?`,
     dark: true,
     cancel: true,
     persistent: true,
-  }).onOk((statName: string) => {
-    const key = statName.toLowerCase().trim();
-    if (key) {
-      // Añadimos la nueva estadística con valores por defecto
-      localData.value[key] = { current: 10, max: 10 };
-      // Notificamos al padre del cambio
-      emitUpdate();
-    }
+  }).onOk(() => {
+    delete localData.value[key];
+    emitUpdate();
   });
 }
 </script>
-
-<style lang="scss" scoped>
-.stat-row {
-  display: grid;
-  grid-template-columns: 100px 1fr 60px 20px 60px auto;
-  align-items: center;
-  gap: 8px;
-}
-.stat-label {
-  font-weight: 500;
-}
-.stat-bar {
-  min-width: 100px;
-}
-.stat-input {
-  .q-field__control {
-    height: 32px;
-  }
-}
-</style>

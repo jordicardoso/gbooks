@@ -1,4 +1,4 @@
-<!-- src/components/sheet/SheetDesigner.vue (NUEVO FICHERO) -->
+<!-- src/components/sheet/SheetDesigner.vue (REFACTORIZADO) -->
 <template>
   <q-card class="bg-grey-10 text-white" style="width: 600px; max-width: 90vw;">
     <q-card-section>
@@ -9,27 +9,34 @@
     <q-separator dark />
 
     <q-card-section>
-      <q-list dark separator>
+      <div class="text-subtitle1 q-mb-sm">Secciones Actuales</div>
+      <q-list v-if="localSchema.layout.length > 0" dark separator bordered>
         <q-item v-for="(section, index) in localSchema.layout" :key="index">
           <q-item-section avatar>
             <q-icon :name="section.icon || 'view_quilt'" />
           </q-item-section>
           <q-item-section>
             <q-item-label>{{ section.title }}</q-item-label>
-            <q-item-label caption class="text-grey-5">Tipo: {{ section.type }} / Clave: {{ section.dataKey }}</q-item-label>
+            <q-item-label caption class="text-grey-5">
+              <!-- Mostramos una descripción más amigable en lugar de los detalles técnicos -->
+              {{ getSectionTypeDescription(section) }}
+            </q-item-label>
           </q-item-section>
           <q-item-section side>
             <q-btn flat round dense icon="delete" color="negative" @click="removeSection(index)" />
           </q-item-section>
         </q-item>
       </q-list>
+      <div v-else class="text-grey-6 text-center q-pa-md">
+        (No hay secciones. Haz clic en "Añadir Sección" para empezar.)
+      </div>
 
-      <div class="q-mt-md">
+      <div class="q-mt-lg">
         <q-btn
           color="primary"
           label="Añadir Sección"
           icon="add"
-          @click="openAddDialog"
+          @click="isAddDialogOpen = true"
         />
       </div>
     </q-card-section>
@@ -40,46 +47,40 @@
       <q-btn flat label="Cancelar" @click="emit('close')" />
       <q-btn color="primary" label="Guardar Cambios" @click="saveSchema" />
     </q-card-actions>
-    <q-dialog v-model="isAddDialogOpen" persistent>
-      <q-card class="bg-grey-9 text-white" style="width: 400px;">
+
+    <!-- === DIÁLOGO MEJORADO PARA AÑADIR SECCIÓN === -->
+    <q-dialog v-model="isAddDialogOpen">
+      <q-card class="bg-grey-9 text-white" style="width: 450px;">
         <q-card-section>
-          <div class="text-h6">Nueva Sección</div>
+          <div class="text-h6">Elige un tipo de sección</div>
         </q-card-section>
 
-        <q-form @submit.prevent="saveNewSection">
-          <q-card-section class="q-gutter-y-md">
-            <q-input
-              v-model="newSectionData.title"
-              label="Título de la sección"
-              filled dark autofocus
-              :rules="[val => !!val || 'El título es obligatorio']"
-            />
-            <q-select
-              v-model="newSectionData.type"
-              :options="availableTypes"
-              label="Tipo de componente"
-              filled dark emit-value map-options
-              :rules="[val => !!val || 'El tipo es obligatorio']"
-            />
-            <!-- El selector de modo solo aparece si el tipo es 'itemSection' -->
-            <q-select
-              v-if="newSectionData.type === 'itemSection'"
-              v-model="newSectionData.mode"
-              :options="['slots', 'list']"
-              label="Modo de la sección"
-              filled dark emit-value map-options
-              :rules="[val => !!val || 'El modo es obligatorio para este tipo']"
-            />
-          </q-card-section>
+        <q-list dark separator>
+          <q-item
+            v-for="template in sectionTemplates"
+            :key="template.label"
+            clickable
+            v-ripple
+            @click="promptForSectionTitle(template)"
+          >
+            <q-item-section avatar>
+              <q-icon :name="template.icon" color="primary" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>{{ template.label }}</q-item-label>
+              <q-item-label caption>{{ template.description }}</q-item-label>
+            </q-item-section>
+            <q-item-section side>
+              <q-icon name="chevron_right" />
+            </q-item-section>
+          </q-item>
+        </q-list>
 
-          <q-card-actions align="right">
-            <q-btn flat label="Cancelar" v-close-popup />
-            <q-btn color="primary" label="Añadir" type="submit" />
-          </q-card-actions>
-        </q-form>
+        <q-card-actions align="right">
+          <q-btn flat label="Cerrar" v-close-popup />
+        </q-card-actions>
       </q-card>
     </q-dialog>
-
   </q-card>
 </template>
 
@@ -88,30 +89,78 @@ import { ref } from 'vue';
 import { useQuasar } from 'quasar';
 import { useBookStore, type CharacterSheetSchema, type CharacterSheetSectionSchema } from 'src/stores/book-store';
 
-const props = defineProps<{
-  availableTypes: string[];
-}>();
-
+// Ya no necesitamos la prop 'availableTypes'
 const emit = defineEmits(['close']);
 const $q = useQuasar();
 const bookStore = useBookStore();
 
-// Creamos una copia local profunda del schema para poder editarla sin afectar al store directamente.
 const localSchema = ref<CharacterSheetSchema>(
   JSON.parse(JSON.stringify(bookStore.characterSheetSchema))
 );
+const isAddDialogOpen = ref(false);
 
-function openAddDialog() {
-  // Reseteamos el formulario
-  newSectionData.value = { title: '', type: null, mode: null };
-  isAddDialogOpen.value = true;
+// Plantillas de sección que se mostrarán al usuario.
+// Esto oculta los detalles de implementación como 'type' y 'mode'.
+const sectionTemplates = [
+  {
+    label: 'Bloque de Estadísticas',
+    description: 'Valores numéricos (ej: Vida, Fuerza, Maná).',
+    icon: 'analytics',
+    schema: { type: 'stats' as const },
+  },
+  {
+    label: 'Equipo (con Ranuras)',
+    description: 'Para equipar objetos en ranuras como "Cabeza", "Manos".',
+    icon: 'checkroom',
+    schema: { type: 'itemSection' as const, mode: 'slots' as const },
+  },
+  {
+    label: 'Inventario (Lista)',
+    description: 'Una lista simple para objetos, consumibles, etc.',
+    icon: 'inventory_2',
+    schema: { type: 'itemSection' as const, mode: 'list' as const },
+  },
+  {
+    label: 'Cronología de Eventos',
+    description: 'Una lista de sucesos importantes en la historia.',
+    icon: 'event_note',
+    schema: { type: 'events' as const },
+  },
+];
+
+type SectionTemplate = typeof sectionTemplates[number];
+
+function getSectionTypeDescription(section: CharacterSheetSectionSchema): string {
+  if (section.type === 'itemSection') {
+    return section.mode === 'slots' ? 'Equipo (Ranuras)' : 'Inventario (Lista)';
+  }
+  if (section.type === 'stats') {
+    return 'Estadísticas';
+  }
+  if (section.type === 'events') {
+    return 'Cronología de Eventos';
+  }
+  return `Tipo: ${section.type}`;
 }
 
-function saveNewSection() {
-  const { title, type, mode } = newSectionData.value;
-  if (!title || !type) return;
+function promptForSectionTitle(template: SectionTemplate) {
+  isAddDialogOpen.value = false; // Cerramos el diálogo de selección
 
-  const dataKey = `${type}_${mode || 'default'}_${Date.now()}`;
+  $q.dialog({
+    title: `Añadir "${template.label}"`,
+    message: 'Introduce un título para esta sección (ej: Atributos, Equipo del Héroe, Mochila).',
+    prompt: { model: '', type: 'text', isValid: val => val.length > 0 },
+    dark: true,
+    cancel: true,
+    persistent: true,
+  }).onOk((title: string) => {
+    addNewSection(title, template);
+  });
+}
+
+function addNewSection(title: string, template: SectionTemplate) {
+  // Generamos una clave única para la sección
+  const dataKey = `${template.schema.type}_${template.schema.mode || 'default'}_${Date.now()}`;
 
   if (localSchema.value.layout.some(s => s.dataKey === dataKey)) {
     $q.notify({ type: 'negative', message: 'Error al generar clave única. Inténtalo de nuevo.' });
@@ -119,42 +168,21 @@ function saveNewSection() {
   }
 
   const newSection: CharacterSheetSectionSchema = {
-    type,
     title,
-    icon: getIconForType(type, mode),
-    dataKey: dataKey as any, // Usamos 'any' porque la clave es dinámica
-    mode: mode || undefined,
+    icon: template.icon,
+    dataKey: dataKey as any, // La clave es dinámica, 'any' es aceptable aquí
+    ...template.schema,
   };
 
   localSchema.value.layout.push(newSection);
-  isAddDialogOpen.value = false; // Cerramos el diálogo
 }
 
 function removeSection(index: number) {
   localSchema.value.layout.splice(index, 1);
 }
 
-const isAddDialogOpen = ref(false);
-const newSectionData = ref({
-  title: '',
-  type: null as string | null,
-  mode: null as 'slots' | 'list' | null,
-});
-
-function getIconForType(type: string, mode?: string): string {
-  if (type === 'itemSection') {
-    return mode === 'slots' ? 'checkroom' : 'inventory_2';
-  }
-  switch (type) {
-    case 'stats': return 'analytics';
-    default: return 'view_quilt';
-  }
-}
-
 function saveSchema() {
-  // Llamamos a la nueva acción del store con nuestra copia local modificada
   bookStore.updateCharacterSheetSchema(localSchema.value);
-  // Cerramos el diálogo
   emit('close');
 }
 </script>

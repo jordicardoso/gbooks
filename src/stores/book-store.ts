@@ -14,16 +14,15 @@ export interface BookState {
   debounceSaveTimer: NodeJS.Timeout | null;
 }
 
-function getInitialDataForSection(type: CharacterSheetSectionSchema['type']) {
-  switch (type) {
+function getInitialDataForSection(section: CharacterSheetSectionSchema) {
+  switch (section.type) {
     case 'stats':
-      return []; // Las estadísticas son una lista de objetos
-    case 'itemList':
-      return []; // El inventario es una lista de objetos
-    case 'equipment':
-      return {}; // El equipamiento es un mapa de slots a objetos
-    case 'enfermedades':
-      return {}; //
+      return {}; // Las estadísticas son un objeto de objetos
+    case 'itemSection':
+      // Diferenciamos entre lista (inventario) y slots (equipo)
+      return section.mode === 'list' ? [] : {};
+    case 'events':
+      return []; // Los eventos son una lista
     default:
       return null; // Fallback para tipos desconocidos
   }
@@ -32,8 +31,17 @@ function getInitialDataForSection(type: CharacterSheetSectionSchema['type']) {
 function generateDefaultSheetFromSchema(schema: CharacterSheetSchema): CharacterSheet {
   const newSheet: Partial<CharacterSheet> = {};
   for (const section of schema.layout) {
-    (newSheet as any)[section.dataKey] = getInitialDataForSection(section.type);
+    (newSheet as any)[section.dataKey] = getInitialDataForSection(section);
   }
+  // Aseguramos que la sección 'stats' siempre exista si está en el schema,
+  // aunque la clave sea dinámica.
+  const statsSection = schema.layout.find(s => s.type === 'stats');
+  if (statsSection && !newSheet.stats) {
+    newSheet.stats = (newSheet as any)[statsSection.dataKey] || {};
+  } else if (!newSheet.stats) {
+    newSheet.stats = {};
+  }
+
   return newSheet as CharacterSheet;
 }
 
@@ -54,29 +62,9 @@ function validateAndRepairBookData(data: any): BookData {
   const nodesToMigrate = Array.isArray(data.nodes) ? data.nodes : defaults.nodes;
   const migratedNodes: BookNode[] = nodesToMigrate.map((node: any) => {
     if (!node) return node;
-
-    // Si el nodo ya tiene un `data`, lo dejamos igual
     if (node.data && typeof node.data === 'object') return node;
-
-    // Extraemos las propiedades que deben ir dentro de `data`
-    const {
-      id,
-      type,
-      position,
-      label,
-      selected,
-      // todo lo demás se agrupa en "rest"
-      ...rest
-    } = node;
-
-    return {
-      id,
-      type,
-      position,
-      label,
-      selected: !!selected,
-      data: { ...rest }, // ← aquí van color, description, imageId, etc.
-    };
+    const { id, type, position, label, selected, ...rest } = node;
+    return { id, type, position, label, selected: !!selected, data: { ...rest } };
   });
 
   return {
@@ -101,11 +89,11 @@ export const useBookStore = defineStore('book', {
   }),
 
   getters: {
-    characterSheet(state): CharacterSheet | null | undefined {
-      return state.activeBook?.characterSheet;
+    characterSheet(state): CharacterSheet | null {
+      return state.activeBook?.characterSheet ?? null;
     },
-    characterSheetSchema(state): CharacterSheetSchema | null | undefined {
-      return state.activeBook?.characterSheetSchema;
+    characterSheetSchema(state): CharacterSheetSchema | null {
+      return state.activeBook?.characterSheetSchema ?? null;
     },
   },
 
@@ -113,26 +101,26 @@ export const useBookStore = defineStore('book', {
     createInitialCharacterSheet() {
       if (!this.activeBook) return;
 
-      // 1. Definimos un schema inicial súper básico.
       const initialSchema: CharacterSheetSchema = {
         layout: [
           {
             type: 'stats',
             title: 'Estadísticas Principales',
-            icon: 'o_analytics',
-            dataKey: 'stats',
+            icon: 'analytics',
+            dataKey: 'stats', // Usamos 'stats' como clave fija para la sección principal
           },
         ],
       };
 
-      // 2. Asignamos el nuevo schema al libro activo.
-      this.activeBook.characterSheetSchema = initialSchema;
+      // Usamos $patch para modificar el estado de forma segura
+      this.$patch(state => {
+        if (state.activeBook) {
+          state.activeBook.characterSheetSchema = initialSchema;
+          state.activeBook.characterSheet = generateDefaultSheetFromSchema(initialSchema);
+        }
+      });
 
-      // 3. Generamos la ficha de datos vacía a partir de este schema.
-      this.activeBook.characterSheet = generateDefaultSheetFromSchema(initialSchema);
-
-      // 4. Marcamos el libro como modificado para que se guarde.
-      this.setDirty();
+      this.setDirty(); // Reutilizamos la lógica de guardado automático
       console.log('Ficha de personaje inicial creada.');
     },
 
@@ -144,58 +132,41 @@ export const useBookStore = defineStore('book', {
     },
 
     updateCharacterSheetSchema(newSchema: CharacterSheetSchema) {
-      if (!this.activeBook) return;
+      if (!this.activeBook || !this.characterSheet || !this.characterSheetSchema) {
+        console.error('No se puede actualizar el schema si no hay ficha activa.');
+        return;
+      }
 
-      const oldSheet = this.activeBook.characterSheet ?? {};
-      const newSheet: Partial<CharacterSheet> = {};
+      const oldSchema = this.characterSheetSchema;
+      const oldDataKeys = new Set(oldSchema.layout.map(s => s.dataKey));
+      const newDataKeys = new Set(newSchema.layout.map(s => s.dataKey));
+      const newCharacterSheet = { ...this.characterSheet };
 
-      for (const section of newSchema.layout) {
-        const key = section.dataKey as keyof CharacterSheet;
-
-        if (Object.prototype.hasOwnProperty.call(oldSheet, key)) {
-          (newSheet as any)[key] = oldSheet[key];
-        } else {
-          (newSheet as any)[key] = getInitialDataForSection(section.type);
+      // 1. Eliminar datos de secciones que ya no existen
+      for (const key of oldDataKeys) {
+        if (!newDataKeys.has(key)) {
+          delete (newCharacterSheet as any)[key];
         }
       }
 
-      // Asignamos el nuevo esquema y la ficha reconciliada
-      this.activeBook.characterSheetSchema = newSchema;
-      this.activeBook.characterSheet = newSheet as CharacterSheet;
-
-      this.setDirty();
-      console.log('Schema de la ficha actualizado y datos reconciliados.');
-    },
-
-    async loadBookById(bookId: string) {
-      if (!bookId) return;
-      this.isLoading = true;
-      this.isDirty = false;
-
-      if (this.debounceSaveTimer) clearTimeout(this.debounceSaveTimer);
-
-      try {
-        const content = await window.electronAPI.loadBook(bookId);
-        const bookData = validateAndRepairBookData(JSON.parse(content));
-
-        this.activeBook = bookData;
-        this.activeBookId = bookId;
-
-        const nodesStore = useNodesStore();
-        const assetsStore = useAssetsStore();
-
-        nodesStore.setElements(bookData.nodes, bookData.edges, bookData.viewport);
-        assetsStore.setAssets(bookId, bookData.assets);
-
-      } catch (error) {
-        console.error(`Error al cargar el libro con ID "${bookId}":`, error);
-        this.clearBook();
-        throw error;
-      } finally {
-        this.isLoading = false;
+      // 2. Añadir datos iniciales para las nuevas secciones
+      for (const section of newSchema.layout) {
+        if (!oldDataKeys.has(section.dataKey)) {
+          (newCharacterSheet as any)[section.dataKey] = getInitialDataForSection(section);
+        }
       }
-    },
 
+      // 3. Actualizar el estado de forma segura con $patch
+      this.$patch(state => {
+        if (state.activeBook) {
+          state.activeBook.characterSheetSchema = newSchema;
+          state.activeBook.characterSheet = newCharacterSheet;
+        }
+      });
+
+      // 4. Disparamos el guardado automático
+      this.setDirty();
+    },
 
     async loadBookById(bookId: string) {
       if (!bookId) return;
@@ -206,7 +177,6 @@ export const useBookStore = defineStore('book', {
 
       try {
         const content = await window.electronAPI.loadBook(bookId);
-        // Ahora esta función también migra los datos a la última versión.
         const bookData = validateAndRepairBookData(JSON.parse(content));
 
         this.activeBook = bookData;
@@ -215,7 +185,6 @@ export const useBookStore = defineStore('book', {
         const nodesStore = useNodesStore();
         const assetsStore = useAssetsStore();
 
-        // [CORREGIDO] Pasamos también el viewport al store de nodos.
         nodesStore.setElements(bookData.nodes, bookData.edges, bookData.viewport);
         assetsStore.setAssets(bookId, bookData.assets);
 
@@ -246,22 +215,19 @@ export const useBookStore = defineStore('book', {
           data: edge.data,
         }));
 
+        // Aseguramos que los datos del libro a guardar están actualizados
         const bookToSave: BookData = {
-          meta: this.activeBook.meta,
-          variables: this.activeBook.variables,
+          ...this.activeBook,
           nodes: nodesStore.nodes,
           edges: cleanEdges,
           assets: assetsStore.assets,
           viewport: nodesStore.viewport,
-          characterSheet: this.activeBook.characterSheet,
-          characterSheetSchema: this.activeBook.characterSheetSchema,
         };
 
         const content = JSON.stringify(bookToSave, null, 2);
         await window.electronAPI.saveBook(this.activeBookId, content);
 
         this.activeBook = bookToSave;
-
         this.isDirty = false;
       } catch (error) {
         console.error('Error al guardar el libro:', error);

@@ -20,7 +20,6 @@
       </q-btn>
     </q-card-section>
 
-    <!-- === RENDERIZADO PARA MODO 'SLOTS' (EQUIPO) === -->
     <div v-if="mode === 'slots'">
       <q-card-section v-if="Object.keys(localData).length === 0" class="text-grey-6 text-center q-pa-md">
         (No hay ranuras de equipo. Haz clic en '+' para añadir una.)
@@ -42,12 +41,17 @@
             </q-item-label>
           </q-item-section>
           <q-item-section side>
-            <q-btn flat dense icon="edit_note" @click="openEditDialog(item, String(slot))">
-              <q-tooltip>{{ item ? 'Editar' : 'Equipar' }}</q-tooltip>
-            </q-btn>
-            <q-btn flat dense icon="delete" color="negative" @click="confirmRemoveSlot(String(slot))">
-              <q-tooltip>Eliminar ranura</q-tooltip>
-            </q-btn>
+            <!-- === INICIO DE LA CORRECCIÓN === -->
+            <!-- Envolvemos los botones en un div con clase 'row' para alinearlos horizontalmente -->
+            <div class="row items-center no-wrap">
+              <q-btn flat dense icon="edit_note" @click="openEditDialog(item, String(slot))">
+                <q-tooltip>{{ item ? 'Editar' : 'Equipar' }}</q-tooltip>
+              </q-btn>
+              <q-btn flat dense icon="delete" color="negative" @click="confirmRemoveSlot(String(slot))">
+                <q-tooltip>Eliminar ranura</q-tooltip>
+              </q-btn>
+            </div>
+            <!-- === FIN DE LA CORRECCIÓN === -->
           </q-item-section>
         </q-item>
       </q-list>

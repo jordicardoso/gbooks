@@ -66,6 +66,7 @@ import type { ItemEffect } from 'src/stores/types';
 import StatsSection from 'src/components/sheet/StatsSection.vue';
 import SheetDesigner from 'src/components/sheet/SheetDesigner.vue';
 import ItemSection from 'src/components/sheet/ItemSection.vue';
+import EventsSection from 'src/components/sheet/EventsSection.vue';
 
 const bookStore = useBookStore();
 const { characterSheet, characterSheetSchema } = storeToRefs(bookStore);
@@ -76,7 +77,8 @@ const isInitialized = ref(false);
 
 const componentMap = shallowRef<Record<string, Component>>({
   stats: StatsSection,
-  itemSection: ItemSection, // ¡Nuestro nuevo componente unificado!
+  itemSection: ItemSection,
+  events: EventsSection,
 });
 
 watch(characterSheet, (newSheet) => {

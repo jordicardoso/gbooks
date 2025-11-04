@@ -69,13 +69,13 @@ export interface BookData {
   characterSheet: CharacterSheet | null;
 }
 
-// --- TIPOS DE ACCIONES BÁSICAS ---
+// --- TIPOS DE ACCIONES ---
 export type ModifyOperation = 'add' | 'subtract' | 'set';
 
 export interface ModifyStatAction {
   id: string;
   type: 'modifyStat';
-  stat: string; // ej: 'health', 'mana'
+  stat: string;
   operation: ModifyOperation;
   value: number;
 }
@@ -84,38 +84,44 @@ export interface ModifyInventoryAction {
   id: string;
   type: 'modifyInventory';
   operation: 'add' | 'remove';
-  item: string; // ej: 'llave_oxidada'
+  item: string;
   quantity: number;
 }
 
 export interface SetFlagAction {
   id: string;
   type: 'setFlag';
-  flag: string; // ej: 'ha_hablado_con_el_rey'
+  flag: string;
   value: boolean;
 }
 
-// --- TIPOS DE ACCIONES COMPLEJAS (CON RESULTADOS) ---
-
-// Un "Resultado" de una tirada de dados
 export interface DiceRollOutcome {
   id: string;
-  range: String; // ej: [1, 1] o [2, 4]
+  range: String;
   description: string;
-  targetNodeId: string; // Nodo al que se dirige si este resultado ocurre
-  actions?: AnyAction[]; // Acciones adicionales que se ejecutan (ej: perder un objeto)
+  targetNodeId: string;
+  actions?: AnyAction[];
 }
 
-// La acción principal de "Tirada de Dados"
 export interface DiceRollAction {
   id:string;
   type: 'diceRoll';
-  dice: string; // ej: "1d6", "2d10+3"
+  dice: string;
   description: string;
   outcomes: DiceRollOutcome[];
 }
 
-// --- UNIÓN DE TODOS LOS TIPOS DE ACCIÓN ---
+export type AnyAction = ModifyStatAction | ModifyInventoryAction | SetFlagAction | DiceRollAction;
+
+// --- TIPOS DE ARISTAS (Consolidado y mejorado) ---
+export interface BookEdge extends Edge {
+  label?: string;
+  data?: {
+    description?: string;
+    actions?: AnyAction[];
+  };
+}
+
 // Esto nos permite tener un array de acciones de diferentes tipos
 export type AnyAction = ModifyStatAction | ModifyInventoryAction | SetFlagAction | DiceRollAction;
 
@@ -125,19 +131,59 @@ export interface BookEdge extends Edge {
   label?: string;
   data?: {
     description?: string;
-    // Ahora usamos nuestro nuevo tipo
     actions?: AnyAction[];
   };
 }
 
 /**
+ * Representa una estadística individual.
+ * Ahora incluye 'min' opcional para rangos como la temperatura.
+ */
+export interface Stat {
+  current: number;
+  max: number;
+  min?: number; // ¡NUEVO!
+}
+
+/**
+ * Representa un evento en la cronología del personaje.
+ */
+export interface Event {
+  id: string;
+  name: string;      // ANTES: description
+  happened: boolean;
+}
+
+/**
+ * Representa un objeto en el inventario o equipo.
+ */
+export interface Item {
+  id: string;
+  name: string;
+  description?: string;
+  quantity?: number;
+  effects: ItemEffect[];
+}
+
+/**
+ * Representa el efecto de un objeto (ej: "+10 a Fuerza").
+ */
+export interface ItemEffect {
+  target: string;
+  value: number;
+}
+
+/**
  * Define la estructura de una sección en el layout de la ficha.
+ * - `dataKey` es ahora `string` para permitir claves dinámicas.
+ * - `type` se alinea con los componentes existentes.
  */
 export interface CharacterSheetSectionSchema {
-  type: 'stats' | 'inventory' | 'events';
+  type: 'stats' | 'itemSection' | 'events';
   title: string;
   icon?: string;
-  dataKey: keyof CharacterSheet;
+  dataKey: string; // <-- CAMBIO CRUCIAL: de 'keyof CharacterSheet' a 'string'
+  mode?: 'slots' | 'list'; // Para diferenciar inventario de equipo
 }
 
 /**
@@ -147,25 +193,15 @@ export interface CharacterSheetSchema {
   layout: CharacterSheetSectionSchema[];
 }
 
-export interface ItemEffect {
-  target: string;
-  value: number;
-}
-
-export interface Item {
-  id: string; // ID único, siempre útil
-  name: string;
-  description?: string;
-  quantity?: number; // Opcional, para objetos apilables
-  effects: ItemEffect[];
-}
-
-// Asegúrate de que CharacterSheet usa este tipo
-export interface CharacterSheet {
-  stats: { [key: string]: { current: number; max: number } };
-  inventory: Item[];
-  events: { [slot: string]: String | null };
-}
+export type CharacterSheet = {
+  stats: { [key: string]: Stat };
+} & {
+  [key: string]:
+    | Record<string, Item | null>  // Para equipo (ranuras/slots)
+    | Item[]                       // Para inventario (lista de items)
+    | Event[]                      // Para eventos (lista)
+    | undefined;                   // Permite que existan claves que no sean secciones
+};
 
 // Ahora añadimos la ficha y su schema a la estructura principal del libro.
 export interface BookData {
@@ -174,7 +210,7 @@ export interface BookData {
   edges: BookEdge[];
   assets: BookAsset[];
   variables: BookVariable[];
-  viewport: ViewPort;
+  viewport: VueFlowViewport;
   characterSheetSchema?: CharacterSheetSchema; // Opcional para libros antiguos
   characterSheet?: CharacterSheet; // Opcional para libros antiguos
 }
