@@ -20,7 +20,7 @@
       />
 
       <q-select
-        v-model="localNode.tags"
+        v-model="localNode.data.tags"
         label="Etiquetas"
         dark
         dense
@@ -42,7 +42,7 @@
       </q-select>
 
       <q-input
-        v-model="localNode.color"
+        v-model="localNode.data.color"
         label="Color del Nodo"
         dark
         dense
@@ -51,13 +51,13 @@
         class="color-input"
       >
         <template #prepend>
-          <q-icon name="circle" :style="{ color: localNode.color || '#455a64' }" />
+          <q-icon name="circle" :style="{ color: localNode.data.color || '#455a64' }" />
         </template>
         <template #append>
           <q-icon name="colorize" class="cursor-pointer">
             <q-popup-proxy cover transition-show="scale" transition-hide="scale">
               <q-color
-                v-model="localNode.color"
+                v-model="localNode.data.color"
                 dark
                 no-header
                 no-footer
@@ -69,7 +69,7 @@
       </q-input>
 
       <q-select
-        v-model="localNode.imageId"
+        v-model="localNode.data.imageId"
         :options="imageAssetOptions"
         option-value="id"
         option-label="name"
@@ -115,7 +115,7 @@
 
       <div class="q-pa-none node-content">
         <q-input
-          v-model="localNode.description"
+          v-model="localNode.data.description"
           label="TEXTO"
           type="textarea"
           autogrow
@@ -198,8 +198,8 @@ const imageAssetOptions = computed(() =>
 
 // URL de la imagen seleccionada para la vista previa.
 const currentImageUrl = computed(() => {
-  if (!localNode.value?.imageId) return null;
-  const selectedOption = imageAssetOptions.value.find(opt => opt.id === localNode.value?.imageId);
+  if (!localNode.value?.data.imageId) return null;
+  const selectedOption = imageAssetOptions.value.find(opt => opt.id === localNode.value?.data.imageId);
   return selectedOption ? selectedOption.src : null;
 });
 

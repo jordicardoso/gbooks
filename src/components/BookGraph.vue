@@ -5,7 +5,7 @@
       v-if="isGraphReady"
       v-model:nodes="nodes"
       v-model:edges="edges"
-      :viewport="viewport"
+      v-model:viewport="viewport"
       :min-zoom="0.2"
       :max-zoom="4"
       @connect="onConnect"
@@ -15,7 +15,11 @@
       @edge-click="onEdgeClick"
     >
       <Background />
-      <MiniMap />
+      <MiniMap
+        :style="{ backgroundColor: 'transparent', border: '2px solid white' }"
+        :node-color="getNodeColor"
+        mask-color="rgba(40, 40, 40, 0.6)"
+      />
       <Controls />
 
       <template #node-start="props">
@@ -77,6 +81,7 @@
 import '@vue-flow/core/dist/style.css';
 import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/controls/dist/style.css';
+import '@vue-flow/minimap/dist/style.css';
 
 import { ref, nextTick, computed, onMounted } from 'vue';
 import { VueFlow, useVueFlow } from '@vue-flow/core';
@@ -100,15 +105,12 @@ const { nodes, edges, viewport } = storeToRefs(nodesStore);
 const { project } = useVueFlow();
 
 const isGraphReady = ref(false);
-
-console.log('Nodos en BookGraph:', JSON.parse(JSON.stringify(nodesStore.nodes)));
-
 const isMenuOpen = ref(false);
 const menuPosition = ref({ x: 0, y: 0 });
 const isEditorOpen = ref(false);
 const selectedNode = ref<BookNode | null>(null);
 const isEdgeEditorOpen = ref(false);
-const selectedEdge = ref<BookEdge | null>(null);
+//const selectedEdge = ref<BookEdge | null>(null);
 const lastPaneMenuEvent = ref<MouseEvent | null>(null);
 
 const hasStartNode = computed(() => nodes.value.some((node) => node.type === 'start'));
@@ -123,13 +125,16 @@ const contextMenuItems = computed<MenuItem[]>(() => {
 });
 
 onMounted(() => {
-  nodesStore.init();
-
+  //nodesStore.init();
   nextTick(() => {
     isGraphReady.value = true;
     console.log('[LOG BookGraph] El grafo está listo para renderizarse.');
   });
 });
+
+function getNodeColor(node: BookNode): string {
+  return node.data.color || '#78909c'; // Un gris azulado como fallback
+}
 
 function onConnect(params: Connection) {
   nodesStore.addConnection(params);
