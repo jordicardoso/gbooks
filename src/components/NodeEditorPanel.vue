@@ -1,23 +1,42 @@
-<!-- src/components/NodeEditorPanel.vue (CORREGIDO) -->
+<!-- src/components/NodeEditorPanel.vue (ACTUALIZADO) -->
 <template>
-  <!-- Usamos v-if para no renderizar nada si no hay un nodo local, evitando errores -->
-  <q-card v-if="localNode" class="node-editor-panel bg-grey-9 text-white no-shadow column no-wrap">
+  <!-- Añadimos la clase dinámica 'fullscreen' -->
+  <q-card v-if="localNode" :class="['node-editor-panel bg-grey-9 text-white no-shadow column no-wrap', { 'fullscreen': isFullScreen }]">
     <q-toolbar class="bg-grey-10">
       <q-toolbar-title class="text-subtitle1">
         Editar Nodo
       </q-toolbar-title>
+      <q-space />
+      <!-- Botón para modo pantalla completa -->
+      <q-btn
+        flat round dense
+        :icon="isFullScreen ? 'fullscreen_exit' : 'fullscreen'"
+        @click="isFullScreen = !isFullScreen"
+      >
+        <q-tooltip>{{ isFullScreen ? 'Salir de pantalla completa' : 'Pantalla completa' }}</q-tooltip>
+      </q-btn>
       <q-btn flat round dense icon="close" @click="emit('close')" />
     </q-toolbar>
 
     <q-card-section class="col q-pt-md q-gutter-y-md scroll">
       <!-- Los v-model ahora apuntan directamente a las propiedades de localNode -->
-      <q-input
-        v-model="localNode.label"
-        label="Nombre del Nodo"
-        dark
-        dense
-        clearable
-      />
+      <div class="row q-col-gutter-md">
+        <div class="col-8">
+          <q-input
+            v-model="localNode.label"
+            label="Nombre del Nodo"
+            dark dense clearable
+          />
+        </div>
+        <div class="col-4">
+          <q-input
+            v-model.number="localNode.data.paragraphNumber"
+            label="Nº Párrafo"
+            type="number"
+            dark dense
+          />
+        </div>
+      </div>
 
       <q-select
         v-model="localNode.data.tags"
@@ -114,14 +133,14 @@
       </div>
 
       <div class="q-pa-none node-content">
-        <q-input
+        <p class="text-caption text-grey-5 q-mb-xs">TEXTO DEL NODO</p>
+        <q-editor
           v-model="localNode.data.description"
-          label="TEXTO"
-          type="textarea"
-          autogrow
           dark
-          dense
-          borderless
+          :toolbar="toolbarOptions"
+          min-height="10rem"
+          content-class="bg-grey-9"
+          toolbar-bg="grey-10"
         />
       </div>
     </q-card-section>
@@ -136,7 +155,7 @@
 
     <q-separator dark />
 
-    <!-- [!code focus:6] El nuevo editor de opciones de SALIDA -->
+    <!-- El nuevo editor de opciones de SALIDA -->
     <q-card-section>
       <ChoicesEditor
         :choices="localNode.choices || []"
@@ -144,19 +163,23 @@
       />
     </q-card-section>
 
+    <!-- Acciones del pie de página con el nuevo botón de eliminar -->
     <q-card-actions align="right" class="q-pa-md">
+      <q-btn flat label="Eliminar" color="negative" @click="confirmDeleteNode" />
+      <q-space />
       <q-btn flat label="Cancelar" color="grey-5" @click="emit('close')" />
-      <q-btn label="Guardar Cambios" color="primary" @click="saveChanges" />
+      <q-btn label="Guardar" color="primary" @click="saveChanges" />
     </q-card-actions>
   </q-card>
 </template>
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
+import { useQuasar } from 'quasar';
 import { useAssetsStore } from 'src/stores/assets-store';
 import { useNodesStore } from 'src/stores/nodes-store';
 import { storeToRefs } from 'pinia';
-import type { BookNode, AnyAction } from 'src/stores/types';
+import type { BookNode, AnyAction, AnyChoice } from 'src/stores/types';
 import ActionsEditor from './ActionsEditor.vue';
 import ChoicesEditor from './ChoicesEditor.vue';
 
@@ -165,22 +188,40 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-const emit = defineEmits(['save', 'close']);
+// Añadimos 'delete' a los emits
+const emit = defineEmits(['save', 'close', 'delete']);
 
-// --- STORES ---
+// --- STORES Y QUASAR ---
+const $q = useQuasar();
 const assetsStore = useAssetsStore();
 const nodesStore = useNodesStore();
 const { assets } = storeToRefs(assetsStore);
 const { nodes } = storeToRefs(nodesStore);
 
 // --- ESTADO LOCAL DEL FORMULARIO ---
-// Refactorizamos para usar una única copia local del nodo.
 const localNode = ref<BookNode | null>(null);
 const allTagsOptions = ref<string[]>([]);
+const isFullScreen = ref(false); // Estado para el modo pantalla completa
+
+const toolbarOptions = [
+  ['bold', 'italic', 'underline', 'strike'],
+  ['hr', 'link'],
+  ['unordered', 'ordered'],
+  [
+    {
+      label: $q.lang.editor.align,
+      icon: $q.iconSet.editor.align,
+      fixedLabel: true,
+      list: 'only-icons',
+      options: ['left', 'center', 'right', 'justify']
+    }
+  ],
+  ['removeFormat']
+];
 
 // Obtiene todas las etiquetas únicas de todos los nodos del libro.
 const allBookTags = computed(() => {
-  const all = nodes.value.flatMap(node => node.tags || []);
+  const all = nodes.value.flatMap(node => node.data.tags || []);
   return [...new Set(all)];
 });
 
@@ -230,33 +271,71 @@ function createTag(inputValue: string, doneFn: (item: string, mode: 'add-unique'
 // Carga el nodo en la copia local cuando cambia la prop.
 watch(() => props.node, (newNode) => {
   if (newNode) {
-    // Creamos una copia profunda para no mutar el estado original.
     localNode.value = JSON.parse(JSON.stringify(newNode));
-
-    // Aseguramos que las propiedades opcionales existan para evitar errores.
-    if (!localNode.value.tags) localNode.value.tags = [];
+    if (!localNode.value.data.tags) localNode.value.data.tags = [];
     if (!localNode.value.actions) localNode.value.actions = [];
-
-    // Actualizamos las opciones de etiquetas.
-    allTagsOptions.value = [...new Set([...allBookTags.value, ...localNode.value.tags])];
+    if (!localNode.value.choices) localNode.value.choices = [];
+    if (typeof localNode.value.data.paragraphNumber !== 'number') {
+      const existingParagraphNumbers = nodes.value.map(n => n.data.paragraphNumber || 0);
+      const maxParagraphNumber = Math.max(0, ...existingParagraphNumbers);
+      localNode.value.data.paragraphNumber = maxParagraphNumber + 1;
+    }
+    allTagsOptions.value = [...new Set([...allBookTags.value, ...(localNode.value.data.tags || [])])];
   } else {
     localNode.value = null;
   }
 }, { immediate: true, deep: true });
 
 
+// Nueva función para confirmar y eliminar el nodo
+function confirmDeleteNode() {
+  if (!localNode.value) return;
+  $q.dialog({
+    title: 'Confirmar Eliminación',
+    message: `¿Estás seguro de que quieres eliminar el nodo "${localNode.value.label}"? Esta acción no se puede deshacer y eliminará todas las conexiones asociadas.`,
+    dark: true,
+    cancel: true,
+    persistent: true,
+    ok: { label: 'Eliminar', color: 'negative', flat: false },
+    cancel: { label: 'Cancelar', flat: true }
+  }).onOk(() => {
+    if (localNode.value) {
+      emit('delete', localNode.value.id);
+    }
+  });
+}
+
 function saveChanges() {
   if (props.node && localNode.value) {
-    // Creamos un objeto de actualizaciones a partir de la copia local.
-    // Ya no necesitamos reconstruir un objeto 'data' que no existe.
-    const { id, position, ...updates } = localNode.value;
+    const paragraphNumberToSave = localNode.value.data.paragraphNumber;
 
-    // Emitimos el payload para que el store lo procese.
+    if (typeof paragraphNumberToSave !== 'number' || paragraphNumberToSave <= 0) {
+      $q.notify({
+        type: 'negative',
+        message: 'El número de párrafo debe ser un número mayor que cero.',
+        position: 'top'
+      });
+      return;
+    }
+
+    const isDuplicate = nodes.value.some(
+      (n) => n.id !== props.node?.id && n.data.paragraphNumber === paragraphNumberToSave
+    );
+
+    if (isDuplicate) {
+      $q.notify({
+        type: 'negative',
+        message: `El número de párrafo ${paragraphNumberToSave} ya está en uso. Por favor, elige otro.`,
+        position: 'top'
+      });
+      return;
+    }
+
+    const { id, position, ...updates } = localNode.value;
     emit('save', {
       nodeId: props.node.id,
       updates: updates,
     });
-    emit('close');
   }
 }
 </script>
@@ -266,6 +345,17 @@ function saveChanges() {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* Estilos para el modo pantalla completa */
+.node-editor-panel.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 3000; /* Asegurarse de que esté por encima de todo */
+  border-radius: 0;
 }
 
 .node-content {

@@ -1,7 +1,6 @@
 // src/stores/nodes-store.ts
 
 import { defineStore } from 'pinia';
-import { applyNodeChanges, applyEdgeChanges } from '@vue-flow/core';
 import type { Connection, NodeChange, EdgeChange, Viewport } from '@vue-flow/core';
 import { uid } from 'quasar';
 import { useBookStore } from './book-store';
@@ -61,6 +60,10 @@ export const useNodesStore = defineStore('nodes', {
         return;
       }
 
+      const existingParagraphNumbers = this.nodes.map(n => n.data.paragraphNumber || 0);
+      const maxParagraphNumber = Math.max(0, ...existingParagraphNumbers);
+      const newParagraphNumber = maxParagraphNumber + 1;
+
       // Esta implementación ya es correcta y ahora coincide con el tipo BookNode actualizado.
       const newNode: BookNode = {
         id: uid(),
@@ -68,6 +71,7 @@ export const useNodesStore = defineStore('nodes', {
         position: options.position,
         label: `Nuevo Nodo ${this.nodes.length + 1}`,
         data: {
+          paragraphNumber: newParagraphNumber,
           description: 'Escribe aquí el párrafo...',
           color: options.type === 'start' ? '#388e3c' : (options.type === 'end' ? '#d32f2f' : '#455a64'),
           tags: [],
@@ -104,6 +108,54 @@ export const useNodesStore = defineStore('nodes', {
 
         useBookStore().setDirty();
       }
+    },
+
+    deleteNode(nodeIdToDelete: string) {
+      const nodeIndex = this.nodes.findIndex(n => n.id === nodeIdToDelete);
+
+      if (nodeIndex === -1) {
+        console.warn(`[NodesStore] Nodo con id ${nodeIdToDelete} no encontrado para eliminar.`);
+        return;
+      }
+
+      // 1. Eliminamos el nodo del array principal.
+      this.nodes.splice(nodeIndex, 1);
+
+      // 2. [LA LÍNEA QUE FALTABA] Eliminamos las aristas conectadas a ese nodo.
+      this.edges = this.edges.filter(edge => edge.source !== nodeIdToDelete && edge.target !== nodeIdToDelete);
+
+      // 3. Limpiamos las conexiones rotas en las 'choices' de otros nodos.
+      this.nodes.forEach(node => {
+        if (!node.choices?.length) return;
+
+        node.choices = node.choices.filter(choice => {
+          if (choice.type === 'simple' && choice.targetNodeId === nodeIdToDelete) {
+            return false;
+          }
+          return true;
+        });
+
+        node.choices.forEach(choice => {
+          if (choice.type === 'conditional') {
+            if (choice.successTargetNodeId === nodeIdToDelete) {
+              choice.successTargetNodeId = '';
+            }
+            if (choice.failureTargetNodeId === nodeIdToDelete) {
+              choice.failureTargetNodeId = '';
+            }
+          } else if (choice.type === 'diceRoll') {
+            choice.outcomes.forEach(outcome => {
+              if (outcome.targetNodeId === nodeIdToDelete) {
+                outcome.targetNodeId = '';
+              }
+            });
+          }
+        });
+      });
+
+      // 4. Marcamos el libro como modificado.
+      const bookStore = useBookStore();
+      bookStore.setDirty();
     },
   },
 });

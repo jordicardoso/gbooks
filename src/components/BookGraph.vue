@@ -1,8 +1,7 @@
 <!-- src/components/BookGraph.vue -->
 <template>
-  <div class="fit absolute">
+  <div v-if="isGraphReady" class="fit absolute">
     <VueFlow
-      v-if="isGraphReady"
       v-model:nodes="nodes"
       v-model:edges="edges"
       v-model:viewport="viewport"
@@ -61,6 +60,7 @@
         class="node-editor-container"
         @close="handleEditorClose"
         @save="handleEditorSave"
+        @delete="handleNodeDelete"
       />
     </Transition>
     <Transition name="slide-fade-right">
@@ -186,6 +186,12 @@ function handleEdgeEditorSave(payload: {
   nodesStore.updateEdge(payload.edgeId, payload.updates);
   handleEdgeEditorClose();
 }
+
+function handleNodeDelete(nodeId: string) {
+  nodesStore.deleteNode(nodeId);
+  handleEditorClose();
+}
+
 
 function onPaneContextMenu(event: MouseEvent) {
   event.preventDefault();

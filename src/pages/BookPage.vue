@@ -27,13 +27,13 @@
       <q-tab name="meta" label="Metadatos" />
       <q-tab name="character" label="Ficha de Personaje" />
       <q-tab name="maps" label="Mapas" />
+      <q-tab name="preview" label="Preview"/>
       <q-tab name="testing" label="Testing & Build" />
     </q-tabs>
 
     <q-separator />
 
     <!-- Paneles de contenido para cada pestaña -->
-    <!-- [!code focus:2] ESTE ES EL CAMBIO CLAVE: Añadimos 'keep-alive' -->
     <q-tab-panels v-model="tab" animated keep-alive class="col bg-blue-grey-10">
       <!-- Panel de Diseño (Grafo) -->
       <q-tab-panel name="design" class="q-pa-none">
@@ -44,7 +44,7 @@
       </q-tab-panel>
 
       <!-- Panel de Assets (Añadido) -->
-      <q-tab-panel name="assets" class="q-pa-md">
+      <q-tab-panel name="assets" class="q-pa-none">
         <!-- El componente se renderiza aquí, pasándole el ID del libro -->
         <AssetsPage v-if="props.id" :book-id="props.id" />
       </q-tab-panel>
@@ -124,19 +124,24 @@
       </q-tab-panel>
 
       <!-- Panel de Ficha de Personaje -->
-      <q-tab-panel name="character" class="q-pa-md">
+      <q-tab-panel name="character" class="q-pa-none">
         <!-- El componente se renderiza aquí, pasándole el ID del libro -->
         <CharacterSheetPage v-if="props.id" :id="props.id" />
       </q-tab-panel>
 
       <!-- Panel de Mapas -->
-      <q-tab-panel name="maps" class="q-pa-md">
+      <q-tab-panel name="maps" class="q-pa-none">
         <!-- El componente se renderiza aquí, pasándole el ID del libro -->
         <BookMap v-if="props.id" :book-id="props.id" />
       </q-tab-panel>
 
+      <q-tab-panel name="preview" class="q-pa-none column">
+        <!-- El componente se renderiza aquí -->
+        <BookPreview v-if="props.id" />
+      </q-tab-panel>
+
       <!-- Panel de Testing -->
-      <q-tab-panel name="testing" class="q-pa-md">
+      <q-tab-panel name="testing" class="q-pa-none">
         <TestingPage /> <!-- El componente TestingPage se renderiza aquí -->
       </q-tab-panel>
     </q-tab-panels>
@@ -162,6 +167,7 @@ import CharacterSheetPage from 'pages/CharacterSheetPage.vue';
 import BookMap from 'src/components/BookMap.vue';
 import AssetsPage from 'pages/AssetsPage.vue';
 import TestingPage from 'pages/TestingPage.vue';
+import BookPreview from 'src/components/BookPreview.vue';
 
 const props = defineProps<{ id: string }>();
 const router = useRouter();

@@ -18,6 +18,7 @@ export interface BookEdge extends Edge {
 
 export interface BookNode extends Node {
   label: string;
+  paragraphNumber: number;
   description: string;
   imageId?: string;
   tags?: string[];
