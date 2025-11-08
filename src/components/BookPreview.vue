@@ -1,8 +1,6 @@
 <!-- src/components/BookPreview.vue (CORREGIDO) -->
 <template>
-  <!-- 1. Quitamos el padding 'q-pa-md' de aquí para que el componente ocupe todo el espacio -->
-  <div class="col column no-wrap bg-grey-10 text-white">
-    <!-- 2. Añadimos el padding 'q-pa-md' aquí, solo para la cabecera -->
+  <div class="fit column no-wrap bg-grey-10 text-white">
     <div class="col-auto q-pa-md">
       <div class="text-h5">Vista Previa del Libro</div>
       <div class="text-caption text-grey-5 q-mb-md">
@@ -19,7 +17,6 @@
     </div>
 
     <!-- Visor de PDF -->
-    <!-- 3. Quitamos la clase 'full-height' que era innecesaria -->
     <div class="col scroll relative-position">
       <div v-if="!pdfDataUrl && !isGenerating" class="absolute-center text-center text-grey-6">
         <q-icon name="visibility" size="4rem" />
@@ -85,7 +82,6 @@ async function generatePdf() {
     const contentWidth = pageWidth - (pageMargin * 2);
     let yPos = pageMargin;
 
-    // 1. Página de Título
     doc.setFontSize(24);
     doc.text(activeBook.value.meta.title, pageWidth / 2, yPos + 20, { align: 'center' });
     yPos += 40;
@@ -94,12 +90,14 @@ async function generatePdf() {
     doc.addPage();
     yPos = pageMargin;
 
-    // 2. Ordenar los nodos por número de párrafo
     const sortedNodes = [...nodes.value].sort((a, b) => a.data.paragraphNumber - b.data.paragraphNumber);
 
-    // 3. Renderizar cada nodo
     for (const node of sortedNodes) {
-      // Añadir cabecera del párrafo
+      if (yPos > pageHeight - 100) { // Margen inferior para evitar cortes
+        doc.addPage();
+        yPos = pageMargin;
+      }
+
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       const paragraphHeader = `Párrafo ${node.data.paragraphNumber}`;
@@ -113,10 +111,10 @@ async function generatePdf() {
       // jsPDF necesita un elemento HTML para renderizar. Creamos uno temporal.
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = node.data.description;
-      // Estilos básicos para que jsPDF los interprete mejor
       tempDiv.style.width = `${contentWidth}pt`;
       tempDiv.style.fontFamily = 'Times-Roman';
       tempDiv.style.fontSize = '12pt';
+      document.body.appendChild(tempDiv);
 
       // El método .html() es asíncrono y maneja el paginado automático
       await doc.html(tempDiv, {
@@ -126,14 +124,17 @@ async function generatePdf() {
         windowWidth: contentWidth,
         autoPaging: 'text',
         margin: [0, pageMargin, pageMargin, pageMargin],
-        callback: (doc) => {
-          // Después de añadir el contenido, actualizamos la posición Y para el siguiente nodo
-          yPos = doc.internal.pageSize.getHeight() + 1; // Forzamos un salto de página virtual
-        }
       });
+
+      document.body.removeChild(tempDiv);
+
+      // Actualizar yPos manualmente después de la renderización
+      // Esto es una aproximación, ya que doc.html no devuelve la posición final fácilmente
+      const splitText = doc.splitTextToSize(tempDiv.innerText, contentWidth);
+      const textHeight = splitText.length * doc.getLineHeight();
+      yPos += textHeight + 20; // Añadir un espacio extra
     }
 
-    // 4. Añadir números de página en el pie
     const pageCount = doc.internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);

@@ -32,6 +32,7 @@
     </div>
     <Handle type="target" :position="Position.Top" />
     <Handle type="source" :position="Position.Bottom" />
+    <NodeResizer :node-id="id" :min-width="150" :min-height="100" />
   </div>
 </template>
 
@@ -40,14 +41,21 @@ import { computed } from 'vue';
 import { Handle, Position } from '@vue-flow/core';
 import { useAssetsStore } from 'src/stores/assets-store';
 import type { BookNode } from 'src/stores/types';
+import NodeResizer from './NodeResizer.vue';
 
 // [UNIFICADO] Patrón de props opcionales para máxima robustez
 const props = defineProps<{
+  id: string;
   label?: string;
   description?: string;
   color?: string;
   tags?: string[];
   imageId?: string;
+  data?: {
+    width?: number;
+    height?: number;
+  };
+  selected?: boolean;
 }>();
 
 const assetsStore = useAssetsStore();
@@ -62,6 +70,14 @@ const nodeStyle = computed(() => {
   const style: Record<string, string> = {};
   // Usa el color de la prop, o un color por defecto si no existe.
   style.backgroundColor = props.color || '#455a64';
+  // APLICAMOS EL TAMAÑO DINÁMICO
+  if (props.data?.width) {
+    style.width = `${props.data.width}px`;
+  }
+  if (props.data?.height) {
+    style.height = `${props.data.height}px`;
+  }
+
   return style;
 });
 </script>
@@ -77,6 +93,9 @@ const nodeStyle = computed(() => {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
   position: relative;
   transition: background-color 0.3s, min-width 0.3s, max-width 0.3s;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .node-header {

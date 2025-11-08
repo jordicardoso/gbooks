@@ -83,11 +83,71 @@ export const useNodesStore = defineStore('nodes', {
       useBookStore().setDirty();
     },
 
+    async createNodeAndConnect(sourceNodeId: string, sourceHandleId: string) {
+      const bookStore = useBookStore(); // 2. Obtén una instancia del book-store
+
+      const sourceNode = this.nodes.find(n => n.id === sourceNodeId);
+      if (!sourceNode) return '';
+
+      // Lógica para crear un nuevo nodo (puedes ajustarla)
+      const newNode: BookNode = {
+        id: uid(),
+        type: 'default',
+        label: 'Nuevo Nodo',
+        position: {
+          x: sourceNode.position.x + 250,
+          y: sourceNode.position.y,
+        },
+        data: {
+          paragraphNumber: this.getNewParagraphNumber(),// Se asignará uno nuevo al editarlo
+          description: '',
+          tags: [],
+          color: '#455a64',
+        }
+      };
+
+      this.nodes.push(newNode);
+
+      // Añade la conexión
+      this.addConnection({
+        source: sourceNodeId,
+        sourceHandle: sourceHandleId,
+        target: newNode.id,
+        targetHandle: 'target', // Handle de entrada por defecto
+      });
+
+      bookStore.setDirty();
+
+      return newNode.id;
+    },
+
+    /**
+     * Helper para obtener un número de párrafo único.
+     */
+    getNewParagraphNumber(): number {
+      const existingNumbers = this.nodes.map(n => n.data.paragraphNumber || 0);
+      const maxNumber = Math.max(0, ...existingNumbers);
+      return maxNumber + 1;
+    },
+
     updateNode(nodeId: string, updates: Partial<Omit<BookNode, 'id' | 'position'>>) {
       const node = this.nodes.find(n => n.id === nodeId);
       if (node) {
         Object.assign(node, updates);
         useBookStore().setDirty();
+      }
+    },
+
+    updateNodeDimensions(nodeId: string, width: number, height: number) {
+      const node = this.nodes.find(n => n.id === nodeId);
+      if (node) {
+        if (!node.data) {
+          // Aseguramos que data exista, aunque no debería pasar con tu estructura
+          node.data = {} as any;
+        }
+        node.data.width = width;
+        node.data.height = height;
+        useBookStore().setDirty(); // Marcamos que hay cambios sin guardar
       }
     },
 

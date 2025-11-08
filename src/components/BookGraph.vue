@@ -23,6 +23,7 @@
 
       <template #node-start="props">
         <BookStartNode
+          :id="props.id"
           v-bind="props.data"
           :label="props.label"
           :selected="props.selected"
@@ -31,14 +32,26 @@
 
       <template #node-story="props">
         <BookStoryNode
+          :id="props.id"
           v-bind="props.data"
           :label="props.label"
           :selected="props.selected"
         />
       </template>
 
+      <template #node-default="props">
+        <BookStoryNode
+          :id="props.id"
+          v-bind="props.data"
+          :label="props.label"
+          :selected="props.selected"
+        />
+      </template>
+
+
       <template #node-end="props">
         <BookEndNode
+          :id="props.id"
           v-bind="props.data"
           :label="props.label"
           :selected="props.selected"
@@ -46,13 +59,13 @@
       </template>
     </VueFlow>
 
-    <ContextMenu
+    <!--<ContextMenu
       :show="isMenuOpen"
       :position="menuPosition"
       :items="contextMenuItems"
       @close="isMenuOpen = false"
       @action="handleMenuAction"
-    />
+    />-->
     <Transition name="slide-fade-right">
       <NodeEditorPanel
         v-if="isEditorOpen"
@@ -98,31 +111,18 @@ import BookStoryNode from './BookStoryNode.vue';
 import BookEndNode from './BookEndNode.vue';
 import NodeEditorPanel from './NodeEditorPanel.vue';
 import EdgeEditorPanel from './EdgeEditorPanel.vue';
-import type { BookNode } from 'src/stores/types';
+import type { BookEdge, BookNode } from 'src/stores/types';
 
 const nodesStore = useNodesStore();
 const { nodes, edges, viewport } = storeToRefs(nodesStore);
 const { project } = useVueFlow();
 
 const isGraphReady = ref(false);
-const isMenuOpen = ref(false);
-const menuPosition = ref({ x: 0, y: 0 });
 const isEditorOpen = ref(false);
 const selectedNode = ref<BookNode | null>(null);
 const isEdgeEditorOpen = ref(false);
-//const selectedEdge = ref<BookEdge | null>(null);
+const selectedEdge = ref<BookEdge | null>(null);
 const lastPaneMenuEvent = ref<MouseEvent | null>(null);
-
-const hasStartNode = computed(() => nodes.value.some((node) => node.type === 'start'));
-const contextMenuItems = computed<MenuItem[]>(() => {
-  if (!hasStartNode.value) {
-    return [{ action: 'add-start-node', label: 'Crear Nodo Inicial', icon: 'play_arrow', color: 'positive' }];
-  }
-  return [
-    { action: 'add-story-node', label: 'Crear Nodo de Historia', icon: 'article' },
-    { action: 'add-end-node', label: 'Crear Nodo Final', icon: 'flag', color: 'negative' },
-  ];
-});
 
 onMounted(() => {
   //nodesStore.init();
@@ -150,14 +150,12 @@ function onMoveEnd(event: Viewport | undefined) {
 function onNodeClick(event: NodeMouseEvent) {
   selectedNode.value = event.node as BookNode;
   isEditorOpen.value = true;
-  isMenuOpen.value = false;
   isEdgeEditorOpen.value = false;
 }
 
 function onEdgeClick(event: { edge: BookEdge }) {
   selectedEdge.value = event.edge;
   isEdgeEditorOpen.value = true;
-  isMenuOpen.value = false;
   isEditorOpen.value = false; // Cerramos el otro panel
 }
 
@@ -192,26 +190,14 @@ function handleNodeDelete(nodeId: string) {
   handleEditorClose();
 }
 
-
 function onPaneContextMenu(event: MouseEvent) {
+  // Previene el menú contextual por defecto del navegador
   event.preventDefault();
-  isMenuOpen.value = false;
+  // Guarda el evento por si quieres usar sus coordenadas para abrir un menú
   lastPaneMenuEvent.value = event;
-  void nextTick(() => {
-    menuPosition.value = { x: event.clientX, y: event.clientY };
-    isMenuOpen.value = true;
-  });
-}
-
-function handleMenuAction(action: string) {
-  if (!lastPaneMenuEvent.value) return;
-  const flowPosition = project({ x: lastPaneMenuEvent.value.clientX, y: lastPaneMenuEvent.value.clientY });
-  const nodeType = action.replace('add-', '').replace('-node', '');
-
-  if (nodeType) {
-    // La llamada correcta que ya habías implementado
-    nodesStore.createNode({ position: flowPosition, type: nodeType });
-  }
+  // Aquí podrías, por ejemplo, abrir un menú contextual
+  // isMenuOpen.value = true;
+  // menuPosition.value = { x: event.clientX, y: event.clientY };
 }
 </script>
 

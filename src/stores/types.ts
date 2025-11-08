@@ -24,6 +24,8 @@ export interface BookNode extends Node {
   tags?: string[];
   color?: string;
   size?: 'small' | 'medium' | 'large';
+  width?: number;
+  height?: number;
   actions?: AnyAction[];
   choices?: AnyChoice[];
 }

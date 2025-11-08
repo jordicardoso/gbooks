@@ -155,7 +155,7 @@
 
     <q-separator dark />
 
-    <!-- El nuevo editor de opciones de SALIDA -->
+    <!-- El nuevo editor de acciones de SALIDA -->
     <q-card-section>
       <ChoicesEditor
         :choices="localNode.choices || []"
@@ -305,7 +305,7 @@ function confirmDeleteNode() {
   });
 }
 
-function saveChanges() {
+async function saveChanges() { // La hacemos async
   if (props.node && localNode.value) {
     const paragraphNumberToSave = localNode.value.data.paragraphNumber;
 
@@ -329,6 +329,21 @@ function saveChanges() {
         position: 'top'
       });
       return;
+    }
+
+    // Procesar las opciones de salida para crear nuevos nodos si es necesario.
+    if (localNode.value.choices) {
+      for (const choice of localNode.value.choices) {
+        // Asumimos que tu ChoicesEditor usa un valor especial para crear un nodo.
+        if (choice.targetNodeId === '--CREATE-NEW--') {
+          // Llamamos a una nueva acción en el store que crea el nodo y la conexión.
+          // Esta acción debería devolver el ID del nuevo nodo.
+          const newNodeId = await nodesStore.createNodeAndConnect(props.node.id, choice.id);
+
+          // Reemplazamos el valor especial con el ID del nodo recién creado.
+          choice.targetNodeId = newNodeId;
+        }
+      }
     }
 
     const { id, position, ...updates } = localNode.value;
