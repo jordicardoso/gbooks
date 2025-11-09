@@ -1,6 +1,6 @@
 <!-- src/pages/BookPage.vue -->
 <template>
-  <q-page class="flex column no-wrap">
+  <q-page class="fit column no-wrap">
     <!-- Barra de herramientas superior -->
     <q-toolbar class="bg-grey-9 text-white">
       <q-btn flat round dense icon="arrow_back" @click="goBack" />
@@ -34,7 +34,7 @@
     <q-separator />
 
     <!-- Paneles de contenido para cada pestaña -->
-    <q-tab-panels v-model="tab" animated keep-alive class="col bg-blue-grey-10">
+    <q-tab-panels v-model="tab" animated keep-alive class="fit col bg-blue-grey-10">
       <!-- Panel de Diseño (Grafo) -->
       <q-tab-panel name="design" class="q-pa-none">
         <BookGraph
@@ -64,6 +64,8 @@
             dark
             v-model="bookStore.activeBook.meta.author"
             label="Autor"
+            type="textarea"
+            autogrow
             @update:model-value="bookStore.setDirty()"
           />
           <q-input
@@ -72,6 +74,7 @@
             v-model="bookStore.activeBook.meta.description"
             label="Descripción"
             type="textarea"
+            autogrow
             @update:model-value="bookStore.setDirty()"
           />
           <q-select
@@ -135,9 +138,9 @@
         <BookMap v-if="props.id" :book-id="props.id" />
       </q-tab-panel>
 
-      <q-tab-panel name="preview" class="q-pa-none column">
+      <q-tab-panel name="preview" class="fit col q-pa-none column" style="flex: 1; min-height: 0;">
         <!-- El componente se renderiza aquí -->
-        <BookPreview v-if="props.id" />
+        <BookPreview v-if="props.id" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"/>
       </q-tab-panel>
 
       <!-- Panel de Testing -->

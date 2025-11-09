@@ -16,18 +16,21 @@ export interface BookEdge extends Edge {
   label?: string;
 }
 
-export interface BookNode extends Node {
-  label: string;
-  paragraphNumber: number;
-  description: string;
+export interface BookNodeData {
+  paragraphNumber?: number;
+  description?: string;
   imageId?: string;
   tags?: string[];
   color?: string;
-  size?: 'small' | 'medium' | 'large';
   width?: number;
   height?: number;
   actions?: AnyAction[];
   choices?: AnyChoice[];
+}
+
+export interface BookNode extends Node {
+  label: string;
+  data: BookNodeData;
 }
 
 export interface BookMeta {
