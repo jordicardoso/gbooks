@@ -2,9 +2,9 @@
 <template>
   <q-page padding>
     <div class="row items-center justify-between q-mb-md">
-      <div class="text-h4 text-white">Biblioteca</div>
+      <div class="text-h4 text-white">{{ $t('library.title') }}</div>
       <q-btn
-        label="Añadir Libro"
+        :label="$t('library.addBook')"
         color="primary"
         icon="add"
         dense
@@ -20,7 +20,7 @@
       <q-spinner-dots color="primary" size="40px" v-if="!libraryStore.isInitialized" />
       <div v-else>
         <q-icon name="sentiment_dissatisfied" size="4rem" />
-        <p class="text-h6">No hay libros en la biblioteca. ¡Crea tu primer libro!</p>
+        <p class="text-h6">{{ $t('library.noBooks') }}</p>
       </div>
     </div>
 
@@ -55,7 +55,7 @@
                     icon="edit"
                     @click.stop="onEditBook(book)"
                   >
-                    <q-tooltip>Editar</q-tooltip>
+                    <q-tooltip>{{ $t('library.editTooltip') }}</q-tooltip>
                   </q-btn>
                   <q-btn
                     flat
@@ -66,7 +66,7 @@
                     color="negative"
                     @click.stop="onDeleteBook(book)"
                   >
-                    <q-tooltip>Eliminar</q-tooltip>
+                    <q-tooltip>{{ $t('library.deleteTooltip') }}</q-tooltip>
                   </q-btn>
                 </div>
               </div>
@@ -74,7 +74,7 @@
           </q-img>
           <q-card-section>
             <p class="text-caption text-grey-5 ellipsis-3-lines">
-              {{ book.description || 'Sin descripción.' }}
+              {{ book.description || $t('library.noDescription') }}
             </p>
           </q-card-section>
 
@@ -99,6 +99,7 @@
 import { ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 import { useLibraryStore } from 'src/stores/library-store';
 import type { Book } from 'src/components/models';
 import AddBookDialog from 'src/components/AddBookDialog.vue';
@@ -107,16 +108,17 @@ import EditBookDialog from 'src/components/EditBookDialog.vue';
 const libraryStore = useLibraryStore();
 const router = useRouter();
 const $q = useQuasar();
+const { t } = useI18n(); // <-- 2. Obtener la función de traducción 't'
 
 // State para los diálogos
 const isAddBookDialogOpen = ref(false);
 const isEditDialogOpen = ref(false);
 const editingBook = ref<Book | null>(null);
 
-// --- NUEVO: State para almacenar las URLs de las portadas ---
+// --- State para almacenar las URLs de las portadas (sin cambios) ---
 const coverImages = ref(new Map<string, string>());
 
-// --- NUEVO: Observador para cargar las portadas cuando la lista de libros esté disponible ---
+// --- Observador para cargar las portadas (sin cambios) ---
 watch(() => libraryStore.books, async (books) => {
   if (!books || books.length === 0) {
     coverImages.value.clear();
@@ -125,25 +127,19 @@ watch(() => libraryStore.books, async (books) => {
 
   const coverPromises = books.map(async (book) => {
     try {
-      // 1. Llamamos a nuestra nueva y eficiente función
       const coverInfo = await window.electronAPI.getCoverInfo(book.id);
-
       if (coverInfo?.filename) {
-        // 2. Si tenemos un nombre de fichero, obtenemos la URL segura
         const imageUrl = await window.electronAPI.getAssetPath(book.id, coverInfo.filename);
         return { bookId: book.id, imageUrl };
       }
     } catch (error) {
       console.error(`No se pudo cargar la portada para el libro ${book.id}:`, error);
     }
-    // Devuelve null si no se encuentra la imagen o hay un error
     return { bookId: book.id, imageUrl: null };
   });
 
-  // Esperamos a que todas las peticiones terminen
   const results = await Promise.all(coverPromises);
 
-  // Actualizamos el mapa con las nuevas URLs
   const newImageMap = new Map<string, string>();
   for (const result of results) {
     if (result.imageUrl) {
@@ -155,27 +151,27 @@ watch(() => libraryStore.books, async (books) => {
 }, { immediate: true, deep: true });
 
 
-// --- Lógica para CREAR un libro (sin cambios) ---
+// --- Lógica para CREAR un libro (modificada para i18n) ---
 async function handleBookSubmit(data: { name: string; description: string }) {
-  $q.loading.show({ message: 'Creando libro...' });
+  $q.loading.show({ message: t('notifications.creatingBook') });
   try {
     await libraryStore.addBook(data);
     $q.notify({
       color: 'positive',
-      message: `Libro "${data.name}" creado con éxito.`,
+      message: t('notifications.bookCreatedSuccess', { bookName: data.name }),
     });
   } catch (error) {
     const err = error as Error;
     $q.notify({
       color: 'negative',
-      message: `Hubo un error al crear el libro: ${err.message}`,
+      message: t('notifications.bookCreatedError', { errorMessage: err.message }),
     });
   } finally {
     $q.loading.hide();
   }
 }
 
-// --- Lógica para EDITAR un libro (sin cambios) ---
+// --- Lógica para EDITAR un libro (modificada para i18n) ---
 function onEditBook(book: Book) {
   editingBook.value = book;
   isEditDialogOpen.value = true;
@@ -184,18 +180,18 @@ function onEditBook(book: Book) {
 async function handleBookUpdate(data: { name: string; description: string }) {
   if (!editingBook.value) return;
 
-  $q.loading.show({ message: 'Guardando cambios...' });
+  $q.loading.show({ message: t('notifications.savingChanges') });
   try {
     await libraryStore.updateBook(editingBook.value.id, data);
     $q.notify({
       color: 'positive',
-      message: 'Libro actualizado con éxito.',
+      message: t('notifications.bookUpdatedSuccess'),
     });
   } catch (error) {
     const err = error as Error;
     $q.notify({
       color: 'negative',
-      message: `Error al actualizar: ${err.message}`,
+      message: t('notifications.bookUpdatedError', { errorMessage: err.message }),
     });
   } finally {
     $q.loading.hide();
@@ -203,31 +199,31 @@ async function handleBookUpdate(data: { name: string; description: string }) {
   }
 }
 
-// --- Lógica para ELIMINAR un libro (sin cambios) ---
+// --- Lógica para ELIMINAR un libro (modificada para i18n) ---
 function onDeleteBook(book: Book) {
   $q.dialog({
-    title: 'Confirmar eliminación',
-    message: `¿Estás seguro de que quieres eliminar el libro "<strong>${book.name}</strong>"? Esta acción no se puede deshacer y borrará todos sus archivos.`,
+    title: t('dialogs.deleteBook.title'),
+    message: t('dialogs.deleteBook.message', { bookName: book.name }),
     html: true,
     cancel: true,
     persistent: true,
     ok: {
-      label: 'Eliminar',
+      label: t('dialogs.deleteBook.okButton'),
       color: 'negative',
     },
   }).onOk(async () => {
-    $q.loading.show({ message: 'Eliminando libro...' });
+    $q.loading.show({ message: t('notifications.deletingBook') });
     try {
       await libraryStore.removeBook(book.id);
       $q.notify({
         color: 'positive',
-        message: 'Libro eliminado con éxito.',
+        message: t('notifications.bookDeletedSuccess'),
       });
     } catch (error) {
       const err = error as Error;
       $q.notify({
         color: 'negative',
-        message: `Error al eliminar: ${err.message}`,
+        message: t('notifications.bookDeletedError', { errorMessage: err.message }),
       });
     } finally {
       $q.loading.hide();
@@ -235,6 +231,7 @@ function onDeleteBook(book: Book) {
   });
 }
 
+// --- Lógica para abrir un libro (sin cambios) ---
 function openBook(bookId: string) {
   void router.push({ name: 'book-editor', params: { id: bookId } });
   console.log('Abrir libro con ID:', bookId);

@@ -1,7 +1,268 @@
-// This is just an example,
-// so you can safely delete all default props below
+// src/i18n/en-US/index.ts
 
 export default {
-  failed: 'Action failed',
-  success: 'Action was successful'
+  // Main library interface texts
+  library: {
+    title: 'Library',
+    addBook: 'Add Book',
+    noBooks: 'No books in the library. Create your first book!',
+    editTooltip: 'Edit',
+    deleteTooltip: 'Delete',
+    noDescription: 'No description.',
+  },
+
+  // Notification texts (pop-ups)
+  notifications: {
+    creatingBook: 'Creating book...',
+    bookCreatedSuccess: 'Book "{bookName}" created successfully.',
+    bookCreatedError: 'There was an error creating the book: {errorMessage}',
+    savingChanges: 'Saving changes...',
+    bookUpdatedSuccess: 'Book updated successfully.',
+    bookUpdatedError: 'Error updating: {errorMessage}',
+    deletingBook: 'Deleting book...',
+    bookDeletedSuccess: 'Book deleted successfully.',
+    bookDeletedError: 'Error deleting: {errorMessage}',
+  },
+
+  // Confirmation dialog texts
+  dialogs: {
+    deleteBook: {
+      title: 'Confirm Deletion',
+      message: 'Are you sure you want to delete the book "<strong>{bookName}</strong>"? This action cannot be undone and will delete all its files.',
+      okButton: 'Delete',
+    },
+  },
+  assetsPage: {
+    title: 'Asset Manager',
+    addAsset: 'Add Asset',
+    searchPlaceholder: 'Search by name...',
+    categoryLabel: 'Category',
+    typeLabel: 'Type',
+    dateAdded: 'Date Added',
+    noBookSelected: 'Select a book to manage its assets.',
+    noAssetsFound: 'No assets found with the current filters.',
+    notifications: {
+      noBookError: 'Error: No book selected.',
+      saving: 'Saving asset...',
+      savedSuccess: 'Asset "{assetName}" added successfully.',
+      saveFailed: 'Could not save the asset.',
+      savedError: 'Error adding the asset.',
+      updating: 'Updating asset...',
+      updatedSuccess: 'Asset "{assetName}" updated successfully.',
+      updatedError: 'Error updating the asset.',
+      deleting: 'Deleting asset...',
+      deletedSuccess: 'Asset "{assetName}" deleted.',
+      deletedError: 'Error deleting the asset.',
+    },
+    dialogs: {
+      deleteAsset: {
+        title: 'Confirm Deletion',
+        message: 'Are you sure you want to delete the asset "<b>{assetName}</b>"? This action cannot be undone.',
+        okButton: 'Delete',
+        cancelButton: 'Cancel',
+      }
+    }
+  },
+  bookPage: {
+    // General and toolbar
+    editingTitle: 'Editing',
+    unsavedChanges: 'Unsaved',
+    loadingBook: 'Loading book...',
+    saveButton: 'Save',
+    saving: 'Saving...',
+    saveSuccess: 'Saved successfully!',
+    saveError: 'Error saving changes',
+
+    // Tabs
+    tabs: {
+      design: 'Design',
+      assets: 'Assets',
+      metadata: 'Metadata',
+      characterSheet: 'Character Sheet',
+      maps: 'Maps',
+      preview: 'Preview',
+      testing: 'Testing & Build',
+    },
+
+    // Metadata Panel
+    meta: {
+      titleLabel: 'Book Title',
+      authorLabel: 'Author',
+      descriptionLabel: 'Description',
+      coverImageLabel: 'Cover Image',
+      noImageAssets: 'No images in assets.',
+      coverPreviewTitle: 'Cover preview:',
+      noCoverSelected: 'No cover image selected',
+    },
+
+    // Messages for when a book is not found
+    bookNotFound: 'Book not found',
+    returnToLibrary: 'Back to library',
+    nodes: {
+      startNodeTitle: 'Start',
+      storyNodeTitle: 'Passage',
+      noText: 'No text',
+      imageLoadError: 'Could not load image',
+    },
+  },
+  characterSheet: {
+    // Texts for CharacterSheetEditor.vue (main view)
+    editor: {
+      title: 'Character Sheet Editor',
+      designButton: 'Design Sheet',
+      designTooltip: 'Add/remove sections (Stats, Inventory...)',
+      create: {
+        title: 'This book doesn\'t have a character sheet yet.',
+        subtitle: 'Create one to start defining stats and inventory.',
+        button: 'Create Character Sheet',
+      },
+      warnings: {
+        statNotFound: 'Attempt to apply effect to non-existent stat: "{statName}"',
+      }
+    },
+    // Texts for SheetDesigner.vue (the dialog)
+    designer: {
+      title: 'Sheet Designer',
+      subtitle: 'Add, remove, and reorder your sheet\'s sections.',
+      currentSections: 'Current Sections',
+      noSections: '(No sections. Click "Add Section" to begin.)',
+      addSection: 'Add Section',
+      saveChanges: 'Save Changes',
+      cancel: 'Cancel',
+      close: 'Close',
+      addDialog: {
+        title: 'Choose a section type',
+        templates: {
+          stats: {
+            label: 'Stats Block',
+            description: 'Numeric values (e.g., Health, Strength, Mana).',
+          },
+          itemSlots: {
+            label: 'Equipment (with Slots)',
+            description: 'For equipping items in slots like "Head", "Hands".',
+          },
+          itemList: {
+            label: 'Inventory (List)',
+            description: 'A simple list for items, consumables, etc.',
+          },
+          events: {
+            label: 'Event Timeline',
+            description: 'A list of important events in the story.',
+          },
+        },
+      },
+      promptTitle: {
+        title: 'Add "{sectionLabel}"',
+        message: 'Enter a title for this section (e.g., Attributes, Hero\'s Gear, Backpack).',
+      },
+      errors: {
+        uniqueKey: 'Error generating unique key. Please try again.',
+      },
+      sectionTypes: {
+        slots: 'Equipment (Slots)',
+        list: 'Inventory (List)',
+        stats: 'Stats',
+        events: 'Event Timeline',
+        unknown: 'Type: {type}',
+      },
+    },
+    // Texts for StatsSection.vue
+    statsSection: {
+      addTooltip: 'Add stat',
+      noStats: '(No stats. Click \'+\' to add one.)',
+      editTooltip: 'Edit Range (min/max)',
+      progressTooltip: '{current} / {max}',
+      rangeLabel: 'Range: {min} ↔ {max}',
+      dialog: {
+        titleEdit: 'Edit Stat',
+        titleNew: 'New Stat',
+        nameLabel: 'Name',
+        nameRequired: 'Name is required',
+        nameExists: 'Stat already exists',
+        maxLabel: 'Maximum Value',
+        numberRequired: 'Must be a number',
+        minLabel: 'Minimum Value (optional)',
+        minPlaceholder: 'Default: 0',
+        save: 'Save',
+        add: 'Add',
+      },
+      confirmDelete: {
+        title: 'Confirm',
+        message: 'Are you sure you want to delete the stat "{statName}"?',
+      },
+    },
+
+    // Texts for ItemSection.vue
+    itemSection: {
+      addSlotTooltip: 'Add equipment slot',
+      addItemTooltip: 'Add item',
+      noSlots: '(No equipment slots. Click \'+\' to add one.)',
+      noItems: '(Empty. Click \'+\' to add an item.)',
+      emptySlot: 'Empty',
+      editTooltip: 'Edit',
+      equipTooltip: 'Equip',
+      removeSlotTooltip: 'Remove slot',
+      useTooltip: 'Use / Consume',
+      removeItemTooltip: 'Remove',
+      dialog: {
+        newSlotTitle: 'New Equipment Slot',
+        newSlotMessage: 'Slot name (e.g., Head, Hands).',
+        confirmRemoveSlotTitle: 'Confirm',
+        confirmRemoveSlotMessage: 'Remove slot "{slotName}"?',
+        confirmRemoveItemTitle: 'Confirm',
+        confirmRemoveItemMessage: 'Remove "{itemName}"?',
+      },
+    },
+
+    // Texts for EventsSection.vue
+    eventsSection: {
+      addTooltip: 'Add event milestone',
+      noEvents: '(No milestones. Click \'+\' to add one.)',
+      editTooltip: 'Edit',
+      removeTooltip: 'Remove',
+      dialog: {
+        newTitle: 'New Milestone',
+        newMessage: 'Enter a name for this milestone (e.g., "The Dragon\'s Cave was found").',
+        editTitle: 'Edit Milestone',
+        editMessage: 'Change the milestone\'s name:',
+        confirmRemoveTitle: 'Confirm',
+        confirmRemoveMessage: 'Are you sure you want to delete this milestone?',
+      },
+    },
+
+    // Texts for EditItemDialog.vue
+    editItemDialog: {
+      titleEdit: 'Edit Item in "{slotName}"',
+      titleEquip: 'Equip Item in "{slotName}"',
+      nameLabel: 'Item Name',
+      nameRequired: 'Name is required',
+      descriptionLabel: 'Description (optional)',
+      effectsTitle: 'Effects',
+      noEffects: '(No effects)',
+      targetStatLabel: 'Target Stat',
+      targetStatRequired: 'Select a stat',
+      valueLabel: 'Value',
+      valuePlaceholder: 'e.g., 10, -5',
+      addEffectTooltip: 'Add effect',
+      save: 'Save',
+      cancel: 'Cancel',
+    },
+  },
+  bookPreview: {
+    title: 'Book Preview',
+    subtitle: 'Generate a PDF preview of your book. Content will be sorted by paragraph number.',
+    generateButton: 'Generate PDF',
+    placeholder: 'Click "Generate PDF" to see the preview.',
+    generating: 'Generating PDF, this may take a moment...',
+    notifications: {
+      noActiveBook: 'There is no active book to generate the PDF for.',
+      generationError: 'An error occurred while generating the PDF.',
+    },
+    pdfContent: {
+      unknownAuthor: 'Unknown Author',
+      untitled: 'Untitled',
+      noDescription: '(No description)',
+      pageNumbering: 'Page {currentPage} of {totalPages}',
+    }
+  },
 };

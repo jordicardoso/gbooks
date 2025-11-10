@@ -1,4 +1,4 @@
-<!-- src/components/sheet/EventsSection.vue (DISEÑO COMPACTO) -->
+<!-- src/components/sheet/EventsSection.vue -->
 <template>
   <q-card class="bg-grey-9">
     <q-card-section class="row items-center">
@@ -6,17 +6,15 @@
       <div class="text-h6">{{ title }}</div>
       <q-space />
       <q-btn flat round dense icon="add" @click="promptAddEvent" color="positive">
-        <q-tooltip>Añadir hito de evento</q-tooltip>
+        <q-tooltip>{{ t('characterSheet.eventsSection.addTooltip') }}</q-tooltip>
       </q-btn>
     </q-card-section>
 
     <q-card-section v-if="localData.length === 0" class="text-grey-6 text-center q-pa-md">
-      (No hay hitos. Haz clic en '+' para añadir uno.)
+      {{ t('characterSheet.eventsSection.noEvents') }}
     </q-card-section>
 
-    <!-- === INICIO DEL NUEVO DISEÑO COMPACTO === -->
     <div v-else class="row q-gutter-sm q-pa-md">
-      <!-- Ya no usamos el sistema de columnas, dejamos que las cajas fluyan -->
       <div
         v-for="(event, index) in localData"
         :key="event.id"
@@ -28,12 +26,10 @@
           {{ event.name }}
         </q-tooltip>
 
-        <!-- El ID centrado -->
         <span class="event-id">
           {{ event.id.toUpperCase() }}
         </span>
 
-        <!-- Los botones de acción que aparecen al pasar el ratón -->
         <div class="event-actions">
           <q-btn
             flat dense round
@@ -41,7 +37,7 @@
             size="xs"
             @click.stop="promptEditEvent(index)"
           >
-            <q-tooltip>Editar</q-tooltip>
+            <q-tooltip>{{ t('characterSheet.eventsSection.editTooltip') }}</q-tooltip>
           </q-btn>
           <q-btn
             flat dense round
@@ -50,21 +46,20 @@
             size="xs"
             @click.stop="confirmRemoveEvent(index)"
           >
-            <q-tooltip>Eliminar</q-tooltip>
+            <q-tooltip>{{ t('characterSheet.eventsSection.removeTooltip') }}</q-tooltip>
           </q-btn>
         </div>
       </div>
     </div>
-    <!-- === FIN DEL NUEVO DISEÑO COMPACTO === -->
   </q-card>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 import type { Event } from 'src/stores/types';
 
-// El script no necesita cambios, la lógica sigue siendo la misma.
 const props = defineProps<{
   title: string;
   icon?: string;
@@ -73,6 +68,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:data']);
 const $q = useQuasar();
+const { t } = useI18n();
 
 const localData = ref<Event[]>(JSON.parse(JSON.stringify(props.data || [])));
 
@@ -107,8 +103,8 @@ function toggleEvent(index: number) {
 
 function promptAddEvent() {
   $q.dialog({
-    title: 'Nuevo Hito',
-    message: 'Introduce un nombre para este hito (ej: "La Cueva del Dragón fue encontrada").',
+    title: t('characterSheet.eventsSection.dialog.newTitle'),
+    message: t('characterSheet.eventsSection.dialog.newMessage'),
     prompt: { model: '', type: 'text', isValid: val => val.length > 0 },
     dark: true,
     cancel: true,
@@ -128,8 +124,8 @@ function promptAddEvent() {
 function promptEditEvent(index: number) {
   const event = localData.value[index];
   $q.dialog({
-    title: 'Editar Hito',
-    message: 'Cambia el nombre del hito:',
+    title: t('characterSheet.eventsSection.dialog.editTitle'),
+    message: t('characterSheet.eventsSection.dialog.editMessage'),
     prompt: { model: event.name, type: 'text', isValid: val => val.length > 0 },
     dark: true,
     cancel: true,
@@ -144,8 +140,8 @@ function promptEditEvent(index: number) {
 
 function confirmRemoveEvent(index: number) {
   $q.dialog({
-    title: 'Confirmar',
-    message: '¿Estás seguro de que quieres eliminar este hito?',
+    title: t('characterSheet.eventsSection.dialog.confirmRemoveTitle'),
+    message: t('characterSheet.eventsSection.dialog.confirmRemoveMessage'),
     dark: true,
     cancel: true,
     persistent: true,
@@ -157,6 +153,7 @@ function confirmRemoveEvent(index: number) {
 </script>
 
 <style lang="scss" scoped>
+/* Estilos sin cambios */
 .event-box {
   position: relative;
   width: 80px;
@@ -169,7 +166,7 @@ function confirmRemoveEvent(index: number) {
   background-color: var(--q-color-grey-8);
   cursor: pointer;
   transition: all 0.3s ease;
-  overflow: hidden; // Esencial para la animación de los botones
+  overflow: hidden;
 
   .event-id {
     font-size: 1.1rem;
@@ -195,7 +192,6 @@ function confirmRemoveEvent(index: number) {
     justify-content: center;
     background-color: rgba(0, 0, 0, 0.6);
     padding: 0 2px;
-    // Animación: empieza fuera de la caja y se desliza hacia adentro
     transform: translateX(100%);
     opacity: 0;
     transition: all 0.2s ease-in-out;
@@ -206,7 +202,6 @@ function confirmRemoveEvent(index: number) {
     opacity: 1;
   }
 
-  // Al pasar el ratón, el ID se desplaza para dejar sitio a los botones
   &:hover .event-id {
     transform: translateX(-10px);
   }

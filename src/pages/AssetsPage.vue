@@ -3,11 +3,11 @@
   <q-page padding class="text-white">
     <!-- 1. Cabecera con título y botón de añadir -->
     <div class="row items-center justify-between q-mb-md">
-      <div class="text-h5">Gestor de Assets</div>
+      <div class="text-h5">{{ $t('assetsPage.title') }}</div>
       <q-btn
         color="primary"
         icon="add"
-        label="Añadir Asset"
+        :label="$t('assetsPage.addAsset')"
         dense
         @click="openAddDialog"
         :disable="!bookId"
@@ -21,7 +21,7 @@
         <div class="col-12 col-sm-6 col-md-4">
           <q-input
             v-model="searchTerm"
-            label="Buscar por nombre..."
+            :label="$t('assetsPage.searchPlaceholder')"
             dark
             dense
             clearable
@@ -39,7 +39,7 @@
           <q-select
             v-model="categoryFilter"
             :options="categoryOptions"
-            label="Categoría"
+            :label="$t('assetsPage.categoryLabel')"
             dark
             dense
             clearable
@@ -53,7 +53,7 @@
           <q-select
             v-model="typeFilter"
             :options="['image']"
-            label="Tipo"
+            :label="$t('assetsPage.typeLabel')"
             dark
             dense
             clearable
@@ -81,7 +81,7 @@
           <q-card-section>
             <div class="text-h6 ellipsis" :title="asset.name">{{ asset.name }}</div>
             <div class="text-caption text-grey-5">
-              Añadido: {{ new Date(asset.creationDate).toLocaleDateString() }}
+              {{ $t('assetsPage.dateAdded') }}: {{ new Date(asset.creationDate).toLocaleDateString() }}
             </div>
           </q-card-section>
 
@@ -98,8 +98,8 @@
     <!-- 4. Mensaje cuando no hay assets o libro seleccionado -->
     <div v-else class="text-center text-h6 text-grey-6 q-mt-xl">
       <q-icon name="image_search" size="3em" class="q-mb-sm" />
-      <div v-if="!bookId">Selecciona un libro para gestionar sus assets.</div>
-      <div v-else>No se encontraron assets con los filtros actuales.</div>
+      <div v-if="!bookId">{{ $t('assetsPage.noBookSelected') }}</div>
+      <div v-else>{{ $t('assetsPage.noAssetsFound') }}</div>
     </div>
 
     <!-- Diálogo para añadir assets -->
@@ -122,6 +122,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n'; // <-- 1. Importar useI18n
 import { type Asset } from 'src/stores/types';
 import { useAssetsStore } from 'src/stores/assets-store';
 import { storeToRefs } from 'pinia';
@@ -135,6 +136,7 @@ const props = defineProps<{
 
 // --- INICIALIZACIÓN ---
 const $q = useQuasar();
+const { t } = useI18n(); // <-- 2. Obtener la función de traducción 't'
 const assetsStore = useAssetsStore();
 const { assets } = storeToRefs(assetsStore);
 
@@ -149,7 +151,6 @@ const isEditDialogOpen = ref(false);
 const editingAsset = ref<Asset | null>(null);
 
 const categoryOptions = computed(() => {
-  // A small improvement: check for length to be more explicit
   if (!assets.value || assets.value.length === 0) return [];
   const categories = assets.value.map(asset => asset.category);
   return [...new Set(categories)];
@@ -183,7 +184,7 @@ const openAddDialog = () => {
 };
 
 const openEditDialog = (asset: Asset) => {
-  editingAsset.value = { ...asset }; // Copiar el asset para evitar mutaciones directas
+  editingAsset.value = { ...asset };
   isEditDialogOpen.value = true;
 };
 
@@ -195,26 +196,26 @@ const handleDialogClose = (isOpen: boolean) => {
 
 const handleAssetSubmit = async (data: { file: File; name: string; category: string }) => {
   if (!props.bookId) {
-    $q.notify({ message: 'Error: No hay libro seleccionado.', color: 'negative' });
+    $q.notify({ message: t('assetsPage.notifications.noBookError'), color: 'negative' });
     return;
   }
-  $q.loading.show({ message: 'Guardando asset...' });
+  $q.loading.show({ message: t('assetsPage.notifications.saving') });
   try {
     const newAsset = await assetsStore.addAsset(data.file, data.name, data.category);
     if (newAsset) {
       isAddDialogOpen.value = false;
       $q.notify({
-        message: `Asset "${data.name}" añadido correctamente.`,
+        message: t('assetsPage.notifications.savedSuccess', { assetName: data.name }),
         color: 'positive',
         icon: 'check_circle',
       });
     } else {
-      throw new Error('No se pudo guardar el asset.');
+      throw new Error(t('assetsPage.notifications.saveFailed'));
     }
   } catch (error) {
     console.error(error);
     $q.notify({
-      message: 'Error al añadir el asset.',
+      message: t('assetsPage.notifications.savedError'),
       color: 'negative',
       icon: 'error',
     });
@@ -224,23 +225,22 @@ const handleAssetSubmit = async (data: { file: File; name: string; category: str
 };
 
 const handleAssetUpdate = async (data: { id: string; name: string; category: string }) => {
-  $q.loading.show({ message: 'Actualizando asset...' });
+  $q.loading.show({ message: t('assetsPage.notifications.updating') });
   try {
-    // Asumimos que `updateAsset` existirá en el store y será async
     await assetsStore.updateAsset(data.id, {
       name: data.name,
       category: data.category,
     });
     isEditDialogOpen.value = false;
     $q.notify({
-      message: `Asset "${data.name}" actualizado correctamente.`,
+      message: t('assetsPage.notifications.updatedSuccess', { assetName: data.name }),
       color: 'positive',
       icon: 'check_circle',
     });
   } catch (error) {
     console.error(error);
     $q.notify({
-      message: 'Error al actualizar el asset.',
+      message: t('assetsPage.notifications.updatedError'),
       color: 'negative',
       icon: 'error',
     });
@@ -251,26 +251,26 @@ const handleAssetUpdate = async (data: { id: string; name: string; category: str
 
 const confirmDelete = (asset: Asset) => {
   $q.dialog({
-    title: 'Confirmar eliminación',
-    message: `¿Estás seguro de que quieres eliminar el asset "<b>${asset.name}</b>"? Esta acción no se puede deshacer.`,
+    title: t('assetsPage.dialogs.deleteAsset.title'),
+    message: t('assetsPage.dialogs.deleteAsset.message', { assetName: asset.name }),
     html: true,
     cancel: true,
     persistent: true,
     dark: true,
-    ok: { color: 'negative', label: 'Eliminar' },
-    cancel: { flat: true, label: 'Cancelar' },
+    ok: { color: 'negative', label: t('assetsPage.dialogs.deleteAsset.okButton') },
+    cancel: { flat: true, label: t('assetsPage.dialogs.deleteAsset.cancelButton') },
   }).onOk(async () => {
-    $q.loading.show({ message: 'Eliminando asset...' });
+    $q.loading.show({ message: t('assetsPage.notifications.deleting') });
     try {
       await assetsStore.deleteAsset(asset.id);
       $q.notify({
-        message: `Asset "${asset.name}" eliminado.`,
+        message: t('assetsPage.notifications.deletedSuccess', { assetName: asset.name }),
         color: 'positive',
         icon: 'check_circle',
       });
     } catch (error) {
       $q.notify({
-        message: (error as Error).message || 'Error al eliminar el asset.',
+        message: (error as Error).message || t('assetsPage.notifications.deletedError'),
         color: 'negative',
         icon: 'error',
       });

@@ -30,13 +30,15 @@ export const useLibraryStore = defineStore('library', {
       if (this.isInitialized) return;
 
       try {
+        console.log('[Store] Inicializando la biblioteca...');
         const loadedBooks = await window.electronAPI.loadLibrary();
         this.books = loadedBooks || [];
-        this.isInitialized = true;
+        this.isInitialized = true; // Solo se pone a true si todo va bien
+        console.log('[Store] Biblioteca inicializada con éxito.');
       } catch (error) {
         console.error('Error al inicializar la biblioteca:', error);
         this.books = [];
-        this.isInitialized = true;
+        // NO ponemos isInitialized a true aquí, para que la UI siga mostrando el spinner
       }
     },
 

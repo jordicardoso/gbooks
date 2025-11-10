@@ -5,15 +5,15 @@
     <div v-if="characterSheetSchema?.layout.length" class="q-gutter-y-lg q-pa-md">
       <!-- CABECERA CON EL NUEVO BOTÓN -->
       <div class="row items-center q-mb-md">
-        <div class="text-h5">Editor de Ficha de Personaje</div>
+        <div class="text-h5">{{ $t('characterSheet.editor.title') }}</div>
         <q-space />
         <q-btn
-          label="Diseñar Ficha"
+          :label="$t('characterSheet.editor.designButton')"
           icon="design_services"
           flat
           @click="isDesignerOpen = true"
         >
-          <q-tooltip>Añadir/quitar secciones (Estadísticas, Inventario...)</q-tooltip>
+          <q-tooltip>{{ $t('characterSheet.editor.designTooltip') }}</q-tooltip>
         </q-btn>
       </div>
 
@@ -29,8 +29,8 @@
             :data="editableSheet[section.dataKey]"
             :available-stats="editableSheet.stats ? Object.keys(editableSheet.stats) : []"
             :mode="section.mode"
-          @update:data="updateSectionData(section.dataKey, $event)"
-          @apply-effects="handleApplyEffects"
+            @update:data="updateSectionData(section.dataKey, $event)"
+            @apply-effects="handleApplyEffects"
           />
         </div>
       </div>
@@ -39,10 +39,10 @@
     <!-- Estado inicial cuando no hay ficha -->
     <div v-else class="text-center text-grey-5 q-pa-xl column items-center justify-center fit">
       <q-icon name="person_add" size="4rem" />
-      <p class="q-mt-md text-body1">Este libro aún no tiene una ficha de personaje.</p>
-      <p class="text-caption">Crea una para empezar a definir las estadísticas y el inventario.</p>
+      <p class="q-mt-md text-body1">{{ $t('characterSheet.editor.create.title') }}</p>
+      <p class="text-caption">{{ $t('characterSheet.editor.create.subtitle') }}</p>
       <q-btn
-        label="Crear Ficha de Personaje"
+        :label="$t('characterSheet.editor.create.button')"
         color="primary"
         @click="createSheet"
         :loading="bookStore.isLoading"
@@ -59,6 +59,7 @@
 <script setup lang="ts">
 import { ref, watch, shallowRef, nextTick, type Component } from 'vue';
 import { debounce } from 'quasar';
+import { useI18n } from 'vue-i18n'; // <-- 1. Importar
 import { useBookStore, type CharacterSheet } from 'src/stores/book-store';
 import { storeToRefs } from 'pinia';
 import type { ItemEffect } from 'src/stores/types';
@@ -68,6 +69,7 @@ import SheetDesigner from 'src/components/sheet/SheetDesigner.vue';
 import ItemSection from 'src/components/sheet/ItemSection.vue';
 import EventsSection from 'src/components/sheet/EventsSection.vue';
 
+const { t } = useI18n(); // <-- 2. Obtener la función 't'
 const bookStore = useBookStore();
 const { characterSheet, characterSheetSchema } = storeToRefs(bookStore);
 
@@ -119,7 +121,8 @@ function handleApplyEffects(effects: ItemEffect[]) {
 
       stat.current = newValue;
     } else {
-      console.warn(`Intento de aplicar efecto a una estadística no existente: "${effect.target}"`);
+      // <-- 3. Usar 't' para el mensaje de advertencia
+      console.warn(t('characterSheet.editor.warnings.statNotFound', { statName: effect.target }));
     }
   });
   // El watcher de 'editableSheet' se encargará de disparar el guardado automático.

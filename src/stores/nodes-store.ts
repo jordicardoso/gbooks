@@ -12,6 +12,8 @@ export interface NodesState {
   viewport: Viewport;
 }
 
+let viewportSaveTimer: number | null = null;
+
 export const useNodesStore = defineStore('nodes', {
   state: (): NodesState => ({
     nodes: [],
@@ -41,10 +43,28 @@ export const useNodesStore = defineStore('nodes', {
       this.viewport = { x: 0, y: 0, zoom: 1 };
     },
 
-    updateViewport(viewport: Viewport) {
-      this.viewport = viewport;
-      useBookStore().setDirty();
+    updateViewport(moveEndPayload: { flowTransform: Viewport }) {
+      if (moveEndPayload && moveEndPayload.flowTransform) {
+        this.viewport = moveEndPayload.flowTransform;
+      } else {
+        // Fallback por si el evento cambia o viene en otro formato
+        this.viewport = moveEndPayload as any;
+      }
+
+      // 2. Cancela cualquier guardado anterior que estuviera programado.
+      if (viewportSaveTimer) {
+        clearTimeout(viewportSaveTimer);
+      }
+
+      console.log(this.viewport);
+      // 3. Programa un nuevo guardado para dentro de 1 segundo.
+      viewportSaveTimer = window.setTimeout(() => {
+        console.log('[NodesStore] Debounce timer finalizado. Guardando el viewport...');
+        useBookStore().saveCurrentBook();
+        viewportSaveTimer = null;
+      }, 1000);
     },
+
 
     addConnection(params: Connection) {
       if (params.source && params.target) {
@@ -52,35 +72,6 @@ export const useNodesStore = defineStore('nodes', {
         this.edges.push(newEdge);
         useBookStore().setDirty();
       }
-    },
-
-    createNode(options: { position: { x: number; y: number }; type: string }) {
-      if (options.type === 'start' && this.nodes.some(n => n.type === 'start')) {
-        console.warn('Intento de crear un segundo nodo inicial. Operación cancelada.');
-        return;
-      }
-
-      const existingParagraphNumbers = this.nodes.map(n => n.data.paragraphNumber || 0);
-      const maxParagraphNumber = Math.max(0, ...existingParagraphNumbers);
-      const newParagraphNumber = maxParagraphNumber + 1;
-
-      // Esta implementación ya es correcta y ahora coincide con el tipo BookNode actualizado.
-      const newNode: BookNode = {
-        id: uid(),
-        type: options.type,
-        position: options.position,
-        label: `Nuevo Nodo ${this.nodes.length + 1}`,
-        data: {
-          paragraphNumber: newParagraphNumber,
-          description: 'Escribe aquí el párrafo...',
-          color: options.type === 'start' ? '#388e3c' : (options.type === 'end' ? '#d32f2f' : '#455a64'),
-          tags: [],
-          size: 'medium'
-        }
-      };
-
-      this.nodes.push(newNode);
-      useBookStore().setDirty();
     },
 
     async createNodeAndConnect(sourceNodeId: string, sourceHandleId: string) {

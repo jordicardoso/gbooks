@@ -1,6 +1,5 @@
-<!-- src/components/sheet/EditItemDialog.vue (NUEVO FICHERO) -->
+<!-- src/components/sheet/EditItemDialog.vue -->
 <template>
-  <!-- Usamos v-model para controlar la visibilidad desde el padre -->
   <q-dialog :model-value="modelValue" @update:model-value="hide" persistent>
     <q-card class="bg-grey-10 text-white" style="width: 500px; max-width: 90vw">
       <q-card-section>
@@ -9,20 +8,19 @@
 
       <q-separator dark />
 
-      <!-- Formulario de edición del objeto -->
       <q-card-section class="q-gutter-y-md">
         <q-input
           v-model="editableItem.name"
-          label="Nombre del Objeto"
+          :label="t('characterSheet.editItemDialog.nameLabel')"
           filled
           dark
           autofocus
-          :rules="[(val) => (val && val.length > 0) || 'El nombre es obligatorio']"
+          :rules="[(val) => (val && val.length > 0) || t('characterSheet.editItemDialog.nameRequired')]"
           lazy-rules
         />
         <q-input
           v-model="editableItem.description"
-          label="Descripción (opcional)"
+          :label="t('characterSheet.editItemDialog.descriptionLabel')"
           type="textarea"
           filled
           dark
@@ -32,11 +30,9 @@
 
       <q-separator dark />
 
-      <!-- Sección para gestionar los efectos -->
       <q-card-section>
-        <div class="text-subtitle1 q-mb-sm">Efectos</div>
+        <div class="text-subtitle1 q-mb-sm">{{ t('characterSheet.editItemDialog.effectsTitle') }}</div>
 
-        <!-- Lista de efectos existentes -->
         <q-list v-if="editableItem.effects.length > 0" dark separator dense>
           <q-item v-for="(effect, index) in editableItem.effects" :key="index">
             <q-item-section>
@@ -60,32 +56,31 @@
             </q-item-section>
           </q-item>
         </q-list>
-        <div v-else class="text-grey-6 text-center q-py-sm">(Sin efectos)</div>
+        <div v-else class="text-grey-6 text-center q-py-sm">{{ t('characterSheet.editItemDialog.noEffects') }}</div>
 
-        <!-- Formulario para añadir un nuevo efecto -->
         <div class="row q-mt-md q-col-gutter-sm items-stretch stretch">
           <div class="col">
             <q-select
               v-model="newEffect.target"
               :options="availableStats"
-              label="Stat afectada"
+              :label="t('characterSheet.editItemDialog.targetStatLabel')"
               filled
               dark
               dense
               emit-value
               map-options
-              :rules="[val => !!val || 'Selecciona una stat']"
+              :rules="[val => !!val || t('characterSheet.editItemDialog.targetStatRequired')]"
             />
           </div>
           <div class="col-4">
             <q-input
               v-model.number="newEffect.value"
-              label="Valor"
+              :label="t('characterSheet.editItemDialog.valueLabel')"
               type="number"
               filled
               dark
               dense
-              placeholder="ej: 10, -5"
+              :placeholder="t('characterSheet.editItemDialog.valuePlaceholder')"
             />
           </div>
           <div class="col-auto">
@@ -97,7 +92,7 @@
               round
               dense
             >
-              <q-tooltip>Añadir efecto</q-tooltip>
+              <q-tooltip>{{ t('characterSheet.editItemDialog.addEffectTooltip') }}</q-tooltip>
             </q-btn>
           </div>
         </div>
@@ -106,10 +101,10 @@
       <q-separator dark />
 
       <q-card-actions align="right">
-        <q-btn flat label="Cancelar" @click="hide" />
+        <q-btn flat :label="t('characterSheet.editItemDialog.cancel')" @click="hide" />
         <q-btn
           color="primary"
-          label="Guardar"
+          :label="t('characterSheet.editItemDialog.save')"
           @click="onSave"
           :disable="!editableItem.name"
         />
@@ -120,23 +115,26 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { Item, ItemEffect } from 'src/stores/types';
 
 const props = defineProps<{
-  modelValue: boolean; // Para el v-model
+  modelValue: boolean;
   item: Item | null;
   slotName: string;
   availableStats: string[];
 }>();
 
 const emit = defineEmits(['update:modelValue', 'save']);
+const { t } = useI18n();
 
-// --- Estado Interno ---
 const editableItem = ref<Omit<Item, 'id'>>({ name: '', description: '', effects: [] });
 const newEffect = ref<ItemEffect>({ target: '', value: 0 });
 
 const formTitle = computed(() =>
-  props.item ? `Editar Objeto en "${props.slotName}"` : `Equipar Objeto en "${props.slotName}"`
+  props.item
+    ? t('characterSheet.editItemDialog.titleEdit', { slotName: props.slotName })
+    : t('characterSheet.editItemDialog.titleEquip', { slotName: props.slotName })
 );
 
 watch(
@@ -145,20 +143,16 @@ watch(
     if (newItem) {
       editableItem.value = JSON.parse(JSON.stringify(newItem));
     } else {
-      // Si no hay item, reseteamos el formulario para crear uno nuevo
       editableItem.value = { name: '', description: '', effects: [] };
     }
-    // Reseteamos el formulario de nuevo efecto
     newEffect.value = { target: '', value: 0 };
   },
   { deep: true }
 );
 
-// --- Lógica de los Efectos ---
 function addEffect() {
   if (!newEffect.value.target.trim()) return;
   editableItem.value.effects.push({ ...newEffect.value });
-  // Reseteamos para el siguiente
   newEffect.value = { target: '', value: 0 };
 }
 
@@ -166,13 +160,12 @@ function removeEffect(index: number) {
   editableItem.value.effects.splice(index, 1);
 }
 
-// --- Control del Diálogo ---
 function hide() {
   emit('update:modelValue', false);
 }
 
 function onSave() {
-  if (!editableItem.value.name) return; // Doble chequeo por si se salta la regla del input
+  if (!editableItem.value.name) return;
   emit('save', editableItem.value);
   hide();
 }

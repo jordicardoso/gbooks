@@ -41,9 +41,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useNodesStore } from 'src/stores/nodes-store';
-import { useBookStore } from 'src/stores/book-store';
-import { useAssetsStore } from 'src/stores/assets-store';
+import { useNodesStore } from 'stores/nodes-store';
+import { useBookStore } from 'stores/book-store';
+import { useAssetsStore } from 'stores/assets-store';
 import { storeToRefs } from 'pinia';
 import html2pdf from 'html2pdf.js';
 import { useQuasar } from 'quasar';

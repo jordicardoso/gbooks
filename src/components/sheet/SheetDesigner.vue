@@ -1,15 +1,15 @@
-<!-- src/components/sheet/SheetDesigner.vue (REFACTORIZADO) -->
+<!-- src/components/sheet/SheetDesigner.vue -->
 <template>
   <q-card class="bg-grey-10 text-white" style="width: 600px; max-width: 90vw;">
     <q-card-section>
-      <div class="text-h6">Diseñador de Ficha</div>
-      <div class="text-subtitle2 text-grey-5">Añade, elimina y reordena las secciones de tu ficha.</div>
+      <div class="text-h6">{{ t('characterSheet.designer.title') }}</div>
+      <div class="text-subtitle2 text-grey-5">{{ t('characterSheet.designer.subtitle') }}</div>
     </q-card-section>
 
     <q-separator dark />
 
     <q-card-section>
-      <div class="text-subtitle1 q-mb-sm">Secciones Actuales</div>
+      <div class="text-subtitle1 q-mb-sm">{{ t('characterSheet.designer.currentSections') }}</div>
       <q-list v-if="localSchema.layout.length > 0" dark separator bordered>
         <q-item v-for="(section, index) in localSchema.layout" :key="index">
           <q-item-section avatar>
@@ -18,7 +18,6 @@
           <q-item-section>
             <q-item-label>{{ section.title }}</q-item-label>
             <q-item-label caption class="text-grey-5">
-              <!-- Mostramos una descripción más amigable en lugar de los detalles técnicos -->
               {{ getSectionTypeDescription(section) }}
             </q-item-label>
           </q-item-section>
@@ -28,13 +27,13 @@
         </q-item>
       </q-list>
       <div v-else class="text-grey-6 text-center q-pa-md">
-        (No hay secciones. Haz clic en "Añadir Sección" para empezar.)
+        {{ t('characterSheet.designer.noSections') }}
       </div>
 
       <div class="q-mt-lg">
         <q-btn
           color="primary"
-          label="Añadir Sección"
+          :label="t('characterSheet.designer.addSection')"
           icon="add"
           @click="isAddDialogOpen = true"
         />
@@ -44,15 +43,14 @@
     <q-separator dark />
 
     <q-card-actions align="right">
-      <q-btn flat label="Cancelar" @click="emit('close')" />
-      <q-btn color="primary" label="Guardar Cambios" @click="saveSchema" />
+      <q-btn flat :label="t('characterSheet.designer.cancel')" @click="emit('close')" />
+      <q-btn color="primary" :label="t('characterSheet.designer.saveChanges')" @click="saveSchema" />
     </q-card-actions>
 
-    <!-- === DIÁLOGO MEJORADO PARA AÑADIR SECCIÓN === -->
     <q-dialog v-model="isAddDialogOpen">
       <q-card class="bg-grey-9 text-white" style="width: 450px;">
         <q-card-section>
-          <div class="text-h6">Elige un tipo de sección</div>
+          <div class="text-h6">{{ t('characterSheet.designer.addDialog.title') }}</div>
         </q-card-section>
 
         <q-list dark separator>
@@ -77,7 +75,7 @@
         </q-list>
 
         <q-card-actions align="right">
-          <q-btn flat label="Cerrar" v-close-popup />
+          <q-btn flat :label="t('characterSheet.designer.close')" v-close-popup />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -85,13 +83,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 import { useBookStore, type CharacterSheetSchema, type CharacterSheetSectionSchema } from 'src/stores/book-store';
 
-// Ya no necesitamos la prop 'availableTypes'
 const emit = defineEmits(['close']);
 const $q = useQuasar();
+const { t } = useI18n();
 const bookStore = useBookStore();
 
 const localSchema = ref<CharacterSheetSchema>(
@@ -99,56 +98,40 @@ const localSchema = ref<CharacterSheetSchema>(
 );
 const isAddDialogOpen = ref(false);
 
-// Plantillas de sección que se mostrarán al usuario.
-// Esto oculta los detalles de implementación como 'type' y 'mode'.
-const sectionTemplates = [
-  {
-    label: 'Bloque de Estadísticas',
-    description: 'Valores numéricos (ej: Vida, Fuerza, Maná).',
-    icon: 'analytics',
-    schema: { type: 'stats' as const },
-  },
-  {
-    label: 'Equipo (con Ranuras)',
-    description: 'Para equipar objetos en ranuras como "Cabeza", "Manos".',
-    icon: 'checkroom',
-    schema: { type: 'itemSection' as const, mode: 'slots' as const },
-  },
-  {
-    label: 'Inventario (Lista)',
-    description: 'Una lista simple para objetos, consumibles, etc.',
-    icon: 'inventory_2',
-    schema: { type: 'itemSection' as const, mode: 'list' as const },
-  },
-  {
-    label: 'Cronología de Eventos',
-    description: 'Una lista de sucesos importantes en la historia.',
-    icon: 'event_note',
-    schema: { type: 'events' as const },
-  },
+const rawTemplates = [
+  { key: 'stats', icon: 'analytics', schema: { type: 'stats' as const } },
+  { key: 'itemSlots', icon: 'checkroom', schema: { type: 'itemSection' as const, mode: 'slots' as const } },
+  { key: 'itemList', icon: 'inventory_2', schema: { type: 'itemSection' as const, mode: 'list' as const } },
+  { key: 'events', icon: 'event_note', schema: { type: 'events' as const } },
 ];
 
-type SectionTemplate = typeof sectionTemplates[number];
+const sectionTemplates = computed(() => rawTemplates.map(template => ({
+  ...template,
+  label: t(`characterSheet.designer.addDialog.templates.${template.key}.label`),
+  description: t(`characterSheet.designer.addDialog.templates.${template.key}.description`),
+})));
+
+type SectionTemplate = typeof sectionTemplates.value[number];
 
 function getSectionTypeDescription(section: CharacterSheetSectionSchema): string {
   if (section.type === 'itemSection') {
-    return section.mode === 'slots' ? 'Equipo (Ranuras)' : 'Inventario (Lista)';
+    return section.mode === 'slots' ? t('characterSheet.designer.sectionTypes.slots') : t('characterSheet.designer.sectionTypes.list');
   }
   if (section.type === 'stats') {
-    return 'Estadísticas';
+    return t('characterSheet.designer.sectionTypes.stats');
   }
   if (section.type === 'events') {
-    return 'Cronología de Eventos';
+    return t('characterSheet.designer.sectionTypes.events');
   }
-  return `Tipo: ${section.type}`;
+  return t('characterSheet.designer.sectionTypes.unknown', { type: section.type });
 }
 
 function promptForSectionTitle(template: SectionTemplate) {
-  isAddDialogOpen.value = false; // Cerramos el diálogo de selección
+  isAddDialogOpen.value = false;
 
   $q.dialog({
-    title: `Añadir "${template.label}"`,
-    message: 'Introduce un título para esta sección (ej: Atributos, Equipo del Héroe, Mochila).',
+    title: t('characterSheet.designer.promptTitle.title', { sectionLabel: template.label }),
+    message: t('characterSheet.designer.promptTitle.message'),
     prompt: { model: '', type: 'text', isValid: val => val.length > 0 },
     dark: true,
     cancel: true,
@@ -159,18 +142,17 @@ function promptForSectionTitle(template: SectionTemplate) {
 }
 
 function addNewSection(title: string, template: SectionTemplate) {
-  // Generamos una clave única para la sección
   const dataKey = `${template.schema.type}_${template.schema.mode || 'default'}_${Date.now()}`;
 
   if (localSchema.value.layout.some(s => s.dataKey === dataKey)) {
-    $q.notify({ type: 'negative', message: 'Error al generar clave única. Inténtalo de nuevo.' });
+    $q.notify({ type: 'negative', message: t('characterSheet.designer.errors.uniqueKey') });
     return;
   }
 
   const newSection: CharacterSheetSectionSchema = {
     title,
     icon: template.icon,
-    dataKey: dataKey as any, // La clave es dinámica, 'any' es aceptable aquí
+    dataKey: dataKey as any,
     ...template.schema,
   };
 

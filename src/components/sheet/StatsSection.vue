@@ -1,4 +1,4 @@
-<!-- src/components/sheet/StatsSection.vue (CON BARRA DE PROGRESO) -->
+<!-- src/components/sheet/StatsSection.vue -->
 <template>
   <q-card class="bg-grey-9">
     <q-card-section class="row items-center">
@@ -6,19 +6,17 @@
       <div class="text-h6">{{ title }}</div>
       <q-space />
       <q-btn flat round dense icon="add" @click="openStatDialog(null)" color="positive">
-        <q-tooltip>Añadir estadística</q-tooltip>
+        <q-tooltip>{{ t('characterSheet.statsSection.addTooltip') }}</q-tooltip>
       </q-btn>
     </q-card-section>
 
     <q-card-section v-if="Object.keys(localData).length === 0" class="text-grey-6 text-center q-pa-md">
-      (No hay estadísticas. Haz clic en '+' para añadir una.)
+      {{ t('characterSheet.statsSection.noStats') }}
     </q-card-section>
 
     <q-list v-else dark separator>
-      <!-- === INICIO DE LA MODIFICACIÓN DEL LAYOUT === -->
       <q-item v-for="(stat, key) in localData" :key="key" class="q-py-md">
         <q-item-section>
-          <!-- Fila superior con el nombre y los controles -->
           <div class="row items-center no-wrap">
             <div class="col">
               <q-item-label class="text-capitalize text-body1">{{ key }}</q-item-label>
@@ -33,13 +31,12 @@
                 @update:model-value="validateStat(stat)"
               />
               <q-btn flat round dense icon="edit" @click="openStatDialog(String(key))">
-                <q-tooltip>Editar Rango (min/max)</q-tooltip>
+                <q-tooltip>{{ t('characterSheet.statsSection.editTooltip') }}</q-tooltip>
               </q-btn>
               <q-btn flat round dense icon="delete" color="negative" @click="confirmRemoveStat(String(key))" />
             </div>
           </div>
 
-          <!-- Fila inferior con la barra de progreso y el rango -->
           <div class="q-mt-sm">
             <q-linear-progress
               :value="getStatProgress(stat)"
@@ -48,19 +45,17 @@
               size="10px"
             >
               <q-tooltip>
-                {{ stat.current }} / {{ stat.max }}
+                {{ t('characterSheet.statsSection.progressTooltip', { current: stat.current, max: stat.max }) }}
               </q-tooltip>
             </q-linear-progress>
             <q-item-label caption class="text-grey-5 q-mt-xs text-right">
-              Rango: {{ stat.min ?? 0 }} &harr; {{ stat.max }}
+              {{ t('characterSheet.statsSection.rangeLabel', { min: stat.min ?? 0, max: stat.max }) }}
             </q-item-label>
           </div>
         </q-item-section>
       </q-item>
-      <!-- === FIN DE LA MODIFICACIÓN DEL LAYOUT === -->
     </q-list>
 
-    <!-- El diálogo para añadir/editar no cambia -->
     <q-dialog v-model="isStatDialogOpen" persistent>
       <q-card class="bg-grey-10 text-white" style="width: 400px">
         <q-card-section>
@@ -70,35 +65,35 @@
           <q-card-section class="q-gutter-y-md">
             <q-input
               v-model="statForm.name"
-              label="Nombre"
+              :label="t('characterSheet.statsSection.dialog.nameLabel')"
               filled dark autofocus
               :readonly="!!editingStatKey"
               :rules="[
-                val => !!val || 'El nombre es obligatorio',
-                val => !!editingStatKey || !localData[val.toLowerCase()] || 'La estadística ya existe'
+                val => !!val || t('characterSheet.statsSection.dialog.nameRequired'),
+                val => !!editingStatKey || !localData[val.toLowerCase()] || t('characterSheet.statsSection.dialog.nameExists')
               ]"
               lazy-rules
             />
             <q-input
               v-model.number="statForm.max"
-              label="Valor Máximo"
+              :label="t('characterSheet.statsSection.dialog.maxLabel')"
               type="number"
               filled dark
-              :rules="[val => typeof val === 'number' || 'Debe ser un número']"
+              :rules="[val => typeof val === 'number' || t('characterSheet.statsSection.dialog.numberRequired')]"
               lazy-rules
             />
             <q-input
               v-model.number="statForm.min"
-              label="Valor Mínimo (opcional)"
+              :label="t('characterSheet.statsSection.dialog.minLabel')"
               type="number"
               filled dark
-              placeholder="Por defecto: 0"
+              :placeholder="t('characterSheet.statsSection.dialog.minPlaceholder')"
             />
           </q-card-section>
           <q-separator dark />
           <q-card-actions align="right">
-            <q-btn flat label="Cancelar" v-close-popup />
-            <q-btn type="submit" color="primary" :label="editingStatKey ? 'Guardar' : 'Añadir'" />
+            <q-btn flat :label="t('characterSheet.designer.cancel')" v-close-popup />
+            <q-btn type="submit" color="primary" :label="dialogButtonLabel" />
           </q-card-actions>
         </q-form>
       </q-card>
@@ -109,6 +104,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import { useQuasar } from 'quasar';
+import { useI18n } from 'vue-i18n';
 import type { Stat } from 'src/stores/types';
 
 const props = defineProps<{
@@ -119,13 +115,15 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:data']);
 const $q = useQuasar();
+const { t } = useI18n();
 
 const localData = ref<{ [key: string]: Stat }>(JSON.parse(JSON.stringify(props.data || {})));
 const isStatDialogOpen = ref(false);
 const editingStatKey = ref<string | null>(null);
 const statForm = ref({ name: '', max: 100, min: 0 });
 
-const dialogTitle = computed(() => editingStatKey.value ? 'Editar Estadística' : 'Nueva Estadística');
+const dialogTitle = computed(() => editingStatKey.value ? t('characterSheet.statsSection.dialog.titleEdit') : t('characterSheet.statsSection.dialog.titleNew'));
+const dialogButtonLabel = computed(() => editingStatKey.value ? t('characterSheet.statsSection.dialog.save') : t('characterSheet.statsSection.dialog.add'));
 
 watch(() => props.data, (newData) => {
   localData.value = JSON.parse(JSON.stringify(newData || {}));
@@ -135,7 +133,6 @@ function emitUpdate() {
   emit('update:data', localData.value);
 }
 
-// --- NUEVA FUNCIÓN PARA CALCULAR EL PROGRESO ---
 function getStatProgress(stat: Stat): number {
   const min = stat.min ?? 0;
   const range = stat.max - min;
@@ -193,8 +190,8 @@ function saveStat() {
 
 function confirmRemoveStat(key: string) {
   $q.dialog({
-    title: 'Confirmar',
-    message: `¿Estás seguro de que quieres eliminar la estadística "${key}"?`,
+    title: t('characterSheet.statsSection.confirmDelete.title'),
+    message: t('characterSheet.statsSection.confirmDelete.message', { statName: key }),
     dark: true,
     cancel: true,
     persistent: true,

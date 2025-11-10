@@ -75,8 +75,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useQuasar } from 'quasar';
-import { useAssetsStore } from 'src/stores/assets-store';
-import { useBookStore } from 'src/stores/book-store';
+import { useAssetsStore } from 'stores/assets-store';
+import { useBookStore } from 'stores/book-store';
 import { storeToRefs } from 'pinia';
 
 const $q = useQuasar();

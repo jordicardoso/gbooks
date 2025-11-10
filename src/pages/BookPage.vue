@@ -5,11 +5,21 @@
     <q-toolbar class="bg-grey-9 text-white">
       <q-btn flat round dense icon="arrow_back" @click="goBack" />
       <q-toolbar-title v-if="bookStore.activeBook">
-        Editando: {{ bookStore.activeBook.meta.title }}
+        {{ $t('bookPage.editingTitle') }}: {{ bookStore.activeBook.meta.title }}
       </q-toolbar-title>
       <q-space />
       <q-spinner color="primary" v-if="bookStore.isLoading" />
-      <q-badge v-if="bookStore.isDirty" color="amber" text-color="black" label="Sin guardar" />
+      <q-badge v-if="bookStore.isDirty" color="amber" text-color="black" :label="$t('bookPage.unsavedChanges')" class="q-mr-sm" />
+      <q-btn
+        v-if="bookStore.activeBook"
+        color="primary"
+        :label="$t('bookPage.saveButton')"
+        icon="save"
+        dense
+        :loading="isSaving"
+        :disable="!bookStore.isDirty"
+        @click="saveBook"
+      />
     </q-toolbar>
 
     <!-- Pestañas de navegación -->
@@ -22,13 +32,13 @@
       align="justify"
       narrow-indicator
     >
-      <q-tab name="design" label="Diseño" />
-      <q-tab name="assets" label="Assets" /> <!-- Pestaña añadida -->
-      <q-tab name="meta" label="Metadatos" />
-      <q-tab name="character" label="Ficha de Personaje" />
-      <q-tab name="maps" label="Mapas" />
-      <q-tab name="preview" label="Preview"/>
-      <q-tab name="testing" label="Testing & Build" />
+      <q-tab name="design" :label="$t('bookPage.tabs.design')" />
+      <q-tab name="assets" :label="$t('bookPage.tabs.assets')" />
+      <q-tab name="meta" :label="$t('bookPage.tabs.metadata')" />
+      <q-tab name="character" :label="$t('bookPage.tabs.characterSheet')" />
+      <q-tab name="maps" :label="$t('bookPage.tabs.maps')" />
+      <q-tab name="preview" :label="$t('bookPage.tabs.preview')"/>
+      <q-tab name="testing" :label="$t('bookPage.tabs.testing')" />
     </q-tabs>
 
     <q-separator />
@@ -43,9 +53,8 @@
         />
       </q-tab-panel>
 
-      <!-- Panel de Assets (Añadido) -->
+      <!-- Panel de Assets -->
       <q-tab-panel name="assets" class="q-pa-none">
-        <!-- El componente se renderiza aquí, pasándole el ID del libro -->
         <AssetsPage v-if="props.id" :book-id="props.id" />
       </q-tab-panel>
 
@@ -56,14 +65,14 @@
             filled
             dark
             v-model="bookStore.activeBook.meta.title"
-            label="Título del libro"
+            :label="$t('bookPage.meta.titleLabel')"
             @update:model-value="bookStore.setDirty()"
           />
           <q-input
             filled
             dark
             v-model="bookStore.activeBook.meta.author"
-            label="Autor"
+            :label="$t('bookPage.meta.authorLabel')"
             type="textarea"
             autogrow
             @update:model-value="bookStore.setDirty()"
@@ -72,7 +81,7 @@
             filled
             dark
             v-model="bookStore.activeBook.meta.description"
-            label="Descripción"
+            :label="$t('bookPage.meta.descriptionLabel')"
             type="textarea"
             autogrow
             @update:model-value="bookStore.setDirty()"
@@ -86,7 +95,7 @@
             option-label="name"
             emit-value
             map-options
-            label="Imagen de portada"
+            :label="$t('bookPage.meta.coverImageLabel')"
             clearable
             @update:model-value="bookStore.setDirty()"
           >
@@ -104,14 +113,14 @@
             <template #no-option>
               <q-item>
                 <q-item-section class="text-grey">
-                  No hay imágenes en los assets.
+                  {{ $t('bookPage.meta.noImageAssets') }}
                 </q-item-section>
               </q-item>
             </template>
           </q-select>
 
           <div class="q-mt-lg">
-            <p class="text-grey text-subtitle2">Vista previa de la portada:</p>
+            <p class="text-grey text-subtitle2">{{ $t('bookPage.meta.coverPreviewTitle') }}</p>
             <q-img
               v-if="coverImageUrl"
               :src="coverImageUrl"
@@ -120,39 +129,31 @@
             />
             <div v-else class="text-center text-grey-6 q-pa-xl bg-grey-9" style="border-radius: 4px;">
               <q-icon name="image" size="3rem" />
-              <p class="q-mt-sm text-caption">Sin imagen de portada seleccionada</p>
+              <p class="q-mt-sm text-caption">{{ $t('bookPage.meta.noCoverSelected') }}</p>
             </div>
           </div>
         </div>
       </q-tab-panel>
 
-      <!-- Panel de Ficha de Personaje -->
+      <!-- Otros paneles... -->
       <q-tab-panel name="character" class="q-pa-none">
-        <!-- El componente se renderiza aquí, pasándole el ID del libro -->
         <CharacterSheetPage v-if="props.id" :id="props.id" />
       </q-tab-panel>
-
-      <!-- Panel de Mapas -->
       <q-tab-panel name="maps" class="q-pa-none">
-        <!-- El componente se renderiza aquí, pasándole el ID del libro -->
         <BookMap v-if="props.id" :book-id="props.id" />
       </q-tab-panel>
-
       <q-tab-panel name="preview" class="fit col q-pa-none column" style="flex: 1; min-height: 0;">
-        <!-- El componente se renderiza aquí -->
         <BookPreview v-if="props.id" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"/>
       </q-tab-panel>
-
-      <!-- Panel de Testing -->
       <q-tab-panel name="testing" class="q-pa-none">
-        <TestingPage /> <!-- El componente TestingPage se renderiza aquí -->
+        <TestingPage />
       </q-tab-panel>
     </q-tab-panels>
 
     <!-- Mensaje de carga general -->
     <div v-if="!bookStore.activeBook && bookStore.isLoading" class="absolute-center text-center">
       <q-spinner-dots color="primary" size="50px" />
-      <div class="q-mt-md text-grey-5">Cargando libro...</div>
+      <div class="q-mt-md text-grey-5">{{ $t('bookPage.loadingBook') }}</div>
     </div>
 
   </q-page>
@@ -161,23 +162,28 @@
 <script setup lang="ts">
 import { ref, onUnmounted, watch, computed } from 'vue';
 import { useRouter} from 'vue-router';
+import { useI18n } from 'vue-i18n';
+import { useQuasar } from 'quasar';
 import { useBookStore } from 'src/stores/book-store';
 import { useAssetsStore } from 'src/stores/assets-store';
 
 // Componentes para las pestañas
 import BookGraph from 'src/components/BookGraph.vue';
 import CharacterSheetPage from 'pages/CharacterSheetPage.vue';
-import BookMap from 'src/components/BookMap.vue';
+import BookMap from 'pages/BookMap.vue';
 import AssetsPage from 'pages/AssetsPage.vue';
 import TestingPage from 'pages/TestingPage.vue';
-import BookPreview from 'src/components/BookPreview.vue';
+import BookPreview from 'pages/BookPreview.vue';
 
 const props = defineProps<{ id: string }>();
 const router = useRouter();
+const { t } = useI18n();
+const $q = useQuasar();
 const bookStore = useBookStore();
 const assetsStore = useAssetsStore();
 
-const tab = ref('design'); // La pestaña inicial ahora es 'design'
+const tab = ref('design');
+const isSaving = ref(false);
 
 const imageAssetOptions = computed(() =>
   assetsStore.assets
@@ -196,7 +202,6 @@ const coverImageUrl = computed(() => {
   return asset ? assetsStore.getAssetUrl(asset.filename) : null;
 });
 
-// Carga el libro y los assets cuando el ID cambia
 watch(() => props.id, (newBookId) => {
   if (newBookId) {
     bookStore.loadBookById(newBookId);
@@ -205,15 +210,34 @@ watch(() => props.id, (newBookId) => {
   }
 }, { immediate: true });
 
-// Limpia los stores cuando el componente se destruye (al salir de la página)
 onUnmounted(() => {
   if (bookStore.isDirty) {
-    void bookStore.saveCurrentBook();
+    // Guardar automáticamente al salir si hay cambios
+    void saveBook();
   }
   bookStore.clearBook();
 });
 
+async function saveBook() {
+  isSaving.value = true;
+  try {
+    await bookStore.saveCurrentBook();
+    $q.notify({
+      type: 'positive',
+      message: t('bookPage.saveSuccess'),
+      timeout: 1500,
+    });
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: t('bookPage.saveError'),
+    });
+  } finally {
+    isSaving.value = false;
+  }
+}
+
 function goBack() {
-  router.push({ name: 'library' }); // Navega a la ruta de la biblioteca
+  router.push({ name: 'library' });
 }
 </script>

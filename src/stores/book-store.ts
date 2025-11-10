@@ -197,12 +197,18 @@ export const useBookStore = defineStore('book', {
       }
     },
 
-    async saveCurrentBook() {
+    async saveCurrentBook(force = false) {
       if (this.debounceSaveTimer) clearTimeout(this.debounceSaveTimer);
 
       if (!this.activeBook || !this.activeBookId || !this.isDirty) {
         return;
       }
+
+      if (!this.isDirty && !force) {
+        console.log('[BookStore] Guardado omitido: no hay cambios y no se ha forzado.');
+        return;
+      }
+
       this.isLoading = true;
       try {
         const nodesStore = useNodesStore();
@@ -215,7 +221,6 @@ export const useBookStore = defineStore('book', {
           data: edge.data,
         }));
 
-        // Aseguramos que los datos del libro a guardar están actualizados
         const bookToSave: BookData = {
           ...this.activeBook,
           nodes: nodesStore.nodes,

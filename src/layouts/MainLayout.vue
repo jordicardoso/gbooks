@@ -1,62 +1,67 @@
 <!-- src/layouts/MainLayout.vue -->
 <template>
-  <q-layout view="lHh lpr lFf">
-    <q-page-container class="bg-blue-grey-10 overflow-hidden">
+  <q-layout view="lHh Lpr lFf">
+    <q-header elevated>
+      <q-toolbar class="bg-grey-10">
+        <q-toolbar-title>
+          Gbooks Editor
+        </q-toolbar-title>
+
+        <!-- Selector de Idioma -->
+        <q-select
+          v-model="locale"
+          :options="localeOptions"
+          dense
+          borderless
+          emit-value
+          map-options
+          options-dense
+          dark
+          color="white"
+          style="min-width: 120px;"
+        >
+          <!-- Esto muestra el icono del mundo y el label del idioma seleccionado -->
+          <template #prepend>
+            <q-icon name="language" color="white" class="q-mr-sm" />
+          </template>
+        </q-select>
+
+      </q-toolbar>
+    </q-header>
+
+    <q-page-container class="bg-dark">
       <router-view />
     </q-page-container>
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
-import { useLibraryStore } from 'src/stores/library-store';
+import { onMounted, watch } from 'vue'; // 1. Importamos 'onMounted'
+import { useI18n } from 'vue-i18n';
+import { useLibraryStore } from 'src/stores/library-store'; // 2. Importamos el store
 
-const router = useRouter();
-const $q = useQuasar();
+// --- INICIALIZACIÓN DE STORES ---
 const libraryStore = useLibraryStore();
 
-const darkModeIcon = computed(() => ($q.dark.isActive ? 'light_mode' : 'dark_mode'));
-function toggleDarkMode() {
-  $q.dark.toggle();
-  localStorage.setItem('darkMode', String($q.dark.isActive));
-}
-
-onMounted(async () => {
-  const darkModeIsActive = localStorage.getItem('darkMode') === 'true';
-  $q.dark.set(darkModeIsActive);
-
-  await libraryStore.initializeLibrary();
+// 3. onMounted se ejecuta una sola vez cuando el layout está listo.
+// Es el lugar perfecto y más seguro para cargar datos iniciales desde Electron.
+onMounted(() => {
+  libraryStore.initializeLibrary();
 });
 
-const menuRoutes = computed(() => {
-  const mainLayoutRoute = router.options.routes.find(r => r.path === '/');
-  const children = mainLayoutRoute?.children || [];
 
-  return children.filter(route => route.meta?.showInMenu !== false);
+// --- LÓGICA DE INTERNACIONALIZACIÓN (i18n) ---
+const { locale } = useI18n({ useScope: 'global' });
+
+const localeOptions = [
+  { value: 'es-ES', label: 'Español' },
+  { value: 'en-US', label: 'English' },
+  { value: 'ca-ES', label: 'Català' },
+  { value: 'ru-RU', label: 'Русский' },
+];
+
+watch(locale, (newLocale) => {
+  console.log(`Idioma cambiado a: ${newLocale}, guardando en localStorage.`);
+  localStorage.setItem('user-locale', newLocale);
 });
-
-const isHeaderVisible = ref(true);
 </script>
-
-<style lang="scss">
-/* Estilos sin cambios */
-.custom-tabs-minimal {
-  .q-tab {
-    min-height: 32px;
-    padding: 0 12px;
-  }
-
-  .q-tab__label {
-    font-size: 0.8rem;
-    font-weight: 500;
-    opacity: 0.7;
-  }
-
-  .q-tab--active .q-tab__label {
-    opacity: 1;
-    font-weight: 700;
-  }
-}
-</style>

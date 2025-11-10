@@ -1,35 +1,38 @@
 <!-- src/components/BookStoryNode.vue -->
 <template>
-  <div class="book-node" :style="nodeStyle">
+  <div class="book-node" :class="{ 'is-selected': selected }" :style="nodeStyle">
     <div class="node-header">
       <div class="row items-center no-wrap">
         <q-icon name="menu_book" class="q-mr-xs" />
-        <span class="text-weight-bold">{{ label || 'Pasaje' }}</span>
+        <span class="text-weight-bold">{{
+            label || t('bookPage.nodes.storyNodeTitle')
+          }}</span>
       </div>
-      <div v-if="tags && tags.length > 0" class="row items-center q-ml-sm gap-xs">
+      <div
+        v-if="tags && tags.length > 0"
+        class="row items-center q-ml-sm gap-xs"
+      >
         <q-chip
           v-for="tag in tags"
           :key="tag"
           :label="tag"
-          color="primary"
+          color="black"
           text-color="white"
           dense
           size="sm"
+          style="opacity: 0.7"
         />
       </div>
     </div>
-    <div class="node-content q-mt-xs">
-      <q-img
-        v-if="imageUrl"
-        :src="imageUrl"
-        class="q-mb-sm node-image"
-        fit="cover"
-      />
-      <div class="node-content q-mt-xs node-content-truncated">
-        <!-- [CORREGIDO] Añadido valor por defecto para robustez -->
-        {{ description || 'Sin texto' }}
+
+    <!-- [MODIFICADO] La estructura interna del contenido no cambia -->
+    <div class="node-content">
+      <q-img v-if="imageUrl" :src="imageUrl" class="node-image" fit="cover" />
+      <div class="node-text-content">
+        {{ description || t('bookPage.nodes.noText') }}
       </div>
     </div>
+
     <Handle type="target" :position="Position.Top" />
     <Handle type="source" :position="Position.Bottom" />
     <NodeResizer :node-id="id" :min-width="150" :min-height="100" />
@@ -40,10 +43,9 @@
 import { computed } from 'vue';
 import { Handle, Position } from '@vue-flow/core';
 import { useAssetsStore } from 'src/stores/assets-store';
-import type { BookNode } from 'src/stores/types';
 import NodeResizer from './NodeResizer.vue';
+import { useI18n } from 'vue-i18n';
 
-// [UNIFICADO] Patrón de props opcionales para máxima robustez
 const props = defineProps<{
   id: string;
   label?: string;
@@ -58,6 +60,7 @@ const props = defineProps<{
   selected?: boolean;
 }>();
 
+const { t } = useI18n();
 const assetsStore = useAssetsStore();
 
 const imageUrl = computed(() => {
@@ -66,24 +69,17 @@ const imageUrl = computed(() => {
   return asset ? assetsStore.getAssetUrl(asset.filename) : null;
 });
 
+// La lógica del script para el tamaño por defecto es correcta y se mantiene.
 const nodeStyle = computed(() => {
   const style: Record<string, string> = {};
-  // Usa el color de la prop, o un color por defecto si no existe.
   style.backgroundColor = props.color || '#455a64';
-  // APLICAMOS EL TAMAÑO DINÁMICO
-  if (props.data?.width) {
-    style.width = `${props.data.width}px`;
-  }
-  if (props.data?.height) {
-    style.height = `${props.data.height}px`;
-  }
-
+  style.width = props.data?.width ? `${props.data.width}px` : '250px';
+  style.height = props.data?.height ? `${props.data.height}px` : '180px';
   return style;
 });
 </script>
 
-<style scoped>
-/* Se elimina la clase estática .book-node-story para permitir el color dinámico */
+<style lang="scss" scoped>
 .book-node {
   padding: 10px;
   border-radius: 8px;
@@ -92,10 +88,16 @@ const nodeStyle = computed(() => {
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
   position: relative;
-  transition: background-color 0.3s, min-width 0.3s, max-width 0.3s;
+  transition: background-color 0.3s ease, box-shadow 0.2s ease,
+  transform 0.2s ease;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.is-selected {
+  box-shadow: 0 0 0 2px var(--q-primary), 0 5px 15px rgba(0, 0, 0, 0.5);
+  transform: scale(1.02);
 }
 
 .node-header {
@@ -107,22 +109,27 @@ const nodeStyle = computed(() => {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding-bottom: 5px;
   gap: 8px;
+  flex-shrink: 0;
 }
+
 .node-content {
   white-space: pre-wrap;
+  word-break: break-word; // Ayuda a que el texto se rompa correctamente
+  flex-grow: 1;
+  overflow-y: auto; // <-- Esta es la clave. Mostrará scroll si el contenido es más grande que el contenedor.
 }
+
 .node-image {
   border-radius: 4px;
   max-height: 120px;
+  margin-bottom: 5px;
 }
 
-.node-content-truncated {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  word-break: break-word;
+/* [ELIMINADO] Se ha eliminado por completo la clase .node-content-truncated
+   y se ha renombrado el div a .node-text-content para evitar confusión.
+   Ya no se necesita el line-clamp. */
+.node-text-content {
+  /* No necesita estilos especiales, hereda el comportamiento del padre */
 }
 
 .vue-flow__handle {
