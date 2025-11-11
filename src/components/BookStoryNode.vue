@@ -25,17 +25,16 @@
       </div>
     </div>
 
-    <!-- [MODIFICADO] La estructura interna del contenido no cambia -->
     <div class="node-content">
-      <q-img v-if="imageUrl" :src="imageUrl" class="node-image" fit="cover" />
-      <div class="node-text-content">
-        {{ description || t('bookPage.nodes.noText') }}
-      </div>
+      <div
+        class="node-text-content"
+        v-html="description || t('bookPage.nodes.noText')"
+      ></div>
     </div>
 
     <Handle type="target" :position="Position.Top" />
     <Handle type="source" :position="Position.Bottom" />
-    <NodeResizer :node-id="id" :min-width="150" :min-height="100" />
+    <NodeResizer :node-id="id" :min-width="150" :min-height="100" @resize-end="onResizeEnd"/>
   </div>
 </template>
 
@@ -43,6 +42,7 @@
 import { computed } from 'vue';
 import { Handle, Position } from '@vue-flow/core';
 import { useAssetsStore } from 'src/stores/assets-store';
+import { useNodesStore } from 'src/stores/nodes-store';
 import NodeResizer from './NodeResizer.vue';
 import { useI18n } from 'vue-i18n';
 
@@ -62,6 +62,7 @@ const props = defineProps<{
 
 const { t } = useI18n();
 const assetsStore = useAssetsStore();
+const nodesStore = useNodesStore();
 
 const imageUrl = computed(() => {
   if (!props.imageId) return null;
@@ -69,18 +70,32 @@ const imageUrl = computed(() => {
   return asset ? assetsStore.getAssetUrl(asset.filename) : null;
 });
 
-// La lógica del script para el tamaño por defecto es correcta y se mantiene.
 const nodeStyle = computed(() => {
   const style: Record<string, string> = {};
-  style.backgroundColor = props.color || '#455a64';
-  style.width = props.data?.width ? `${props.data.width}px` : '250px';
-  style.height = props.data?.height ? `${props.data.height}px` : '180px';
+
+  if (imageUrl.value) {
+    style.backgroundImage = `url('${imageUrl.value}')`;
+    style.backgroundSize = 'cover';
+    style.backgroundPosition = 'center';
+  } else {
+    // Si no hay imagen, usamos el color de fondo como antes.
+    style.backgroundColor = props.color || '#455a64';
+  }
+
   return style;
 });
+
+function onResizeEnd(payload: { width: number; height: number }) {
+  console.log(`[BookStoryNode] Resize End detectado para el nodo ${props.id}. Nuevo tamaño:`, payload);
+  // Llamamos a la acción del store para que guarde las nuevas dimensiones.
+  nodesStore.updateNodeDimensions(props.id, payload.width, payload.height);
+}
 </script>
 
 <style lang="scss" scoped>
 .book-node {
+  width: 100%;
+  height: 100%;
   padding: 10px;
   border-radius: 8px;
   color: white;
@@ -93,11 +108,33 @@ const nodeStyle = computed(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    // Un fondo oscuro semitransparente. Ajusta la opacidad (el último valor) a tu gusto.
+    background-color: rgba(0, 0, 0, 0.6);
+    // Hereda los bordes redondeados del nodo.
+    border-radius: inherit;
+    // Se asegura de que esté por debajo del contenido pero por encima de la imagen de fondo.
+    z-index: 1;
+    transition: background-color 0.3s ease;
+  }
 }
 
 .is-selected {
   box-shadow: 0 0 0 2px var(--q-primary), 0 5px 15px rgba(0, 0, 0, 0.5);
   transform: scale(1.02);
+}
+
+.node-header,
+.node-content {
+  position: relative;
+  z-index: 2;
 }
 
 .node-header {
@@ -114,9 +151,10 @@ const nodeStyle = computed(() => {
 
 .node-content {
   white-space: pre-wrap;
-  word-break: break-word; // Ayuda a que el texto se rompa correctamente
+  word-break: break-word;
   flex-grow: 1;
-  overflow-y: auto; // <-- Esta es la clave. Mostrará scroll si el contenido es más grande que el contenedor.
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .node-image {
@@ -137,6 +175,7 @@ const nodeStyle = computed(() => {
   height: 10px;
   background: var(--q-primary);
   border: 1px solid white;
+  z-index: 10;
 }
 
 .gap-xs {

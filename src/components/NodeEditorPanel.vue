@@ -60,6 +60,27 @@
         </template>
       </q-select>
 
+      <q-select
+        v-model="localNode.type"
+        :options="nodeTypeOptions"
+        label="Tipo de Nodo"
+        dark
+        dense
+        emit-value
+        map-options
+      >
+        <template #option="scope">
+          <q-item v-bind="scope.itemProps">
+            <q-item-section avatar>
+              <q-icon :name="scope.opt.icon" />
+            </q-item-section>
+            <q-item-section>
+              <q-item-label>{{ scope.opt.label }}</q-item-label>
+            </q-item-section>
+          </q-item>
+        </template>
+      </q-select>
+
       <q-input
         v-model="localNode.data.color"
         label="Color del Nodo"
@@ -202,6 +223,11 @@ const { nodes } = storeToRefs(nodesStore);
 const localNode = ref<BookNode | null>(null);
 const allTagsOptions = ref<string[]>([]);
 const isFullScreen = ref(false); // Estado para el modo pantalla completa
+
+const nodeTypeOptions = [
+  { value: 'story', label: 'Párrafo (Historia)', icon: 'menu_book' },
+  { value: 'end', label: 'Final', icon: 'flag' },
+];
 
 const toolbarOptions = [
   ['bold', 'italic', 'underline', 'strike'],

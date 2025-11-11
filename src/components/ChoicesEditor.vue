@@ -93,7 +93,6 @@ function removeChoice(index: number) {
   emitUpdate();
 }
 
-// --- NUEVAS FUNCIONES PARA EL DIÁLOGO DE EDICIÓN ---
 
 // Abre el diálogo para crear una opción nueva del tipo seleccionado
 function promptNewChoice(type: 'simple' | 'conditional' | 'diceRoll') {

@@ -59,6 +59,17 @@ function validateAndRepairBookData(data: any): BookData {
 
   if (!data || typeof data !== 'object') return defaults;
 
+  let cleanViewport = { ...defaults.viewport };
+  if (data.viewport) {
+    // Si encontramos la estructura antigua y compleja, extraemos lo que nos interesa.
+    if (data.viewport.flowTransform) {
+      cleanViewport = { ...defaults.viewport, ...data.viewport.flowTransform };
+    } else {
+      // Si no, asumimos que es la estructura nueva y limpia.
+      cleanViewport = { ...defaults.viewport, ...data.viewport };
+    }
+  }
+
   const nodesToMigrate = Array.isArray(data.nodes) ? data.nodes : defaults.nodes;
   const migratedNodes: BookNode[] = nodesToMigrate.map((node: any) => {
     if (!node) return node;
@@ -73,7 +84,7 @@ function validateAndRepairBookData(data: any): BookData {
     edges: Array.isArray(data.edges) ? data.edges : defaults.edges,
     assets: Array.isArray(data.assets) ? data.assets : defaults.assets,
     variables: Array.isArray(data.variables) ? data.variables : defaults.variables,
-    viewport: { ...defaults.viewport, ...data.viewport },
+    viewport: cleanViewport,
     characterSheetSchema: data.characterSheetSchema || defaults.characterSheetSchema,
     characterSheet: data.characterSheet || defaults.characterSheet,
   };
@@ -188,6 +199,9 @@ export const useBookStore = defineStore('book', {
         nodesStore.setElements(bookData.nodes, bookData.edges, bookData.viewport);
         assetsStore.setAssets(bookId, bookData.assets);
 
+        console.log("viewport inicial:");
+        console.log(bookData.viewport);
+
       } catch (error) {
         console.error(`Error al cargar el libro con ID "${bookId}":`, error);
         this.clearBook();
@@ -200,7 +214,7 @@ export const useBookStore = defineStore('book', {
     async saveCurrentBook(force = false) {
       if (this.debounceSaveTimer) clearTimeout(this.debounceSaveTimer);
 
-      if (!this.activeBook || !this.activeBookId || !this.isDirty) {
+      if (!this.activeBook || !this.activeBookId) {
         return;
       }
 
@@ -228,6 +242,9 @@ export const useBookStore = defineStore('book', {
           assets: assetsStore.assets,
           viewport: nodesStore.viewport,
         };
+
+        console.log("bookToSave");
+        console.log(bookToSave);
 
         const content = JSON.stringify(bookToSave, null, 2);
         await window.electronAPI.saveBook(this.activeBookId, content);

@@ -2,9 +2,9 @@
 <template>
   <div v-if="isGraphReady" class="fit absolute">
     <VueFlow
+      @load="onLoad"
       v-model:nodes="nodes"
       v-model:edges="edges"
-      v-model:viewport="viewport"
       :min-zoom="0.2"
       :max-zoom="4"
       @connect="onConnect"
@@ -96,16 +96,16 @@ import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/controls/dist/style.css';
 import '@vue-flow/minimap/dist/style.css';
 
-import { ref, nextTick, computed, onMounted } from 'vue';
-import { VueFlow, useVueFlow } from '@vue-flow/core';
-import type { Connection, NodeChange, EdgeChange, NodeMouseEvent, Viewport } from '@vue-flow/core';
+import { watch, ref, nextTick, onMounted } from 'vue';
+import { VueFlow } from '@vue-flow/core';
+import type { Connection, NodeMouseEvent, VueFlowInstance, Viewport } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 import { Controls } from '@vue-flow/controls';
 import { MiniMap } from '@vue-flow/minimap';
 import { useNodesStore } from 'src/stores/nodes-store';
 import { storeToRefs } from 'pinia';
-import ContextMenu from './ContextMenu.vue';
-import type { MenuItem } from './ContextMenu.vue';
+//import ContextMenu from './ContextMenu.vue';
+//import type { MenuItem } from './ContextMenu.vue';
 import BookStartNode from './BookStartNode.vue';
 import BookStoryNode from './BookStoryNode.vue';
 import BookEndNode from './BookEndNode.vue';
@@ -115,7 +115,8 @@ import type { BookEdge, BookNode } from 'src/stores/types';
 
 const nodesStore = useNodesStore();
 const { nodes, edges, viewport } = storeToRefs(nodesStore);
-const { project } = useVueFlow();
+
+const vueFlowInstance = ref<VueFlowInstance | null>(null);
 
 const isGraphReady = ref(false);
 const isEditorOpen = ref(false);
@@ -124,8 +125,34 @@ const isEdgeEditorOpen = ref(false);
 const selectedEdge = ref<BookEdge | null>(null);
 const lastPaneMenuEvent = ref<MouseEvent | null>(null);
 
+function syncViewport() {
+  // Solo actúa si AMBAS condiciones se cumplen: la instancia está lista Y el viewport tiene datos válidos.
+  if (vueFlowInstance.value && viewport.value) {
+    console.log('[LOG BookGraph] Syncing viewport. Instance and data are ready.');
+    vueFlowInstance.value.setViewport({
+      x: viewport.value.x,
+      y: viewport.value.y,
+      zoom: viewport.value.zoom,
+    });
+  } else {
+    console.log(`[LOG BookGraph] Sync skipped. Instance ready: ${!!vueFlowInstance.value}, Viewport valid: ${!!viewport.value}`);
+  }
+}
+
+function onLoad(instance: VueFlowInstance) {
+  console.log('[LOG BookGraph] VueFlow instance loaded.');
+  vueFlowInstance.value = instance;
+  syncViewport();
+}
+
+watch(viewport, () => {
+  console.log('[LOG BookGraph] Viewport in store has changed.');
+  // Intento 2: Los datos del store han cambiado, intentamos sincronizar.
+  // Si la instancia ya está lista, funcionará. Si no, no hará nada.
+  syncViewport();
+}, { deep: true }); // Quitamos 'immediate' porque la lógica ya no lo necesita.
+
 onMounted(() => {
-  //nodesStore.init();
   nextTick(() => {
     isGraphReady.value = true;
     console.log('[LOG BookGraph] El grafo está listo para renderizarse.');
@@ -191,18 +218,12 @@ function handleNodeDelete(nodeId: string) {
 }
 
 function onPaneContextMenu(event: MouseEvent) {
-  // Previene el menú contextual por defecto del navegador
   event.preventDefault();
-  // Guarda el evento por si quieres usar sus coordenadas para abrir un menú
   lastPaneMenuEvent.value = event;
-  // Aquí podrías, por ejemplo, abrir un menú contextual
-  // isMenuOpen.value = true;
-  // menuPosition.value = { x: event.clientX, y: event.clientY };
 }
 </script>
 
 <style lang="scss" scoped>
-/* ... tus estilos ... */
 .node-editor-container {
   position: absolute;
   top: 10px;

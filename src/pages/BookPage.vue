@@ -10,16 +10,6 @@
       <q-space />
       <q-spinner color="primary" v-if="bookStore.isLoading" />
       <q-badge v-if="bookStore.isDirty" color="amber" text-color="black" :label="$t('bookPage.unsavedChanges')" class="q-mr-sm" />
-      <q-btn
-        v-if="bookStore.activeBook"
-        color="primary"
-        :label="$t('bookPage.saveButton')"
-        icon="save"
-        dense
-        :loading="isSaving"
-        :disable="!bookStore.isDirty"
-        @click="saveBook"
-      />
     </q-toolbar>
 
     <!-- Pestañas de navegación -->
@@ -166,6 +156,7 @@ import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { useBookStore } from 'src/stores/book-store';
 import { useAssetsStore } from 'src/stores/assets-store';
+import { useNodesStore } from 'src/stores/nodes-store';
 
 // Componentes para las pestañas
 import BookGraph from 'src/components/BookGraph.vue';
@@ -181,6 +172,8 @@ const { t } = useI18n();
 const $q = useQuasar();
 const bookStore = useBookStore();
 const assetsStore = useAssetsStore();
+const nodesStore = useNodesStore();
+
 
 const tab = ref('design');
 const isSaving = ref(false);
@@ -204,6 +197,7 @@ const coverImageUrl = computed(() => {
 
 watch(() => props.id, (newBookId) => {
   if (newBookId) {
+    nodesStore.init();
     bookStore.loadBookById(newBookId);
   } else {
     bookStore.clearBook();

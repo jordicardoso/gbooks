@@ -32,35 +32,54 @@ export const useNodesStore = defineStore('nodes', {
       }, { detached: true }); // 'detached: true' es una buena práctica para que la suscripción sobreviva a los cambios de pestaña.
 
     },
+
     setElements(nodes: BookNode[], edges: BookEdge[], viewport?: Viewport) {
-      this.nodes = nodes;
+      const processedNodes = nodes.map(node => {
+        // Solo aplicamos esto a los nodos que pueden ser redimensionados.
+        if (node.type === 'story' || node.type === 'start' || node.type === 'end') {
+          const style: Record<string, string> = {};
+          if (node.data?.width) {
+            style.width = `${node.data.width}px`;
+          }
+          if (node.data?.height) {
+            style.height = `${node.data.height}px`;
+          }
+
+          if (Object.keys(style).length > 0) {
+            return {
+              ...node,
+              style: { ...node.style, ...style }
+            };
+          }
+        }
+        // Si el nodo no necesita cambios, lo devolvemos tal cual.
+        return node;
+      });
+
+      this.nodes = processedNodes;
       this.edges = edges;
       this.viewport = viewport || { x: 0, y: 0, zoom: 1 };
     },
+
     clearElements() {
       this.nodes = [];
       this.edges = [];
       this.viewport = { x: 0, y: 0, zoom: 1 };
     },
 
-    updateViewport(moveEndPayload: { flowTransform: Viewport }) {
-      if (moveEndPayload && moveEndPayload.flowTransform) {
-        this.viewport = moveEndPayload.flowTransform;
-      } else {
-        // Fallback por si el evento cambia o viene en otro formato
-        this.viewport = moveEndPayload as any;
-      }
+    updateViewport(newViewport: Viewport) {
+      // El payload ya es el objeto {x, y, zoom} que necesitamos
+      this.viewport = newViewport;
 
-      // 2. Cancela cualquier guardado anterior que estuviera programado.
+      // Cancela cualquier guardado anterior que estuviera programado.
       if (viewportSaveTimer) {
         clearTimeout(viewportSaveTimer);
       }
 
-      console.log(this.viewport);
-      // 3. Programa un nuevo guardado para dentro de 1 segundo.
+      console.log('Nuevo viewport para guardar:', this.viewport);
+      // Programa un nuevo guardado para dentro de 1 segundo.
       viewportSaveTimer = window.setTimeout(() => {
-        console.log('[NodesStore] Debounce timer finalizado. Guardando el viewport...');
-        useBookStore().saveCurrentBook();
+        useBookStore().saveCurrentBook(true);
         viewportSaveTimer = null;
       }, 1000);
     },
@@ -83,13 +102,13 @@ export const useNodesStore = defineStore('nodes', {
       // Lógica para crear un nuevo nodo (puedes ajustarla)
       const newNode: BookNode = {
         id: uid(),
-        type: 'default',
         label: 'Nuevo Nodo',
         position: {
           x: sourceNode.position.x + 250,
           y: sourceNode.position.y,
         },
         data: {
+          type: 'story',
           paragraphNumber: this.getNewParagraphNumber(),// Se asignará uno nuevo al editarlo
           description: '',
           tags: [],
