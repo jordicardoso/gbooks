@@ -60,7 +60,41 @@ export default {
         message: 'Вы уверены, что хотите удалить ассет "<b>{assetName}</b>"? Это действие необратимо.',
         okButton: 'Удалить',
         cancelButton: 'Отмена',
-      }
+      },
+      editChoice: {
+        titleEdit: 'Редактировать вариант выбора',
+        titleNew: 'Новый вариант выбора',
+        label: 'Текст варианта (что видит игрок)',
+        labelRequired: 'Текст обязателен',
+        destinationNode: 'Узел назначения',
+        destinationNodeRequired: 'Вы должны выбрать узел назначения',
+        noNodes: 'Нет узлов',
+        createNewNode: '➡️ Создать новый узел при сохранении',
+        outputConnectionPoint: 'Точка исходящего соединения',
+        handles: {
+          bottom: 'Низ',
+          right: 'Справа',
+          left: 'Слева',
+          top: 'Верх'
+        },
+        condition: 'Условие',
+        stat: 'Характеристика',
+        operator: 'Оп.',
+        value: 'Значение',
+        onSuccess: 'Назначение при УСПЕХЕ',
+        onFailure: 'Назначение при ПРОВАЛЕ',
+        diceToRoll: 'Бросок кубиков (напр., 1d6, 2d10+3)',
+        possibleOutcomes: 'Возможные исходы',
+        outcomeCondition: 'Если результат {condition}',
+        outcomeDestination: 'Переход к узлу: {nodeLabel}',
+        addOutcomesBelow: '(Добавьте исходы ниже)',
+        conditionPlaceholder: 'Условие (напр., 1-3, 4, 5-6)',
+        buttons: {
+          cancel: 'Отмена',
+          save: 'Сохранить'
+        },
+        newNode: 'Новый узел'
+      },
     }
   },
   bookPage: {

@@ -208,9 +208,6 @@ export const useBookStore = defineStore('book', {
         nodesStore.setElements(bookData.nodes, bookData.edges, bookData.viewport);
         assetsStore.setAssets(bookId, bookData.assets);
 
-        console.log("viewport inicial:");
-        console.log(bookData.viewport);
-
       } catch (error) {
         console.error(`Error al cargar el libro con ID "${bookId}":`, error);
         this.clearBook();
@@ -251,9 +248,6 @@ export const useBookStore = defineStore('book', {
           assets: assetsStore.assets,
           viewport: nodesStore.viewport,
         };
-
-        console.log("bookToSave");
-        console.log(bookToSave);
 
         const content = JSON.stringify(bookToSave, null, 2);
         await window.electronAPI.saveBook(this.activeBookId, content);

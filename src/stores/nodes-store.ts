@@ -131,7 +131,7 @@ export const useNodesStore = defineStore('nodes', {
 
     async createNodeAndConnect(sourceNodeId: string, choice: any) { // [CAMBIO 1] La firma ahora acepta el objeto 'choice'
       const sourceNode = this.nodes.find(n => n.id === sourceNodeId);
-      if (!sourceNode) return '';
+      if (!sourceNode) return null;
 
       const position = { x: sourceNode.position.x, y: sourceNode.position.y };
       // Usamos las dimensiones del nodo si existen, si no, un valor por defecto.
@@ -182,7 +182,7 @@ export const useNodesStore = defineStore('nodes', {
         targetHandle: targetHandle,
       });
 
-      return newNode.id;
+      return newNode;
     },
 
     /**

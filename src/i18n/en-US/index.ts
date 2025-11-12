@@ -60,7 +60,41 @@ export default {
         message: 'Are you sure you want to delete the asset "<b>{assetName}</b>"? This action cannot be undone.',
         okButton: 'Delete',
         cancelButton: 'Cancel',
-      }
+      },
+      editChoice: {
+        titleEdit: 'Edit Output Option',
+        titleNew: 'New Output Option',
+        label: 'Option text (what the player sees)',
+        labelRequired: 'Text is required',
+        destinationNode: 'Destination Node',
+        destinationNodeRequired: 'You must select a destination node',
+        noNodes: 'No nodes',
+        createNewNode: '➡️ Create new node on save',
+        outputConnectionPoint: 'Output Connection Point',
+        handles: {
+          bottom: 'Bottom',
+          right: 'Right',
+          left: 'Left',
+          top: 'Top'
+        },
+        condition: 'Condition',
+        stat: 'Stat',
+        operator: 'Op.',
+        value: 'Value',
+        onSuccess: 'Destination on SUCCESS',
+        onFailure: 'Destination on FAILURE',
+        diceToRoll: 'Dice to roll (e.g., 1d6, 2d10+3)',
+        possibleOutcomes: 'Possible Outcomes',
+        outcomeCondition: 'If the result is {condition}',
+        outcomeDestination: 'Goes to node: {nodeLabel}',
+        addOutcomesBelow: '(Add outcomes below)',
+        conditionPlaceholder: 'Condition (e.g., 1-3, 4, 5-6)',
+        buttons: {
+          cancel: 'Cancel',
+          save: 'Save'
+        },
+        newNode: 'New node'
+      },
     }
   },
   bookPage: {

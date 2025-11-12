@@ -24,6 +24,26 @@ export default {
     bookDeletedError: 'Error al eliminar: {errorMessage}',
   },
 
+  choices: {
+    title: 'Opciones de Salida',
+    addTooltip: 'Añadir Opción de Salida',
+    noChoices: '(Sin opciones de salida. El nodo es un final.)',
+    editTooltip: 'Editar',
+    deleteTooltip: 'Eliminar',
+    addDialog: {
+      title: 'Elige un tipo de Opción',
+      simple: 'Decisión Simple',
+      conditional: 'Prueba Condicional (Stat/Item/Evento)',
+      diceRoll: 'Tirada de Dados'
+    },
+    description: {
+      simple: 'Directo a párrafo: {paragraph}',
+      conditional: 'Si {subject} {operator} {value} → {success} | Si no → {failure}',
+      diceRoll: 'Tirada de {dice} con {count} resultados.',
+      unknown: 'Opción desconocida'
+    }
+  },
+
   // Textos para diálogos de confirmación
   dialogs: {
     deleteBook: {
@@ -31,6 +51,40 @@ export default {
       message: '¿Estás seguro de que quieres eliminar el libro "<strong>{bookName}</strong>"? Esta acción no se puede deshacer y borrará todos sus archivos.',
       okButton: 'Eliminar',
     },
+    editChoice: {
+      titleEdit: 'Editar Opción de Salida',
+      titleNew: 'Nueva Opción de Salida',
+      label: 'Texto de la opción (lo que ve el jugador)',
+      labelRequired: 'El texto es obligatorio',
+      destinationNode: 'Nodo de destino',
+      destinationNodeRequired: 'Debes seleccionar un nodo de destino',
+      noNodes: 'No hay nodos',
+      createNewNode: '➡️ Crear nuevo nodo al guardar',
+      outputConnectionPoint: 'Punto de conexión de salida',
+      handles: {
+        bottom: 'Abajo',
+        right: 'Derecha',
+        left: 'Izquierda',
+        top: 'Arriba'
+      },
+      condition: 'Condición',
+      stat: 'Stat',
+      operator: 'Op.',
+      value: 'Valor',
+      onSuccess: 'Destino si se CUMPLE',
+      onFailure: 'Destino si FALLA',
+      diceToRoll: 'Dados a lanzar (ej: 1d6, 2d10+3)',
+      possibleOutcomes: 'Resultados posibles',
+      outcomeCondition: 'Si el resultado es {condition}',
+      outcomeDestination: 'Va al nodo: {nodeLabel}',
+      addOutcomesBelow: '(Añade resultados abajo)',
+      conditionPlaceholder: 'Condición (ej: 1-3, 4, 5-6)',
+      buttons: {
+        cancel: 'Cancelar',
+        save: 'Guardar'
+      },
+      newNode: 'Nuevo nodo'
+    }
   },
   assetsPage: {
     title: 'Gestor de Assets',

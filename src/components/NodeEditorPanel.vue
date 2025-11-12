@@ -360,15 +360,18 @@ async function saveChanges() { // La hacemos async
     // Procesar las opciones de salida para crear nuevos nodos si es necesario.
     if (localNode.value.choices) {
       for (const choice of localNode.value.choices) {
-        // Asumimos que tu ChoicesEditor usa un valor especial para crear un nodo.
         if (choice.targetNodeId === '--CREATE-NEW--') {
-          // Llamamos a una nueva acción en el store que crea el nodo y la conexión.
-          // Esta acción debería devolver el ID del nuevo nodo.
-          const newNodeId = await nodesStore.createNodeAndConnect(props.node.id, choice);
-          choice.targetNodeId = newNodeId;
+          // [CAMBIO] Recibimos el objeto del nodo completo
+          const newNode = await nodesStore.createNodeAndConnect(props.node.id, choice);
 
-          // Reemplazamos el valor especial con el ID del nodo recién creado.
-          choice.targetNodeId = newNodeId;
+          // [MEJORA] Comprobamos que el nodo se creó correctamente
+          if (newNode) {
+            // Asignamos el ID a la choice para que el guardado sea correcto
+            choice.targetNodeId = newNode.id;
+          } else {
+            // Si algo falla, evitamos que la choice quede en un estado inválido
+            choice.targetNodeId = '';
+          }
         }
       }
     }

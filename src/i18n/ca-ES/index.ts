@@ -31,6 +31,40 @@ export default {
       message: 'Estàs segur que vols eliminar el llibre "<strong>{bookName}</strong>"? Aquesta acció no es pot desfer i esborrarà tots els seus fitxers.',
       okButton: 'Eliminar',
     },
+    editChoice: {
+      titleEdit: 'Editar Opció de Sortida',
+      titleNew: 'Nova Opció de Sortida',
+      label: 'Text de l\'opció (el que veu el jugador)',
+      labelRequired: 'El text és obligatori',
+      destinationNode: 'Node de destinació',
+      destinationNodeRequired: 'Has de seleccionar un node de destinació',
+      noNodes: 'No hi ha nodes',
+      createNewNode: '➡️ Crear nou node en desar',
+      outputConnectionPoint: 'Punt de connexió de sortida',
+      handles: {
+        bottom: 'A baix',
+        right: 'Dreta',
+        left: 'Esquerra',
+        top: 'A dalt'
+      },
+      condition: 'Condició',
+      stat: 'Estadística',
+      operator: 'Op.',
+      value: 'Valor',
+      onSuccess: 'Destinació si es COMPLEIX',
+      onFailure: 'Destinació si FALLA',
+      diceToRoll: 'Daus a llançar (ex: 1d6, 2d10+3)',
+      possibleOutcomes: 'Resultats possibles',
+      outcomeCondition: 'Si el resultat és {condition}',
+      outcomeDestination: 'Va al node: {nodeLabel}',
+      addOutcomesBelow: '(Afegeix resultats a sota)',
+      conditionPlaceholder: 'Condició (ex: 1-3, 4, 5-6)',
+      buttons: {
+        cancel: 'Cancel·lar',
+        save: 'Desar'
+      },
+      newNode: 'Node nou'
+    }
   },
   assetsPage: {
     title: 'Gestor d\'Assets',
