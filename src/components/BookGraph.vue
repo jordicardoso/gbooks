@@ -1,8 +1,8 @@
-<!-- src/components/BookGraph.vue -->
+<!-- src/components/BookGraph.vue (REFACTORIZADO) -->
 <template>
   <div v-if="isGraphReady" class="fit absolute">
+    <!-- [CAMBIO 1] Eliminamos el evento @load -->
     <VueFlow
-      @load="onLoad"
       v-model:nodes="nodes"
       v-model:edges="edges"
       :min-zoom="0.2"
@@ -21,6 +21,7 @@
       />
       <Controls />
 
+      <!-- El resto del template no cambia -->
       <template #node-start="props">
         <BookStartNode
           :id="props.id"
@@ -59,13 +60,13 @@
       </template>
     </VueFlow>
 
-    <!--<ContextMenu
+    <ContextMenu
       :show="isMenuOpen"
       :position="menuPosition"
       :items="contextMenuItems"
       @close="isMenuOpen = false"
       @action="handleMenuAction"
-    />-->
+    />
     <Transition name="slide-fade-right">
       <NodeEditorPanel
         v-if="isEditorOpen"
@@ -89,23 +90,26 @@
 </template>
 
 <script setup lang="ts">
-// El resto del script no necesita cambios, ya que la lógica es correcta.
 // CSS imports
 import '@vue-flow/core/dist/style.css';
 import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/controls/dist/style.css';
 import '@vue-flow/minimap/dist/style.css';
 
-import { watch, ref, nextTick, onMounted } from 'vue';
-import { VueFlow } from '@vue-flow/core';
-import type { Connection, NodeMouseEvent, VueFlowInstance, Viewport } from '@vue-flow/core';
+import { watch, ref, nextTick, onMounted, computed } from 'vue';
+// [CAMBIO 2] Importamos `useVueFlow` y quitamos `VueFlowInstance` que ya no es necesaria aquí
+import { VueFlow, useVueFlow } from '@vue-flow/core';
+import type { Connection, NodeMouseEvent, Viewport } from '@vue-flow/core';
 import { Background } from '@vue-flow/background';
 import { Controls } from '@vue-flow/controls';
 import { MiniMap } from '@vue-flow/minimap';
+import { useBookStore } from 'src/stores/book-store';
 import { useNodesStore } from 'src/stores/nodes-store';
 import { storeToRefs } from 'pinia';
-//import ContextMenu from './ContextMenu.vue';
-//import type { MenuItem } from './ContextMenu.vue';
+
+import ContextMenu from './ContextMenu.vue';
+import type { MenuItem } from './ContextMenu.vue';
+
 import BookStartNode from './BookStartNode.vue';
 import BookStoryNode from './BookStoryNode.vue';
 import BookEndNode from './BookEndNode.vue';
@@ -114,53 +118,41 @@ import EdgeEditorPanel from './EdgeEditorPanel.vue';
 import type { BookEdge, BookNode } from 'src/stores/types';
 
 const nodesStore = useNodesStore();
-const { nodes, edges, viewport } = storeToRefs(nodesStore);
+const { nodes, edges } = storeToRefs(nodesStore);
 
-const vueFlowInstance = ref<VueFlowInstance | null>(null);
+// Desestructuramos las funciones que vamos a usar a lo largo del componente.
+const { setViewport, project, onInit } = useVueFlow();
+
+const isMenuOpen = ref(false);
+const menuPosition = ref({ x: 0, y: 0 });
+const contextMenuItems = computed<MenuItem[]>(() => [
+  { action: 'add_story', label: 'Añadir Párrafo', icon: 'add_circle' },
+  { action: 'add_end', label: 'Añadir Final', icon: 'flag' },
+]);
+const menuProjectedPosition = ref<{ x: number; y: number } | null>(null);
 
 const isGraphReady = ref(false);
 const isEditorOpen = ref(false);
 const selectedNode = ref<BookNode | null>(null);
 const isEdgeEditorOpen = ref(false);
 const selectedEdge = ref<BookEdge | null>(null);
-const lastPaneMenuEvent = ref<MouseEvent | null>(null);
-
-function syncViewport() {
-  // Solo actúa si AMBAS condiciones se cumplen: la instancia está lista Y el viewport tiene datos válidos.
-  if (vueFlowInstance.value && viewport.value) {
-    console.log('[LOG BookGraph] Syncing viewport. Instance and data are ready.');
-    vueFlowInstance.value.setViewport({
-      x: viewport.value.x,
-      y: viewport.value.y,
-      zoom: viewport.value.zoom,
-    });
-  } else {
-    console.log(`[LOG BookGraph] Sync skipped. Instance ready: ${!!vueFlowInstance.value}, Viewport valid: ${!!viewport.value}`);
-  }
-}
-
-function onLoad(instance: VueFlowInstance) {
-  console.log('[LOG BookGraph] VueFlow instance loaded.');
-  vueFlowInstance.value = instance;
-  syncViewport();
-}
-
-watch(viewport, () => {
-  console.log('[LOG BookGraph] Viewport in store has changed.');
-  // Intento 2: Los datos del store han cambiado, intentamos sincronizar.
-  // Si la instancia ya está lista, funcionará. Si no, no hará nada.
-  syncViewport();
-}, { deep: true }); // Quitamos 'immediate' porque la lógica ya no lo necesita.
 
 onMounted(() => {
+  // Usamos nextTick para asegurarnos de que el DOM está listo antes de cambiar la variable.
   nextTick(() => {
     isGraphReady.value = true;
-    console.log('[LOG BookGraph] El grafo está listo para renderizarse.');
   });
 });
 
+onInit(() => {
+  console.log('[LOG BookGraph] VueFlow instance is ready via onInit hook.');
+  const bookStore = useBookStore();
+  const initialViewport = bookStore.getViewport();
+  setViewport(initialViewport);
+});
+
 function getNodeColor(node: BookNode): string {
-  return node.data.color || '#78909c'; // Un gris azulado como fallback
+  return node.data.color || '#78909c';
 }
 
 function onConnect(params: Connection) {
@@ -169,7 +161,6 @@ function onConnect(params: Connection) {
 
 function onMoveEnd(event: Viewport | undefined) {
   if (event) {
-    console.log('[LOG BookGraph] Move End detectado. Llamando a la acción updateViewport con:', event);
     nodesStore.updateViewport(event);
   }
 }
@@ -183,7 +174,7 @@ function onNodeClick(event: NodeMouseEvent) {
 function onEdgeClick(event: { edge: BookEdge }) {
   selectedEdge.value = event.edge;
   isEdgeEditorOpen.value = true;
-  isEditorOpen.value = false; // Cerramos el otro panel
+  isEditorOpen.value = false;
 }
 
 function handleEditorClose() {
@@ -217,9 +208,46 @@ function handleNodeDelete(nodeId: string) {
   handleEditorClose();
 }
 
+// [CAMBIO 6] `onPaneContextMenu` ahora usa la función `project` directamente.
 function onPaneContextMenu(event: MouseEvent) {
   event.preventDefault();
-  lastPaneMenuEvent.value = event;
+
+  // `project` ya estará disponible y vinculado a la instancia correcta.
+  const projectedPosition = project({
+    x: event.clientX,
+    y: event.clientY,
+  });
+
+  menuProjectedPosition.value = projectedPosition;
+  menuPosition.value = { x: event.clientX, y: event.clientY };
+  isMenuOpen.value = true;
+  isEditorOpen.value = false;
+  isEdgeEditorOpen.value = false;
+}
+
+function handleMenuAction(actionId: string) {
+  if (!menuProjectedPosition.value) {
+    console.error("handleMenuAction was called but no projected position was found.");
+    isMenuOpen.value = false;
+    return;
+  }
+
+  let nodeType = '';
+  if (actionId === 'add_story') {
+    nodeType = 'story';
+  } else if (actionId === 'add_end') {
+    nodeType = 'end';
+  }
+
+  if (nodeType) {
+    nodesStore.createNode({
+      position: menuProjectedPosition.value,
+      type: nodeType,
+    });
+  }
+
+  isMenuOpen.value = false;
+  menuProjectedPosition.value = null;
 }
 </script>
 

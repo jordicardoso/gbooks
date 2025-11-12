@@ -3,6 +3,12 @@
   <div class="book-node" :class="{ 'is-selected': selected }" :style="nodeStyle">
     <div class="node-header">
       <div class="row items-center no-wrap">
+        <span
+          v-if="paragraphNumber"
+          class="paragraph-number q-mr-sm"
+        >
+          #{{ paragraphNumber }}
+        </span>
         <q-icon name="menu_book" class="q-mr-xs" />
         <span class="text-weight-bold">{{
             label || t('bookPage.nodes.storyNodeTitle')
@@ -32,8 +38,17 @@
       ></div>
     </div>
 
-    <Handle type="target" :position="Position.Top" />
-    <Handle type="source" :position="Position.Bottom" />
+    <Handle type="target" :position="Position.Top" id="top-target" />
+    <Handle type="target" :position="Position.Left" id="left-target" />
+    <Handle type="target" :position="Position.Bottom" id="bottom-target" />
+    <Handle type="target" :position="Position.Right" id="right-target" />
+
+    <!-- Conexiones de SALIDA (source) -->
+    <Handle type="source" :position="Position.Top" id="top-source" />
+    <Handle type="source" :position="Position.Left" id="left-source" />
+    <Handle type="source" :position="Position.Bottom" id="bottom-source" />
+    <Handle type="source" :position="Position.Right" id="right-source" />
+
     <NodeResizer :node-id="id" :min-width="150" :min-height="100" @resize-end="onResizeEnd"/>
   </div>
 </template>
@@ -48,6 +63,7 @@ import { useI18n } from 'vue-i18n';
 
 const props = defineProps<{
   id: string;
+  paragraphNumber?: number;
   label?: string;
   description?: string;
   color?: string;
@@ -86,7 +102,6 @@ const nodeStyle = computed(() => {
 });
 
 function onResizeEnd(payload: { width: number; height: number }) {
-  console.log(`[BookStoryNode] Resize End detectado para el nodo ${props.id}. Nuevo tamaño:`, payload);
   // Llamamos a la acción del store para que guarde las nuevas dimensiones.
   nodesStore.updateNodeDimensions(props.id, payload.width, payload.height);
 }

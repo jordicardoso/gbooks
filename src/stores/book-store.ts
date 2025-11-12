@@ -109,6 +109,15 @@ export const useBookStore = defineStore('book', {
   },
 
   actions: {
+    getViewport(): Viewport {
+      if (this.activeBook && this.activeBook.viewport) {
+        // Devuelve el viewport limpio y validado del libro activo
+        return this.activeBook.viewport;
+      }
+      // Fallback seguro si no hay libro o viewport
+      return { x: 0, y: 0, zoom: 1 };
+    },
+
     createInitialCharacterSheet() {
       if (!this.activeBook) return;
 

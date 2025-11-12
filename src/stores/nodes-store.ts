@@ -24,13 +24,27 @@ export const useNodesStore = defineStore('nodes', {
   actions: {
     init() {
       this.$subscribe((mutation) => {
-        if (mutation.type === 'patch object' && mutation.payload.viewport) {
+        // 1. Ignoramos los cambios directos al viewport, ya que tienen su propio sistema de guardado.
+        if (mutation.payload && 'viewport' in mutation.payload) {
           return;
         }
 
-        useBookStore().setDirty();
-      }, { detached: true }); // 'detached: true' es una buena práctica para que la suscripción sobreviva a los cambios de pestaña.
+        // [LA CLAVE] Añadimos una guarda para asegurarnos de que 'events' es un array.
+        // Las actualizaciones en bloque (como al cargar un libro) no tienen un array de eventos.
+        if (Array.isArray(mutation.events)) {
+          // 2. Ignoramos los cambios que son SOLO de posición (arrastrar nodos).
+          const isJustPositionChange = mutation.events.every(
+            (event) => (event as any).type === 'position'
+          );
+          if (isJustPositionChange) {
+            // Si solo se está arrastrando un nodo, no marcamos como sucio.
+            return;
+          }
+        }
 
+        // Si el cambio es legítimo (crear nodo, cambiar texto, o una actualización en bloque), marcamos como sucio.
+        useBookStore().setDirty();
+      }, { detached: true });
     },
 
     setElements(nodes: BookNode[], edges: BookEdge[], viewport?: Viewport) {
@@ -76,7 +90,6 @@ export const useNodesStore = defineStore('nodes', {
         clearTimeout(viewportSaveTimer);
       }
 
-      console.log('Nuevo viewport para guardar:', this.viewport);
       // Programa un nuevo guardado para dentro de 1 segundo.
       viewportSaveTimer = window.setTimeout(() => {
         useBookStore().saveCurrentBook(true);
@@ -87,29 +100,67 @@ export const useNodesStore = defineStore('nodes', {
 
     addConnection(params: Connection) {
       if (params.source && params.target) {
+        const sourceNode = this.nodes.find(n => n.id === params.source);
+        const targetNode = this.nodes.find(n => n.id === params.target);
+
+        if (sourceNode && targetNode) {
+          const dx = targetNode.position.x - sourceNode.position.x;
+          const dy = targetNode.position.y - sourceNode.position.y;
+
+          // Si no se especifican handles, los calculamos
+          if (!params.sourceHandle) {
+            if (Math.abs(dx) > Math.abs(dy)) { // Es más horizontal
+              params.sourceHandle = dx > 0 ? 'right-source' : 'left-source';
+            } else { // Es más vertical
+              params.sourceHandle = dy > 0 ? 'bottom-source' : 'top-source';
+            }
+          }
+          if (!params.targetHandle) {
+            if (Math.abs(dx) > Math.abs(dy)) { // Es más horizontal
+              params.targetHandle = dx > 0 ? 'left-target' : 'right-target';
+            } else { // Es más vertical
+              params.targetHandle = dy > 0 ? 'top-target' : 'bottom-target';
+            }
+          }
+        }
+
         const newEdge: BookEdge = { ...params, id: uid() };
         this.edges.push(newEdge);
-        useBookStore().setDirty();
       }
     },
 
-    async createNodeAndConnect(sourceNodeId: string, sourceHandleId: string) {
-      const bookStore = useBookStore(); // 2. Obtén una instancia del book-store
-
+    async createNodeAndConnect(sourceNodeId: string, choice: any) { // [CAMBIO 1] La firma ahora acepta el objeto 'choice'
       const sourceNode = this.nodes.find(n => n.id === sourceNodeId);
       if (!sourceNode) return '';
 
-      // Lógica para crear un nuevo nodo (puedes ajustarla)
+      const position = { x: sourceNode.position.x, y: sourceNode.position.y };
+      // Usamos las dimensiones del nodo si existen, si no, un valor por defecto.
+      const offsetX = (sourceNode.dimensions?.width || 200) + 100;
+      const offsetY = (sourceNode.dimensions?.height || 100) + 80;
+
+      // Esta lógica ahora calculará la posición correctamente
+      switch (choice.sourceHandle) {
+        case 'right-source':
+          position.x += offsetX;
+          break;
+        case 'left-source':
+          position.x -= offsetX;
+          break;
+        case 'top-source':
+          position.y -= offsetY;
+          break;
+        default: // 'bottom-source' y cualquier otro caso
+          position.y += offsetY;
+          break;
+      }
+
       const newNode: BookNode = {
         id: uid(),
-        label: 'Nuevo Nodo',
-        position: {
-          x: sourceNode.position.x + 250,
-          y: sourceNode.position.y,
-        },
+        label: 'Nuevo Párrafo',
+        position: position, // [CAMBIO 2] Usamos la posición calculada dinámicamente
         data: {
           type: 'story',
-          paragraphNumber: this.getNewParagraphNumber(),// Se asignará uno nuevo al editarlo
+          paragraphNumber: this.getNewParagraphNumber(),
           description: '',
           tags: [],
           color: '#455a64',
@@ -118,15 +169,18 @@ export const useNodesStore = defineStore('nodes', {
 
       this.nodes.push(newNode);
 
-      // Añade la conexión
+      // Determinamos el handle de destino para que la conexión sea más natural
+      let targetHandle = 'left-target';
+      if (choice.sourceHandle === 'left-source') targetHandle = 'right-target';
+      if (choice.sourceHandle === 'top-source') targetHandle = 'bottom-target';
+      if (choice.sourceHandle === 'bottom-source') targetHandle = 'top-target';
+
       this.addConnection({
         source: sourceNodeId,
-        sourceHandle: sourceHandleId,
+        sourceHandle: choice.sourceHandle || 'bottom-source',
         target: newNode.id,
-        targetHandle: 'target', // Handle de entrada por defecto
+        targetHandle: targetHandle,
       });
-
-      bookStore.setDirty();
 
       return newNode.id;
     },
@@ -140,11 +194,34 @@ export const useNodesStore = defineStore('nodes', {
       return maxNumber + 1;
     },
 
+    createNode(options: { position: { x: number; y: number }; type: string }) {
+      // Previene la creación de un segundo nodo de inicio.
+      if (options.type === 'start' && this.nodes.some(n => n.type === 'start')) {
+        console.warn('Intento de crear un segundo nodo de inicio. Operación cancelada.');
+        return;
+      }
+
+      const newNode: BookNode = {
+        id: uid(),
+        type: options.type,
+        position: options.position,
+        label: `Nuevo ${options.type === 'end' ? 'Final' : 'Párrafo'}`,
+        data: {
+          paragraphNumber: this.getNewParagraphNumber(),
+          description: 'Escribe aquí el contenido...',
+          // Asigna un color por defecto según el tipo
+          color: options.type === 'end' ? '#d32f2f' : '#455a64',
+          tags: [],
+        }
+      };
+      this.nodes.push(newNode);
+    },
+
     updateNode(nodeId: string, updates: Partial<Omit<BookNode, 'id' | 'position'>>) {
       const node = this.nodes.find(n => n.id === nodeId);
       if (node) {
         Object.assign(node, updates);
-        useBookStore().setDirty();
+        //useBookStore().setDirty();
       }
     },
 
@@ -157,7 +234,7 @@ export const useNodesStore = defineStore('nodes', {
         }
         node.data.width = width;
         node.data.height = height;
-        useBookStore().setDirty(); // Marcamos que hay cambios sin guardar
+        //useBookStore().setDirty(); // Marcamos que hay cambios sin guardar
       }
     },
 
@@ -175,8 +252,7 @@ export const useNodesStore = defineStore('nodes', {
           if (!edge.data) edge.data = {}; // Nos aseguramos de que `data` exista
           Object.assign(edge.data, dataUpdates);
         }
-
-        useBookStore().setDirty();
+        //useBookStore().setDirty();
       }
     },
 
@@ -225,7 +301,7 @@ export const useNodesStore = defineStore('nodes', {
 
       // 4. Marcamos el libro como modificado.
       const bookStore = useBookStore();
-      bookStore.setDirty();
+      //bookStore.setDirty();
     },
   },
 });

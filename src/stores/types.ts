@@ -113,6 +113,7 @@ export interface SimpleChoice {
   type: 'simple';
   label: string; // "Intentas asustarlo con tu antorcha"
   targetNodeId: string; // "134"
+  sourceHandle?: string;
 }
 
 // 2. y 3. Pruebas de Personaje y Situación
@@ -131,6 +132,7 @@ export interface Condition {
   // Para 'item': la cantidad (ej: 1)
   // Para 'event': el estado a comprobar (ej: true)
   value: number | boolean | string;
+  sourceHandle?: string;
 }
 
 export interface ConditionalChoice {
@@ -140,6 +142,7 @@ export interface ConditionalChoice {
   condition: Condition;
   successTargetNodeId: string;
   failureTargetNodeId: string;
+  sourceHandle?: string;
 }
 
 // 4. Veredicto del Azar (Dados)
@@ -148,6 +151,7 @@ export interface DiceOutcome {
   range: string; // "1-2", "3-5", "6"
   label: string; // "¡El hielo cruje y se rompe!"
   targetNodeId: string;
+  sourceHandle?: string;
 }
 
 export interface DiceRollChoice {
@@ -156,6 +160,7 @@ export interface DiceRollChoice {
   label: string; // "Intentas cruzar el lago helado. Tira un dado."
   dice: string; // "1d6", "2d10"
   outcomes: DiceOutcome[];
+  sourceHandle?: string;
 }
 
 

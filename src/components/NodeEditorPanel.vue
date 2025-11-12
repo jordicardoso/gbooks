@@ -364,7 +364,8 @@ async function saveChanges() { // La hacemos async
         if (choice.targetNodeId === '--CREATE-NEW--') {
           // Llamamos a una nueva acción en el store que crea el nodo y la conexión.
           // Esta acción debería devolver el ID del nuevo nodo.
-          const newNodeId = await nodesStore.createNodeAndConnect(props.node.id, choice.id);
+          const newNodeId = await nodesStore.createNodeAndConnect(props.node.id, choice);
+          choice.targetNodeId = newNodeId;
 
           // Reemplazamos el valor especial con el ID del nodo recién creado.
           choice.targetNodeId = newNodeId;

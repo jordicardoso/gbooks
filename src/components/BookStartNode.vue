@@ -3,6 +3,12 @@
   <div class="book-node" :class="{ 'is-selected': selected }" :style="nodeStyle">
     <div class="node-header">
       <div class="row items-center no-wrap">
+        <span
+          v-if="paragraphNumber"
+          class="paragraph-number q-mr-sm"
+        >
+          #{{ paragraphNumber }}
+        </span>
         <q-icon name="play_arrow" class="q-mr-xs" />
         <span class="text-weight-bold">{{
             label || t('bookPage.nodes.storyNodeTitle')
@@ -47,6 +53,7 @@ import { useNodesStore } from 'src/stores/nodes-store';
 
 const props = defineProps<{
   id: string;
+  paragraphNumber?: number;
   label?: string;
   description?: string;
   color?: string;

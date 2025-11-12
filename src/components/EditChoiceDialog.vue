@@ -35,6 +35,13 @@
                 <q-item><q-item-section class="text-grey">No hay nodos</q-item-section></q-item>
               </template>
             </q-select>
+            <q-select
+              v-model="editableChoice.sourceHandle"
+              :options="sourceHandleOptions"
+              label="Punto de conexión de salida"
+              filled dark emit-value map-options
+              class="q-mt-md"
+            />
           </div>
 
           <!-- === CAMPOS PARA PRUEBA CONDICIONAL === -->
@@ -127,6 +134,13 @@ const nodeOptions = computed(() => {
   return options;
 });
 
+const sourceHandleOptions = [
+  { label: 'Abajo', value: 'bottom-source' },
+  { label: 'Derecha', value: 'right-source' },
+  { label: 'Izquierda', value: 'left-source' },
+  { label: 'Arriba', value: 'top-source' },
+];
+
 const availableStats = computed(() => {
   if (!activeBook.value?.sheet.stats) return [];
   return Object.keys(activeBook.value.sheet.stats);
@@ -136,6 +150,9 @@ const availableStats = computed(() => {
 watch(() => props.choice, (newChoice) => {
   if (newChoice) {
     editableChoice.value = JSON.parse(JSON.stringify(newChoice));
+    if (!editableChoice.value.sourceHandle) {
+      editableChoice.value.sourceHandle = 'bottom-source';
+    }
   } else {
     editableChoice.value = null;
   }
