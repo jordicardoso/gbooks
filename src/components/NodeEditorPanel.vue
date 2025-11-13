@@ -376,6 +376,21 @@ async function saveChanges() { // La hacemos async
       }
     }
 
+    if (localNode.value.choices) {
+      for (const choice of localNode.value.choices) {
+        // Por ahora, solo las 'simple' choices tienen un sourceHandle editable.
+        if (choice.type === 'simple' && choice.targetNodeId && choice.sourceHandle) {
+          const simpleChoice = choice as SimpleChoice;
+          nodesStore.updateEdgeSourceHandle(
+            props.node.id,
+            simpleChoice.targetNodeId,
+            simpleChoice.sourceHandle
+          );
+        }
+        // Aquí podrías añadir lógica para otros tipos de 'choice' si también tuvieran handles.
+      }
+    }
+
     const { id, position, ...updates } = localNode.value;
     emit('save', {
       nodeId: props.node.id,

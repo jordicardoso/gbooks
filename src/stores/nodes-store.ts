@@ -129,6 +129,21 @@ export const useNodesStore = defineStore('nodes', {
       }
     },
 
+    updateEdgeSourceHandle(sourceNodeId: string, targetNodeId: string, newSourceHandle: string) {
+      if (!sourceNodeId || !targetNodeId || !newSourceHandle) {
+        return;
+      }
+
+      const edgeToUpdate = this.edges.find(
+        (edge) => edge.source === sourceNodeId && edge.target === targetNodeId
+      );
+
+      if (edgeToUpdate && edgeToUpdate.sourceHandle !== newSourceHandle) {
+        edgeToUpdate.sourceHandle = newSourceHandle;
+        // La reactividad de Pinia se encargará de notificar a VueFlow del cambio.
+      }
+    },
+
     async createNodeAndConnect(sourceNodeId: string, choice: any) { // [CAMBIO 1] La firma ahora acepta el objeto 'choice'
       const sourceNode = this.nodes.find(n => n.id === sourceNodeId);
       if (!sourceNode) return null;
