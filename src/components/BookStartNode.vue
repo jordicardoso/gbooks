@@ -1,4 +1,4 @@
-<!-- src/components/BookStartNode.vue -->
+<!-- src/components/BookStartNode.vue (CORREGIDO) -->
 <template>
   <div class="book-node" :class="{ 'is-selected': selected }" :style="nodeStyle">
     <div class="node-header">
@@ -38,7 +38,9 @@
       ></div>
     </div>
 
-    <Handle type="source" :position="Position.Bottom" />
+    <!-- [LA CLAVE] Añadimos el 'id' que faltaba para que las conexiones se guarden bien -->
+    <Handle type="source" :position="Position.Bottom" id="bottom-source" />
+
     <NodeResizer :node-id="id" :min-width="150" :min-height="100" @resize-end="onResizeEnd"/>
   </div>
 </template>

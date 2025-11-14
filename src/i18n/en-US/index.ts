@@ -24,6 +24,26 @@ export default {
     bookDeletedError: 'Error deleting: {errorMessage}',
   },
 
+  choices: {
+    title: 'Output Options',
+    addTooltip: 'Add Output Option',
+    noChoices: '(No output options. This node is an ending.)',
+    editTooltip: 'Edit',
+    deleteTooltip: 'Delete',
+    addDialog: {
+      title: 'Choose an Option Type',
+      simple: 'Simple Choice',
+      conditional: 'Conditional Check (Stat/Item/Event)',
+      diceRoll: 'Dice Roll'
+    },
+    description: {
+      simple: 'Direct to paragraph: {paragraph}',
+      conditional: 'If {subject} {operator} {value} → {success} | Else → {failure}',
+      diceRoll: 'Roll {dice} with {count} outcomes.',
+      unknown: 'Unknown option'
+    }
+  },
+
   // Confirmation dialog texts
   dialogs: {
     deleteBook: {

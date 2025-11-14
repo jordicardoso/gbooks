@@ -38,6 +38,7 @@
       ></div>
     </div>
 
+    <!-- Conexiones de ENTRADA (target) -->
     <Handle type="target" :position="Position.Top" id="top-target" />
     <Handle type="target" :position="Position.Left" id="left-target" />
     <Handle type="target" :position="Position.Bottom" id="bottom-target" />
@@ -131,11 +132,8 @@ function onResizeEnd(payload: { width: number; height: number }) {
     left: 0;
     width: 100%;
     height: 100%;
-    // Un fondo oscuro semitransparente. Ajusta la opacidad (el último valor) a tu gusto.
     background-color: rgba(0, 0, 0, 0.6);
-    // Hereda los bordes redondeados del nodo.
     border-radius: inherit;
-    // Se asegura de que esté por debajo del contenido pero por encima de la imagen de fondo.
     z-index: 1;
     transition: background-color 0.3s ease;
   }
@@ -178,11 +176,8 @@ function onResizeEnd(payload: { width: number; height: number }) {
   margin-bottom: 5px;
 }
 
-/* [ELIMINADO] Se ha eliminado por completo la clase .node-content-truncated
-   y se ha renombrado el div a .node-text-content para evitar confusión.
-   Ya no se necesita el line-clamp. */
 .node-text-content {
-  /* No necesita estilos especiales, hereda el comportamiento del padre */
+  /* No necesita estilos especiales */
 }
 
 .vue-flow__handle {
@@ -192,6 +187,24 @@ function onResizeEnd(payload: { width: number; height: number }) {
   border: 1px solid white;
   z-index: 10;
 }
+
+/* [LA CLAVE] Estilos para separar las asas superpuestas */
+.vue-flow__handle[type='source'] {
+  /* Damos un color diferente a las salidas para distinguirlas */
+  background: #57cc99;
+}
+
+/* Desplazamos las asas de entrada (target) a un lado */
+.vue-flow__handle#top-target { transform: translateX(-10px); }
+.vue-flow__handle#bottom-target { transform: translateX(-10px); }
+.vue-flow__handle#left-target { transform: translateY(-10px); }
+.vue-flow__handle#right-target { transform: translateY(-10px); }
+
+/* Desplazamos las asas de salida (source) al otro lado */
+.vue-flow__handle#top-source { transform: translateX(10px); }
+.vue-flow__handle#bottom-source { transform: translateX(10px); }
+.vue-flow__handle#left-source { transform: translateY(10px); }
+.vue-flow__handle#right-source { transform: translateY(10px); }
 
 .gap-xs {
   gap: 4px;

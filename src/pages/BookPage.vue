@@ -195,9 +195,10 @@ const coverImageUrl = computed(() => {
   return asset ? assetsStore.getAssetUrl(asset.filename) : null;
 });
 
+// [LA CLAVE] Se ha eliminado la llamada a nodesStore.init()
 watch(() => props.id, (newBookId) => {
   if (newBookId) {
-    nodesStore.init();
+    // Ahora solo cargamos el libro. El book-store se encargará de poblar el nodes-store.
     bookStore.loadBookById(newBookId);
   } else {
     bookStore.clearBook();

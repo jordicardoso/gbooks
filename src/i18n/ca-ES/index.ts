@@ -24,6 +24,26 @@ export default {
     bookDeletedError: 'Error en eliminar: {errorMessage}',
   },
 
+  choices: {
+    title: 'Opcions de Sortida',
+    addTooltip: 'Afegir Opció de Sortida',
+    noChoices: '(Sense opcions de sortida. El node és un final.)',
+    editTooltip: 'Editar',
+    deleteTooltip: 'Eliminar',
+    addDialog: {
+      title: 'Tria un tipus d\'Opció',
+      simple: 'Decisió Simple',
+      conditional: 'Prova Condicional (Estadística/Objecte/Esdeveniment)',
+      diceRoll: 'Llançament de Daus'
+    },
+    description: {
+      simple: 'Directe al paràgraf: {paragraph}',
+      conditional: 'Si {subject} {operator} {value} → {success} | Si no → {failure}',
+      diceRoll: 'Llançament de {dice} amb {count} resultats.',
+      unknown: 'Opció desconeguda'
+    }
+  },
+
   // Textos per a diàlegs de confirmació
   dialogs: {
     deleteBook: {

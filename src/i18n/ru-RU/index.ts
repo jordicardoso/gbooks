@@ -24,6 +24,26 @@ export default {
     bookDeletedError: 'Ошибка удаления: {errorMessage}',
   },
 
+  choices: {
+    title: 'Варианты выбора',
+    addTooltip: 'Добавить вариант выбора',
+    noChoices: '(Нет вариантов выбора. Этот узел - концовка.)',
+    editTooltip: 'Редактировать',
+    deleteTooltip: 'Удалить',
+    addDialog: {
+      title: 'Выберите тип варианта',
+      simple: 'Простой выбор',
+      conditional: 'Проверка условия (Характеристика/Предмет/Событие)',
+      diceRoll: 'Бросок кубиков'
+    },
+    description: {
+      simple: 'Напрямую к параграфу: {paragraph}',
+      conditional: 'Если {subject} {operator} {value} → {success} | Иначе → {failure}',
+      diceRoll: 'Бросок {dice} с {count} исходами.',
+      unknown: 'Неизвестный вариант'
+    }
+  },
+
   // Тексты для диалогов подтверждения
   dialogs: {
     deleteBook: {

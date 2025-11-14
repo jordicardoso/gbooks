@@ -103,19 +103,19 @@ async function generatePdf() {
   try {
     console.log('[PDF Generation] Proceso iniciado.');
 
+    // Ocultamos el contenedor para que no aparezca en la pantalla
     //container.style.position = 'fixed';
     container.style.top = '0';
-    container.style.left = '100vw';
-    container.style.width = '210mm';
+    container.style.left = '100vw'; // Lo movemos fuera de la vista
+    container.style.width = '210mm'; // Ancho de A4
     container.style.background = 'white';
 
     document.body.appendChild(container);
 
+    // --- [CAMBIOS CLAVE EN EL CSS] ---
     const styles = `
       <style>
         body, html { margin: 0; padding: 0; font-family: 'Times New Roman', Times, serif; color: black; background-color: white; }
-        /* --- CAMBIO CLAVE: Dejar que html2pdf controle los márgenes --- */
-        .page-content { padding: 0; }
 
         /* --- PORTADA (sin cambios) --- */
         .portada-container {
@@ -137,11 +137,11 @@ async function generatePdf() {
           align-items: center; text-align: center; padding: 20mm;
         }
         .titulo-box {
-          background-color: rgba(0, 0, 0, 0.65); /* Fondo negro semitransparente */
-          border: 4px solid #39ff14; /* Borde verde eléctrico */
+          background-color: rgba(0, 0, 0, 0.65);
+          border: 4px solid #39ff14;
           padding: 30px 40px;
           border-radius: 8px;
-          box-shadow: 0 0 25px rgba(57, 255, 20, 0.6); /* Brillo sutil a juego */
+          box-shadow: 0 0 25px rgba(57, 255, 20, 0.6);
           max-width: 80%;
         }
         .portada-texto .titulo-principal {
@@ -155,28 +155,57 @@ async function generatePdf() {
         .portada-sin-imagen-wrapper { page-break-after: always; }
         .portada-sin-imagen {
             display: flex; flex-direction: column; justify-content: center;
-            align-items: center; height: 257mm;
+            align-items: center; height: 100%; /* Altura A4 menos márgenes */
         }
         .portada-sin-imagen .titulo-principal { font-size: 40pt; margin-bottom: 20px; text-align: center; color: black; }
         .portada-sin-imagen .autor { font-size: 16pt; color: #444; text-align: center; line-height: 1.4; }
 
-        /* --- ESTILOS PARA EL CONTENIDO DEL LIBRO --- */
+        /* --- CONTENIDO DEL LIBRO (sin cambios en la lógica) --- */
+        .page {
+            /* Forzamos cada '.page' a tener la altura de una página A4 menos los márgenes */
+            height: 267mm; /* 297mm (A4) - 15mm (top) - 15mm (bottom) */
+            /*padding: 15mm 10mm 10mm 10mm;  Márgenes superior/inferior y laterales */
+            box-sizing: border-box;
+            page-break-after: always; /* Le dice a html2pdf que aquí empieza una nueva página */
+            /*overflow: hidden;  Evita desbordamientos inesperados */
+        }
         .two-column-layout {
-          margin-left: 10mm; margin-right: 10mm; margin-top: 15mm; margin-bottom: 15mm;
+          height: 290mm;
           column-count: 2;
           column-gap: 10mm;
           column-rule: 1px solid #eee;
+          padding: 15mm 10mm;
+          box-sizing: border-box;
+          width: 210mm;
         }
-        .seccion-parrafo {
-          margin-bottom: 15mm;
-          break-inside: avoid-column;
-          page-break-inside: avoid;
+
+        .numero-parrafo {
+          text-align: center;
+          font-size: 14pt;
+          font-weight: bold;
+          margin-bottom: 5px;
+
+          /* Intenta mantener el número pegado al texto que le sigue */
+          break-after: avoid-column;
+          break-after: avoid-page;
         }
-        .numero-parrafo { text-align: center; font-size: 14pt; font-weight: bold; margin-bottom: 10px; }
-        .descripcion-parrafo { font-size: 11pt; line-height: 1.5; text-align: justify; }
+
+        .descripcion-parrafo {
+          font-size: 10pt;
+          line-height: 1.5;
+          text-align: justify;
+        }
+
+        .descripcion-parrafo p,
+        .descripcion-parrafo ul,
+        .descripcion-parrafo blockquote {
+          /*break-inside: avoid-column;*/
+          /*page-break-inside: avoid;*/
+        }
       </style>
     `;
 
+    // --- GENERACIÓN DE LA PORTADA (sin cambios) ---
     let coverPageHtml = '';
     let hasCoverImage = false;
     const imageId = activeBook.value.meta.imageId;
@@ -207,16 +236,15 @@ async function generatePdf() {
     if (!hasCoverImage) {
       coverPageHtml = `
         <div class="portada-sin-imagen-wrapper">
-            <div class="page-content">
-              <div class="portada-sin-imagen">
-                <div class="titulo-principal">${activeBook.value.meta.title || 'Sin Título'}</div>
-                <div class="autor">${authorHtml}</div>
-              </div>
-            </div>
+          <div class="portada-sin-imagen">
+            <div class="titulo-principal">${activeBook.value.meta.title || 'Sin Título'}</div>
+            <div class="autor">${authorHtml}</div>
+          </div>
         </div>
       `;
     }
 
+    // --- GENERACIÓN DEL CONTENIDO DEL LIBRO (sin cambios en la lógica) ---
     const sortedNodes = [...nodes.value].sort((a, b) => {
       const numA = parseFloat(String(a.data?.paragraphNumber ?? '').trim());
       const numB = parseFloat(String(b.data?.paragraphNumber ?? '').trim());
@@ -242,7 +270,7 @@ async function generatePdf() {
     const finalHtml = `
       ${styles}
       ${coverPageHtml}
-      <div class="page-content">
+      <div class="page">
         <div class="two-column-layout">
           ${bookContent}
         </div>
@@ -256,7 +284,7 @@ async function generatePdf() {
     console.log('[PDF Generation] Contenido renderizado. Iniciando captura...');
 
     const opt = {
-      //margin: 0,
+      margin: 0,
       filename: `${activeBook.value.meta.title || 'libro'}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, logging: false },
@@ -266,6 +294,7 @@ async function generatePdf() {
 
     const worker = html2pdf().set(opt).from(container);
 
+    // --- NUMERACIÓN DE PÁGINAS (lógica mejorada) ---
     await worker.toPdf().get('pdf').then(pdf => {
       const totalPages = pdf.internal.getNumberOfPages();
       console.log(`[PDF Generation] El PDF se generó con ${totalPages} páginas.`);
@@ -278,7 +307,7 @@ async function generatePdf() {
         pdf.setFontSize(10);
         pdf.setTextColor(150);
         // Posicionamos el número de página a 10mm del borde inferior
-        pdf.text(`Página ${i - 1} de ${totalPages - 1}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        pdf.text(`Página ${i - 1}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
       }
     });
 

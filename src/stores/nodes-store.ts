@@ -1,10 +1,10 @@
 // src/stores/nodes-store.ts
 
 import { defineStore } from 'pinia';
-import type { Connection, NodeChange, EdgeChange, Viewport } from '@vue-flow/core';
+import type { Connection, Viewport } from '@vue-flow/core';
 import { uid } from 'quasar';
 import { useBookStore } from './book-store';
-import type { BookNode, BookEdge } from './types';
+import type { BookNode, BookEdge, AnyChoice } from './types';
 
 export interface NodesState {
   nodes: BookNode[];
@@ -12,6 +12,7 @@ export interface NodesState {
   viewport: Viewport;
 }
 
+// Timer para el autoguardado del viewport
 let viewportSaveTimer: number | null = null;
 
 export const useNodesStore = defineStore('nodes', {
@@ -22,34 +23,13 @@ export const useNodesStore = defineStore('nodes', {
   }),
 
   actions: {
-    init() {
-      this.$subscribe((mutation) => {
-        // 1. Ignoramos los cambios directos al viewport, ya que tienen su propio sistema de guardado.
-        if (mutation.payload && 'viewport' in mutation.payload) {
-          return;
-        }
-
-        // [LA CLAVE] Añadimos una guarda para asegurarnos de que 'events' es un array.
-        // Las actualizaciones en bloque (como al cargar un libro) no tienen un array de eventos.
-        if (Array.isArray(mutation.events)) {
-          // 2. Ignoramos los cambios que son SOLO de posición (arrastrar nodos).
-          const isJustPositionChange = mutation.events.every(
-            (event) => (event as any).type === 'position'
-          );
-          if (isJustPositionChange) {
-            // Si solo se está arrastrando un nodo, no marcamos como sucio.
-            return;
-          }
-        }
-
-        // Si el cambio es legítimo (crear nodo, cambiar texto, o una actualización en bloque), marcamos como sucio.
-        useBookStore().setDirty();
-      }, { detached: true });
-    },
-
+    /**
+     * Carga los elementos (nodos, aristas) y el viewport en el store.
+     * Se usa al abrir un libro.
+     */
     setElements(nodes: BookNode[], edges: BookEdge[], viewport?: Viewport) {
+      // Procesa los nodos para aplicar las dimensiones guardadas como estilos CSS.
       const processedNodes = nodes.map(node => {
-        // Solo aplicamos esto a los nodos que pueden ser redimensionados.
         if (node.type === 'story' || node.type === 'start' || node.type === 'end') {
           const style: Record<string, string> = {};
           if (node.data?.width) {
@@ -58,15 +38,10 @@ export const useNodesStore = defineStore('nodes', {
           if (node.data?.height) {
             style.height = `${node.data.height}px`;
           }
-
           if (Object.keys(style).length > 0) {
-            return {
-              ...node,
-              style: { ...node.style, ...style }
-            };
+            return { ...node, style: { ...node.style, ...style } };
           }
         }
-        // Si el nodo no necesita cambios, lo devolvemos tal cual.
         return node;
       });
 
@@ -75,142 +50,59 @@ export const useNodesStore = defineStore('nodes', {
       this.viewport = viewport || { x: 0, y: 0, zoom: 1 };
     },
 
+    /**
+     * Limpia todos los elementos del store.
+     */
     clearElements() {
       this.nodes = [];
       this.edges = [];
       this.viewport = { x: 0, y: 0, zoom: 1 };
     },
 
+    /**
+     * Actualiza la posición del viewport y la guarda con un retardo para no saturar.
+     * Este es un caso especial que no marca el libro como "sucio".
+     */
     updateViewport(newViewport: Viewport) {
-      // El payload ya es el objeto {x, y, zoom} que necesitamos
       this.viewport = newViewport;
 
-      // Cancela cualquier guardado anterior que estuviera programado.
       if (viewportSaveTimer) {
         clearTimeout(viewportSaveTimer);
       }
 
-      // Programa un nuevo guardado para dentro de 1 segundo.
       viewportSaveTimer = window.setTimeout(() => {
-        useBookStore().saveCurrentBook(true);
+        useBookStore().saveCurrentBook(true); // Guardado silencioso
         viewportSaveTimer = null;
       }, 1000);
     },
 
-
-    addConnection(params: Connection) {
-      if (params.source && params.target) {
-        const sourceNode = this.nodes.find(n => n.id === params.source);
-        const targetNode = this.nodes.find(n => n.id === params.target);
-
-        if (sourceNode && targetNode) {
-          const dx = targetNode.position.x - sourceNode.position.x;
-          const dy = targetNode.position.y - sourceNode.position.y;
-
-          // Si no se especifican handles, los calculamos
-          if (!params.sourceHandle) {
-            if (Math.abs(dx) > Math.abs(dy)) { // Es más horizontal
-              params.sourceHandle = dx > 0 ? 'right-source' : 'left-source';
-            } else { // Es más vertical
-              params.sourceHandle = dy > 0 ? 'bottom-source' : 'top-source';
-            }
-          }
-          if (!params.targetHandle) {
-            if (Math.abs(dx) > Math.abs(dy)) { // Es más horizontal
-              params.targetHandle = dx > 0 ? 'left-target' : 'right-target';
-            } else { // Es más vertical
-              params.targetHandle = dy > 0 ? 'top-target' : 'bottom-target';
-            }
-          }
-        }
-
-        const newEdge: BookEdge = { ...params, id: uid() };
-        this.edges.push(newEdge);
-      }
-    },
-
-    updateEdgeSourceHandle(sourceNodeId: string, targetNodeId: string, newSourceHandle: string) {
-      if (!sourceNodeId || !targetNodeId || !newSourceHandle) {
+    /**
+     * Añade una nueva conexión (arista) al grafo.
+     */
+    addConnection(connection: Connection) {
+      if (!connection.source || !connection.target) {
+        console.error('Intento de crear una conexión inválida', connection);
         return;
       }
 
-      const edgeToUpdate = this.edges.find(
-        (edge) => edge.source === sourceNodeId && edge.target === targetNodeId
-      );
-
-      if (edgeToUpdate && edgeToUpdate.sourceHandle !== newSourceHandle) {
-        edgeToUpdate.sourceHandle = newSourceHandle;
-        // La reactividad de Pinia se encargará de notificar a VueFlow del cambio.
-      }
-    },
-
-    async createNodeAndConnect(sourceNodeId: string, choice: any) { // [CAMBIO 1] La firma ahora acepta el objeto 'choice'
-      const sourceNode = this.nodes.find(n => n.id === sourceNodeId);
-      if (!sourceNode) return null;
-
-      const position = { x: sourceNode.position.x, y: sourceNode.position.y };
-      // Usamos las dimensiones del nodo si existen, si no, un valor por defecto.
-      const offsetX = (sourceNode.dimensions?.width || 200) + 100;
-      const offsetY = (sourceNode.dimensions?.height || 100) + 80;
-
-      // Esta lógica ahora calculará la posición correctamente
-      switch (choice.sourceHandle) {
-        case 'right-source':
-          position.x += offsetX;
-          break;
-        case 'left-source':
-          position.x -= offsetX;
-          break;
-        case 'top-source':
-          position.y -= offsetY;
-          break;
-        default: // 'bottom-source' y cualquier otro caso
-          position.y += offsetY;
-          break;
-      }
-
-      const newNode: BookNode = {
+      const newEdge: BookEdge = {
         id: uid(),
-        label: 'Nuevo Párrafo',
-        position: position, // [CAMBIO 2] Usamos la posición calculada dinámicamente
-        data: {
-          type: 'story',
-          paragraphNumber: this.getNewParagraphNumber(),
-          description: '',
-          tags: [],
-          color: '#455a64',
-        }
+        source: connection.source,
+        target: connection.target,
+        sourceHandle: connection.sourceHandle,
+        targetHandle: connection.targetHandle,
+        label: '',
+        data: { actions: [] }
       };
 
-      this.nodes.push(newNode);
-
-      // Determinamos el handle de destino para que la conexión sea más natural
-      let targetHandle = 'left-target';
-      if (choice.sourceHandle === 'left-source') targetHandle = 'right-target';
-      if (choice.sourceHandle === 'top-source') targetHandle = 'bottom-target';
-      if (choice.sourceHandle === 'bottom-source') targetHandle = 'top-target';
-
-      this.addConnection({
-        source: sourceNodeId,
-        sourceHandle: choice.sourceHandle || 'bottom-source',
-        target: newNode.id,
-        targetHandle: targetHandle,
-      });
-
-      return newNode;
+      this.edges.push(newEdge);
+      useBookStore().setDirty(); // ¡IMPORTANTE! Marca que hay cambios.
     },
 
     /**
-     * Helper para obtener un número de párrafo único.
+     * Crea un nuevo nodo en una posición específica.
      */
-    getNewParagraphNumber(): number {
-      const existingNumbers = this.nodes.map(n => n.data.paragraphNumber || 0);
-      const maxNumber = Math.max(0, ...existingNumbers);
-      return maxNumber + 1;
-    },
-
     createNode(options: { position: { x: number; y: number }; type: string }) {
-      // Previene la creación de un segundo nodo de inicio.
       if (options.type === 'start' && this.nodes.some(n => n.type === 'start')) {
         console.warn('Intento de crear un segundo nodo de inicio. Operación cancelada.');
         return;
@@ -224,99 +116,175 @@ export const useNodesStore = defineStore('nodes', {
         data: {
           paragraphNumber: this.getNewParagraphNumber(),
           description: 'Escribe aquí el contenido...',
-          // Asigna un color por defecto según el tipo
           color: options.type === 'end' ? '#d32f2f' : '#455a64',
           tags: [],
         }
       };
       this.nodes.push(newNode);
+      useBookStore().setDirty(); // ¡IMPORTANTE! Marca que hay cambios.
     },
 
+    /**
+     * Crea un nuevo nodo y lo conecta automáticamente a un nodo de origen.
+     */
+    async createNodeAndConnect(sourceNodeId: string, choice: AnyChoice) {
+      const sourceNode = this.nodes.find(n => n.id === sourceNodeId);
+      if (!sourceNode) return null;
+
+      const position = { x: sourceNode.position.x, y: sourceNode.position.y };
+      const offsetX = (sourceNode.dimensions?.width || 200) + 100;
+      const offsetY = (sourceNode.dimensions?.height || 100) + 80;
+
+      let targetHandle = 'left-target';
+      switch (choice.sourceHandle) {
+        case 'right-source':
+          position.x += offsetX;
+          targetHandle = 'left-target';
+          break;
+        case 'left-source':
+          position.x -= offsetX;
+          targetHandle = 'right-target';
+          break;
+        case 'top-source':
+          position.y -= offsetY;
+          targetHandle = 'bottom-target';
+          break;
+        default: // 'bottom-source'
+          position.y += offsetY;
+          targetHandle = 'top-target';
+          break;
+      }
+
+      const newNode: BookNode = {
+        id: uid(),
+        label: 'Nuevo Párrafo',
+        position: position,
+        data: {
+          type: 'story',
+          paragraphNumber: this.getNewParagraphNumber(),
+          description: '',
+          tags: [],
+          color: '#455a64',
+        }
+      };
+      this.nodes.push(newNode);
+
+      // Esta llamada ya marcará el libro como "sucio" internamente.
+      this.addConnection({
+        source: sourceNodeId,
+        sourceHandle: choice.sourceHandle || 'bottom-source',
+        target: newNode.id,
+        targetHandle: targetHandle,
+      });
+
+      return newNode;
+    },
+
+    /**
+     * Actualiza las propiedades de un nodo existente.
+     */
     updateNode(nodeId: string, updates: Partial<Omit<BookNode, 'id' | 'position'>>) {
       const node = this.nodes.find(n => n.id === nodeId);
       if (node) {
         Object.assign(node, updates);
-        //useBookStore().setDirty();
+        useBookStore().setDirty(); // ¡IMPORTANTE! Marca que hay cambios.
       }
     },
 
+    /**
+     * Actualiza las dimensiones de un nodo (ancho y alto).
+     */
     updateNodeDimensions(nodeId: string, width: number, height: number) {
       const node = this.nodes.find(n => n.id === nodeId);
       if (node) {
-        if (!node.data) {
-          // Aseguramos que data exista, aunque no debería pasar con tu estructura
-          node.data = {} as any;
-        }
+        if (!node.data) node.data = {} as any;
         node.data.width = width;
         node.data.height = height;
-        //useBookStore().setDirty(); // Marcamos que hay cambios sin guardar
+        useBookStore().setDirty(); // ¡IMPORTANTE! Marca que hay cambios.
       }
     },
 
+    /**
+     * Actualiza las propiedades de una arista (conexión) existente.
+     */
     updateEdge(edgeId: string, updates: Partial<Omit<BookEdge, 'id'>>) {
       const edge = this.edges.find(e => e.id === edgeId);
       if (edge) {
-        // Hacemos una fusión inteligente para no sobreescribir el objeto `data` completo.
         const { data: dataUpdates, ...otherUpdates } = updates;
-
-        // Aplicamos cambios de nivel superior (como 'label')
         Object.assign(edge, otherUpdates);
-
-        // Si hay actualizaciones en 'data', las fusionamos.
         if (dataUpdates) {
-          if (!edge.data) edge.data = {}; // Nos aseguramos de que `data` exista
+          if (!edge.data) edge.data = {};
           Object.assign(edge.data, dataUpdates);
         }
-        //useBookStore().setDirty();
+        useBookStore().setDirty(); // ¡IMPORTANTE! Marca que hay cambios.
       }
     },
 
+    /**
+     * Actualiza el punto de conexión de origen de una arista.
+     */
+    updateEdgeSourceHandle(sourceNodeId: string, targetNodeId: string, newSourceHandle: string) {
+      if (!sourceNodeId || !targetNodeId || !newSourceHandle) return;
+      const edgeToUpdate = this.edges.find(
+        (edge) => edge.source === sourceNodeId && edge.target === targetNodeId
+      );
+      if (edgeToUpdate && edgeToUpdate.sourceHandle !== newSourceHandle) {
+        edgeToUpdate.sourceHandle = newSourceHandle;
+        useBookStore().setDirty(); // ¡IMPORTANTE! Marca que hay cambios.
+      }
+    },
+
+    /**
+     * Elimina una arista (conexión) del grafo.
+     */
+    deleteEdge(edgeId: string) {
+      const index = this.edges.findIndex(edge => edge.id === edgeId);
+      if (index !== -1) {
+        this.edges.splice(index, 1);
+        useBookStore().setDirty(); // ¡IMPORTANTE! Marca que hay cambios.
+      }
+    },
+
+    /**
+     * Elimina un nodo y todas sus conexiones asociadas.
+     */
     deleteNode(nodeIdToDelete: string) {
       const nodeIndex = this.nodes.findIndex(n => n.id === nodeIdToDelete);
+      if (nodeIndex === -1) return;
 
-      if (nodeIndex === -1) {
-        console.warn(`[NodesStore] Nodo con id ${nodeIdToDelete} no encontrado para eliminar.`);
-        return;
-      }
-
-      // 1. Eliminamos el nodo del array principal.
+      // 1. Elimina el nodo.
       this.nodes.splice(nodeIndex, 1);
 
-      // 2. [LA LÍNEA QUE FALTABA] Eliminamos las aristas conectadas a ese nodo.
+      // 2. Elimina las aristas conectadas a ese nodo.
       this.edges = this.edges.filter(edge => edge.source !== nodeIdToDelete && edge.target !== nodeIdToDelete);
 
-      // 3. Limpiamos las conexiones rotas en las 'choices' de otros nodos.
+      // 3. Limpia las conexiones rotas en las 'choices' de otros nodos.
       this.nodes.forEach(node => {
         if (!node.choices?.length) return;
-
-        node.choices = node.choices.filter(choice => {
-          if (choice.type === 'simple' && choice.targetNodeId === nodeIdToDelete) {
-            return false;
-          }
-          return true;
-        });
-
         node.choices.forEach(choice => {
-          if (choice.type === 'conditional') {
-            if (choice.successTargetNodeId === nodeIdToDelete) {
-              choice.successTargetNodeId = '';
-            }
-            if (choice.failureTargetNodeId === nodeIdToDelete) {
-              choice.failureTargetNodeId = '';
-            }
+          if (choice.type === 'simple' && choice.targetNodeId === nodeIdToDelete) {
+            choice.targetNodeId = '';
+          } else if (choice.type === 'conditional') {
+            if (choice.successTargetNodeId === nodeIdToDelete) choice.successTargetNodeId = '';
+            if (choice.failureTargetNodeId === nodeIdToDelete) choice.failureTargetNodeId = '';
           } else if (choice.type === 'diceRoll') {
             choice.outcomes.forEach(outcome => {
-              if (outcome.targetNodeId === nodeIdToDelete) {
-                outcome.targetNodeId = '';
-              }
+              if (outcome.targetNodeId === nodeIdToDelete) outcome.targetNodeId = '';
             });
           }
         });
       });
 
-      // 4. Marcamos el libro como modificado.
-      const bookStore = useBookStore();
-      //bookStore.setDirty();
+      useBookStore().setDirty(); // ¡IMPORTANTE! Marca que hay cambios.
+    },
+
+    /**
+     * Helper para obtener un número de párrafo único y consecutivo.
+     */
+    getNewParagraphNumber(): number {
+      const existingNumbers = this.nodes.map(n => n.data.paragraphNumber || 0);
+      const maxNumber = Math.max(0, ...existingNumbers);
+      return maxNumber + 1;
     },
   },
 });

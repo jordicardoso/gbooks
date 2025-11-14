@@ -1,19 +1,20 @@
-<!-- src/components/BookGraph.vue (REFACTORIZADO) -->
+<!-- src/components/BookGraph.vue (CORREGIDO Y MEJORADO) -->
 <template>
   <div v-if="isGraphReady" class="fit absolute">
-    <!-- [CAMBIO 1] Eliminamos el evento @load -->
     <VueFlow
       v-model:nodes="nodes"
       v-model:edges="edges"
       :min-zoom="0.2"
       :max-zoom="4"
+      class="book-graph"
       @connect="onConnect"
       @move-end="onMoveEnd"
       @pane-context-menu="onPaneContextMenu"
       @node-click="onNodeClick"
       @edge-click="onEdgeClick"
+      multi-selection-key-code="Shift"
     >
-      <Background />
+      <Background :variant="BackgroundVariant.Dots" :gap="24" :size="1" />
       <MiniMap
         :style="{ backgroundColor: 'transparent', border: '2px solid white' }"
         :node-color="getNodeColor"
@@ -21,45 +22,65 @@
       />
       <Controls />
 
-      <!-- El resto del template no cambia -->
+      <!-- [REFACTOR] Pasamos las props de forma explícita para mayor claridad y robustez -->
       <template #node-start="props">
         <BookStartNode
           :id="props.id"
-          v-bind="props.data"
           :label="props.label"
           :selected="props.selected"
+          :paragraph-number="props.data.paragraphNumber"
+          :description="props.data.description"
+          :color="props.data.color"
+          :tags="props.data.tags"
+          :image-id="props.data.imageId"
+          :data="props.data"
         />
       </template>
 
       <template #node-story="props">
         <BookStoryNode
           :id="props.id"
-          v-bind="props.data"
           :label="props.label"
           :selected="props.selected"
+          :paragraph-number="props.data.paragraphNumber"
+          :description="props.data.description"
+          :color="props.data.color"
+          :tags="props.data.tags"
+          :image-id="props.data.imageId"
+          :data="props.data"
         />
       </template>
 
       <template #node-default="props">
         <BookStoryNode
           :id="props.id"
-          v-bind="props.data"
           :label="props.label"
           :selected="props.selected"
+          :paragraph-number="props.data.paragraphNumber"
+          :description="props.data.description"
+          :color="props.data.color"
+          :tags="props.data.tags"
+          :image-id="props.data.imageId"
+          :data="props.data"
         />
       </template>
-
 
       <template #node-end="props">
         <BookEndNode
           :id="props.id"
-          v-bind="props.data"
           :label="props.label"
           :selected="props.selected"
+          :paragraph-number="props.data.paragraphNumber"
+          :description="props.data.description"
+          :color="props.data.color"
+          :tags="props.data.tags"
+          :image-id="props.data.imageId"
+          :data="props.data"
         />
       </template>
     </VueFlow>
 
+    <!-- El resto del componente no necesita cambios -->
     <ContextMenu
       :show="isMenuOpen"
       :position="menuPosition"
@@ -84,6 +105,7 @@
         class="node-editor-container"
         @close="handleEdgeEditorClose"
         @save="handleEdgeEditorSave"
+        @delete="handleEdgeDelete"
       />
     </Transition>
   </div>
@@ -96,11 +118,10 @@ import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/controls/dist/style.css';
 import '@vue-flow/minimap/dist/style.css';
 
-import { watch, ref, nextTick, onMounted, computed } from 'vue';
-// [CAMBIO 2] Importamos `useVueFlow` y quitamos `VueFlowInstance` que ya no es necesaria aquí
+import { ref, nextTick, onMounted, computed } from 'vue';
 import { VueFlow, useVueFlow } from '@vue-flow/core';
 import type { Connection, NodeMouseEvent, Viewport } from '@vue-flow/core';
-import { Background } from '@vue-flow/background';
+import { Background, BackgroundVariant } from '@vue-flow/background';
 import { Controls } from '@vue-flow/controls';
 import { MiniMap } from '@vue-flow/minimap';
 import { useBookStore } from 'src/stores/book-store';
@@ -148,7 +169,9 @@ onInit(() => {
   console.log('[LOG BookGraph] VueFlow instance is ready via onInit hook.');
   const bookStore = useBookStore();
   const initialViewport = bookStore.getViewport();
-  setViewport(initialViewport);
+  if (initialViewport) {
+    setViewport(initialViewport);
+  }
 });
 
 function getNodeColor(node: BookNode): string {
@@ -175,6 +198,11 @@ function onEdgeClick(event: { edge: BookEdge }) {
   selectedEdge.value = event.edge;
   isEdgeEditorOpen.value = true;
   isEditorOpen.value = false;
+}
+
+function handleEdgeDelete(edgeId: string) {
+  nodesStore.deleteEdge(edgeId);
+  handleEdgeEditorClose(); // Cierra el panel después de borrar
 }
 
 function handleEditorClose() {
@@ -208,11 +236,9 @@ function handleNodeDelete(nodeId: string) {
   handleEditorClose();
 }
 
-// [CAMBIO 6] `onPaneContextMenu` ahora usa la función `project` directamente.
 function onPaneContextMenu(event: MouseEvent) {
   event.preventDefault();
 
-  // `project` ya estará disponible y vinculado a la instancia correcta.
   const projectedPosition = project({
     x: event.clientX,
     y: event.clientY,
@@ -270,5 +296,10 @@ function handleMenuAction(actionId: string) {
 .slide-fade-right-leave-to {
   transform: translateX(100%);
   opacity: 0;
+}
+.vue-flow__selection {
+  background: rgba(0, 110, 255, 0.15);
+  border: 1px solid rgba(0, 110, 255, 0.8);
+  border-radius: 4px;
 }
 </style>
