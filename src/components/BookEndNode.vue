@@ -1,39 +1,41 @@
 <!-- src/components/BookEndNode.vue -->
 <template>
-  <div class="book-node" :style="nodeStyle">
+  <!-- [1] Añadimos la clase dinámica para el resaltado -->
+  <div class="book-node" :class="{ 'is-selected': selected }" :style="nodeStyle">
     <div class="node-header">
       <q-icon name="flag" class="q-mr-xs" />
       <span class="text-weight-bold">{{ label || 'Fin' }}</span>
     </div>
     <div class="node-content q-mt-xs node-content-truncated">
-      <!-- El valor por defecto ya estaba bien -->
       {{ description || 'Nodo final sin descripción.' }}
     </div>
-    <Handle type="target" :position="Position.Top" />
+    <!-- [2. LA CLAVE] Añadimos un 'id' al Handle -->
+    <Handle type="target" :position="Position.Top" id="top-target" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
 import { Handle, Position } from '@vue-flow/core';
-import type { BookNode } from 'src/stores/types';
 
+// [3] Añadimos las props que faltaban para consistencia
 const props = defineProps<{
+  id: string;
   label?: string;
   description?: string;
   color?: string;
+  selected?: boolean;
 }>();
 
 const nodeStyle = computed(() => {
   const style: Record<string, string> = {};
-  // Usa el color de la prop, o un color por defecto si no existe.
   style.backgroundColor = props.color || '#d32f2f';
   return style;
 });
 </script>
 
-<style scoped>
-/* El CSS ya estaba correcto, con el color de fondo dinámico */
+<!-- El CSS ya estaba perfecto, solo he añadido el estilo para .is-selected -->
+<style lang="scss" scoped>
 .book-node {
   min-width: 150px;
   max-width: 250px;
@@ -44,7 +46,13 @@ const nodeStyle = computed(() => {
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
   position: relative;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+/* Estilo para cuando el nodo está seleccionado */
+.is-selected {
+  box-shadow: 0 0 0 2px var(--q-primary), 0 5px 15px rgba(0, 0, 0, 0.5);
+  transform: scale(1.02);
 }
 
 .node-header {
