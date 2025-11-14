@@ -1,7 +1,8 @@
 // src/stores/nodes-store.ts
 
 import { defineStore } from 'pinia';
-import type { Connection, Viewport } from '@vue-flow/core';
+// [1. LA CLAVE] Importamos MarkerType de Vue Flow
+import { MarkerType, type Connection, type Viewport } from '@vue-flow/core';
 import { uid } from 'quasar';
 import { useBookStore } from './book-store';
 import type { BookNode, BookEdge, AnyChoice } from './types';
@@ -92,6 +93,8 @@ export const useNodesStore = defineStore('nodes', {
         sourceHandle: connection.sourceHandle,
         targetHandle: connection.targetHandle,
         label: '',
+        // [2. LA CLAVE] Añadimos la punta de flecha al final de la conexión.
+        markerEnd: MarkerType.ArrowClosed,
         data: { actions: [] }
       };
 
@@ -169,7 +172,7 @@ export const useNodesStore = defineStore('nodes', {
       };
       this.nodes.push(newNode);
 
-      // Esta llamada ya marcará el libro como "sucio" internamente.
+      // Esta llamada ya marcará el libro como "sucio" y creará la flecha.
       this.addConnection({
         source: sourceNodeId,
         sourceHandle: choice.sourceHandle || 'bottom-source',
