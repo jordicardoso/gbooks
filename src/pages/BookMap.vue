@@ -1,158 +1,181 @@
-<!-- src/components/BookMap.vue -->
+<!-- src/pages/BookMap.vue (REDISEÑADO) -->
 <template>
-  <!-- Este q-card ahora es una columna flexible que ocupa todo el espacio disponible -->
-  <q-card class="bg-grey-9 text-white column no-wrap fit">
-    <q-card-section>
-      <div class="text-h6">Mapa del Libro</div>
-      <div class="text-subtitle2 text-grey-5">Selecciona un mapa de tus assets para asociarlo a este libro.</div>
-    </q-card-section>
-
-    <q-card-section>
-      <q-select
-        v-model="selectedMapId"
-        :options="mapAssetOptions"
-        option-value="id"
-        option-label="name"
-        emit-value
-        map-options
-        label="Seleccionar Mapa"
-        dark
-        dense
-        clearable
-        @update:model-value="updateBookMap"
-      >
-        <template #option="scope">
-          <q-item v-bind="scope.itemProps">
+  <!-- Usamos QPage para integrar un panel lateral (drawer) -->
+  <q-page class="row no-wrap">
+    <!-- Panel lateral con localizaciones sin posicionar -->
+    <q-drawer
+      show-if-above
+      :width="250"
+      bordered
+      class="bg-grey-9 text-white column"
+    >
+      <q-toolbar class="bg-grey-10">
+        <q-toolbar-title>Localizaciones</q-toolbar-title>
+      </q-toolbar>
+      <q-scroll-area class="col">
+        <q-list dark separator>
+          <q-item-label header>Sin Posicionar</q-item-label>
+          <q-item
+            v-for="loc in unplacedLocations"
+            :key="loc.id"
+            clickable
+            v-ripple
+            draggable="true"
+            @dragstart="handleDragStart($event, loc.id)"
+            class="draggable-item"
+          >
             <q-item-section avatar>
-              <q-img :src="scope.opt.src" style="width: 40px; height: 40px; border-radius: 4px;" fit="cover" />
+              <q-icon name="location_on" :style="{ color: loc.data.color || '#795548' }" />
             </q-item-section>
             <q-item-section>
-              <q-item-label>{{ scope.opt.name }}</q-item-label>
-              <q-item-label caption class="text-grey-5">{{ scope.opt.category }}</q-item-label>
+              <q-item-label>{{ loc.label }}</q-item-label>
             </q-item-section>
           </q-item>
-        </template>
-        <template #no-option>
-          <q-item>
-            <q-item-section class="text-grey">
-              No hay mapas en los assets. Añade imágenes con la categoría 'map'.
+          <q-item v-if="!unplacedLocations.length">
+            <q-item-section class="text-grey-6 text-center">
+              Todas las localizaciones están en su sitio.
             </q-item-section>
           </q-item>
-        </template>
-      </q-select>
-    </q-card-section>
+        </q-list>
+      </q-scroll-area>
+    </q-drawer>
 
-    <q-separator dark inset />
+    <!-- Área principal del mapa -->
+    <div class="col column q-pa-md">
+      <div class="col-auto">
+        <q-select
+          v-model="currentMapId"
+          :options="mapAssetOptions"
+          label="Seleccionar Mapa General"
+          dark dense clearable emit-value map-options
+          class="q-mb-md"
+        />
+      </div>
 
-    <!-- Esta sección ahora usa "col" para crecer y llenar el espacio restante -->
-    <q-card-section class="col map-display-section">
-      <div v-if="currentMapUrl" class="map-container" @contextmenu.prevent="handleContextMenu">
+      <div
+        class="col map-container bg-grey-10"
+        @dragover.prevent
+        @drop="handleDrop"
+      >
         <q-img
+          v-if="currentMapUrl"
           :src="currentMapUrl"
           fit="contain"
           class="map-image"
         />
-        <q-menu context-menu>
-          <q-list dense style="min-width: 150px">
-            <q-item clickable v-close-popup @click="onAddNode">
-              <q-item-section avatar>
-                <q-icon name="add_location_alt" />
-              </q-item-section>
-              <q-item-section>Insertar Nodo</q-item-section>
-            </q-item>
-          </q-list>
-        </q-menu>
+        <div v-else class="fit flex flex-center text-grey-6">
+          <q-icon name="map" size="4rem" />
+          <p class="q-mt-md">Selecciona un mapa para empezar.</p>
+        </div>
+
+        <!-- Renderizar nodos ya posicionados en este mapa -->
+        <MapNode
+          v-for="loc in placedLocations"
+          :key="loc.id"
+          :node="loc"
+          @click="handleLocationClick(loc)"
+        />
       </div>
-      <div v-else class="text-center text-grey-6 fit column items-center justify-center">
-        <q-icon name="map" size="4rem" />
-        <p class="q-mt-md">No hay ningún mapa seleccionado para este libro.</p>
-        <p>Selecciona un mapa de la lista superior para asignarlo.</p>
-      </div>
-    </q-card-section>
-  </q-card>
+    </div>
+  </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
-import { useQuasar } from 'quasar';
+import { ref, computed } from 'vue';
 import { useAssetsStore } from 'stores/assets-store';
-import { useBookStore } from 'stores/book-store';
+import { useNodesStore } from 'stores/nodes-store';
 import { storeToRefs } from 'pinia';
+import MapNode from 'src/components/MapNode.vue'; // <-- ¡Nuevo componente!
+import type { BookNode } from 'src/stores/types';
 
-const $q = useQuasar();
 const assetsStore = useAssetsStore();
-const bookStore = useBookStore();
+const nodesStore = useNodesStore();
 
 const { assets } = storeToRefs(assetsStore);
-const { mapId } = storeToRefs(bookStore);
+const { nodes } = storeToRefs(nodesStore);
 
-const selectedMapId = ref<string | null>(null);
-const contextMenuCoords = ref({ x: 0, y: 0 });
+// ID del mapa que se está mostrando actualmente
+const currentMapId = ref<string | null>(null);
 
-// Filtrar assets para obtener solo los que son mapas
+// Opciones para el selector de mapas
 const mapAssetOptions = computed(() =>
-  assets.value.filter(asset => asset.category === 'map' && asset.type === 'image')
+  assets.value
+    .filter(asset => asset.category === 'map' && asset.type === 'image')
+    .map(asset => ({ label: asset.name, value: asset.id }))
 );
 
-// Obtener la URL del mapa actualmente seleccionado
+// URL del mapa actual
 const currentMapUrl = computed(() => {
-  if (!selectedMapId.value) return null;
-  const asset = assetsStore.getAssetById(selectedMapId.value);
-  return asset ? asset.src : null;
+  if (!currentMapId.value) return null;
+  const asset = assetsStore.getAssetById(currentMapId.value);
+  return asset ? assetsStore.getAssetUrl(asset.filename) : null;
 });
 
-// Sincronizar el ID del mapa del store con el estado local del componente
-watch(mapId, (newId) => {
-  selectedMapId.value = newId;
-}, { immediate: true });
+// Filtra las localizaciones que aún no tienen posición en un mapa
+const unplacedLocations = computed(() =>
+  nodes.value.filter(n => n.type === 'location' && !n.data.mapPosition)
+);
 
-// Actualizar el store cuando el usuario cambia la selección
-function updateBookMap(newMapId: string | null) {
-  bookStore.setMapId(newMapId);
-  $q.notify({
-    message: 'Selección de mapa actualizada. No olvides guardar el libro.',
-    color: 'info',
-    icon: 'info',
-  });
+// Filtra las localizaciones que SÍ tienen posición y pertenecen al mapa actual
+const placedLocations = computed(() =>
+  nodes.value.filter(n =>
+    n.type === 'location' &&
+    n.data.mapPosition &&
+    n.data.mapId === currentMapId.value
+  )
+);
+
+function handleDragStart(event: DragEvent, nodeId: string) {
+  if (event.dataTransfer) {
+    event.dataTransfer.setData('text/plain', nodeId);
+    event.dataTransfer.effectAllowed = 'move';
+  }
 }
 
-function handleContextMenu(event: MouseEvent) {
-  const target = event.currentTarget as HTMLElement;
-  const rect = target.getBoundingClientRect();
-  contextMenuCoords.value = {
-    x: event.clientX - rect.left,
-    y: event.clientY - rect.top,
-  };
+function handleDrop(event: DragEvent) {
+  if (!event.dataTransfer || !currentMapId.value) return;
+
+  const nodeId = event.dataTransfer.getData('text/plain');
+  const mapContainer = event.currentTarget as HTMLElement;
+  const rect = mapContainer.getBoundingClientRect();
+
+  // Calcula la posición en porcentaje para que sea responsive
+  const x = ((event.clientX - rect.left) / rect.width) * 100;
+  const y = ((event.clientY - rect.top) / rect.height) * 100;
+
+  // Llama a la nueva acción del store
+  nodesStore.setNodeMapPosition(nodeId, currentMapId.value, { x, y });
 }
 
-function onAddNode() {
-  const { x, y } = contextMenuCoords.value;
-  $q.notify({
-    message: `Añadir nodo en coordenadas: (${Math.round(x)}, ${Math.round(y)})`,
-    color: 'primary',
-    icon: 'add_circle_outline',
-    caption: 'Funcionalidad en desarrollo.'
-  });
-  console.log('Intento de añadir un nodo en:', contextMenuCoords.value);
+function handleLocationClick(locationNode: BookNode) {
+  // Futuro: Si el nodo tiene un targetMapId, cambiar currentMapId a ese valor
+  if (locationNode.data.targetMapId) {
+    console.log(`Navegar al mapa: ${locationNode.data.targetMapId}`);
+    currentMapId.value = locationNode.data.targetMapId;
+  } else {
+    console.log(`Clic en localización: ${locationNode.label}`);
+    // Aquí podrías abrir un panel de edición para la localización, por ejemplo.
+  }
 }
-
 </script>
 
 <style lang="scss" scoped>
-.map-display-section {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.draggable-item {
+  cursor: grab;
+  &:active {
+    cursor: grabbing;
+  }
 }
 .map-container {
+  position: relative;
   width: 100%;
   height: 100%;
   border-radius: 4px;
   overflow: hidden;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
 }
 .map-image {
   width: 100%;
   height: 100%;
-  background-color: rgba(0,0,0,0.2);
 }
 </style>

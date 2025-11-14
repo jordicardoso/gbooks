@@ -235,13 +235,14 @@ export const useBookStore = defineStore('book', {
         const assetsStore = useAssetsStore();
 
         // [LA CLAVE] Aquí está la corrección.
-        // Ahora incluimos sourceHandle y targetHandle en el objeto que se guarda.
+        // Ahora incluimos `markerEnd` en el objeto que se guarda.
         const cleanEdges = toRaw(nodesStore.edges).map(edge => ({
           id: edge.id,
           source: edge.source,
           target: edge.target,
-          sourceHandle: edge.sourceHandle, // <-- AÑADIDO
-          targetHandle: edge.targetHandle, // <-- AÑADIDO
+          sourceHandle: edge.sourceHandle,
+          targetHandle: edge.targetHandle,
+          markerEnd: edge.markerEnd, // <-- AÑADIDO
           label: edge.label,
           data: edge.data,
         }));

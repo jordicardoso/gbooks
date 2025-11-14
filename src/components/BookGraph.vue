@@ -148,6 +148,7 @@ const isMenuOpen = ref(false);
 const menuPosition = ref({ x: 0, y: 0 });
 const contextMenuItems = computed<MenuItem[]>(() => [
   { action: 'add_story', label: 'Añadir Párrafo', icon: 'add_circle' },
+  { action: 'add_location', label: 'Añadir Localización', icon: 'add_location' },
   { action: 'add_end', label: 'Añadir Final', icon: 'flag' },
 ]);
 const menuProjectedPosition = ref<{ x: number; y: number } | null>(null);
@@ -263,6 +264,8 @@ function handleMenuAction(actionId: string) {
     nodeType = 'story';
   } else if (actionId === 'add_end') {
     nodeType = 'end';
+  } else if (actionId === 'add_location') { // [NUEVO]
+    nodeType = 'location';
   }
 
   if (nodeType) {

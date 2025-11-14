@@ -106,25 +106,50 @@ export const useNodesStore = defineStore('nodes', {
      * Crea un nuevo nodo en una posición específica.
      */
     createNode(options: { position: { x: number; y: number }; type: string }) {
-      if (options.type === 'start' && this.nodes.some(n => n.type === 'start')) {
-        console.warn('Intento de crear un segundo nodo de inicio. Operación cancelada.');
-        return;
+      // ... (código existente)
+
+      // [MODIFICADO] Lógica para determinar la etiqueta y el color
+      let label = 'Nuevo Párrafo';
+      let color = '#455a64'; // Color por defecto para 'story'
+
+      if (options.type === 'end') {
+        label = 'Nuevo Final';
+        color = '#d32f2f';
+      } else if (options.type === 'location') {
+        label = 'Nueva Localización';
+        color = '#795548'; // Un color café para las localizaciones
       }
 
       const newNode: BookNode = {
         id: uid(),
         type: options.type,
         position: options.position,
-        label: `Nuevo ${options.type === 'end' ? 'Final' : 'Párrafo'}`,
+        label: label,
         data: {
-          paragraphNumber: this.getNewParagraphNumber(),
+          paragraphNumber: options.type !== 'location' ? this.getNewParagraphNumber() : undefined,
           description: 'Escribe aquí el contenido...',
-          color: options.type === 'end' ? '#d32f2f' : '#455a64',
+          color: color,
           tags: [],
+          // Las propiedades del mapa se inicializan vacías
+          mapId: null,
+          mapPosition: null,
+          targetMapId: null,
         }
       };
       this.nodes.push(newNode);
-      useBookStore().setDirty(); // ¡IMPORTANTE! Marca que hay cambios.
+      useBookStore().setDirty();
+    },
+
+    setNodeMapPosition(nodeId: string, mapId: string, position: { x: number; y: number }) {
+      const node = this.nodes.find(n => n.id === nodeId);
+      if (node && node.type === 'location') {
+        node.data.mapId = mapId;
+        node.data.mapPosition = position;
+        useBookStore().setDirty();
+        console.log(`Nodo de localización '${nodeId}' posicionado en el mapa '${mapId}'.`);
+      } else {
+        console.error(`No se pudo encontrar el nodo de localización con ID: ${nodeId}`);
+      }
     },
 
     /**

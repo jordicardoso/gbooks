@@ -16,6 +16,8 @@ export interface BookEdge extends Edge {
   label?: string;
 }
 
+export type BookNodeType = 'start' | 'story' | 'end' | 'location';
+
 export interface BookNodeData {
   paragraphNumber?: number;
   description?: string;
@@ -26,6 +28,9 @@ export interface BookNodeData {
   height?: number;
   actions?: AnyAction[];
   choices?: AnyChoice[];
+  mapId?: string | null;
+  mapPosition?: { x: number; y: number } | null;
+  targetMapId?: string | null;
 }
 
 export interface BookNode extends Node {
