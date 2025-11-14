@@ -167,10 +167,10 @@ async function generatePdf() {
             /*padding: 15mm 10mm 10mm 10mm;  Márgenes superior/inferior y laterales */
             box-sizing: border-box;
             page-break-after: always; /* Le dice a html2pdf que aquí empieza una nueva página */
-            /*overflow: hidden;  Evita desbordamientos inesperados */
+            overflow: hidden;  /*Evita desbordamientos inesperados */
         }
         .two-column-layout {
-          height: 290mm;
+          /*height: 290mm;*/
           column-count: 2;
           column-gap: 10mm;
           column-rule: 1px solid #eee;
