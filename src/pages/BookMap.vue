@@ -1,10 +1,9 @@
-<!-- src/pages/BookMap.vue (REDISEÑADO) -->
+<!-- src/pages/BookMap.vue (CORREGIDO) -->
 <template>
-  <!-- Usamos QPage para integrar un panel lateral (drawer) -->
   <q-page class="row no-wrap">
     <!-- Panel lateral con localizaciones sin posicionar -->
     <q-drawer
-      show-if-above
+      v-model="isDrawerOpen"
       :width="250"
       bordered
       class="bg-grey-9 text-white column"
@@ -81,11 +80,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+// [1. AÑADIDO] Importamos 'defineExpose'
+import { ref, computed, defineExpose } from 'vue';
 import { useAssetsStore } from 'stores/assets-store';
 import { useNodesStore } from 'stores/nodes-store';
 import { storeToRefs } from 'pinia';
-import MapNode from 'src/components/MapNode.vue'; // <-- ¡Nuevo componente!
+import MapNode from 'src/components/MapNode.vue';
 import type { BookNode } from 'src/stores/types';
 
 const assetsStore = useAssetsStore();
@@ -94,29 +94,27 @@ const nodesStore = useNodesStore();
 const { assets } = storeToRefs(assetsStore);
 const { nodes } = storeToRefs(nodesStore);
 
-// ID del mapa que se está mostrando actualmente
+// [2. AÑADIDO] Variable para controlar el estado del panel
+const isDrawerOpen = ref(true);
+
 const currentMapId = ref<string | null>(null);
 
-// Opciones para el selector de mapas
 const mapAssetOptions = computed(() =>
   assets.value
     .filter(asset => asset.category === 'map' && asset.type === 'image')
     .map(asset => ({ label: asset.name, value: asset.id }))
 );
 
-// URL del mapa actual
 const currentMapUrl = computed(() => {
   if (!currentMapId.value) return null;
   const asset = assetsStore.getAssetById(currentMapId.value);
   return asset ? assetsStore.getAssetUrl(asset.filename) : null;
 });
 
-// Filtra las localizaciones que aún no tienen posición en un mapa
 const unplacedLocations = computed(() =>
   nodes.value.filter(n => n.type === 'location' && !n.data.mapPosition)
 );
 
-// Filtra las localizaciones que SÍ tienen posición y pertenecen al mapa actual
 const placedLocations = computed(() =>
   nodes.value.filter(n =>
     n.type === 'location' &&
@@ -124,6 +122,21 @@ const placedLocations = computed(() =>
     n.data.mapId === currentMapId.value
   )
 );
+
+// [3. AÑADIDO] Funciones para controlar el panel desde fuera
+function openDrawer() {
+  isDrawerOpen.value = true;
+}
+function closeDrawer() {
+  isDrawerOpen.value = false;
+}
+
+// [4. AÑADIDO] Exponemos las funciones
+defineExpose({
+  openDrawer,
+  closeDrawer,
+});
+
 
 function handleDragStart(event: DragEvent, nodeId: string) {
   if (event.dataTransfer) {
@@ -139,22 +152,18 @@ function handleDrop(event: DragEvent) {
   const mapContainer = event.currentTarget as HTMLElement;
   const rect = mapContainer.getBoundingClientRect();
 
-  // Calcula la posición en porcentaje para que sea responsive
   const x = ((event.clientX - rect.left) / rect.width) * 100;
   const y = ((event.clientY - rect.top) / rect.height) * 100;
 
-  // Llama a la nueva acción del store
   nodesStore.setNodeMapPosition(nodeId, currentMapId.value, { x, y });
 }
 
 function handleLocationClick(locationNode: BookNode) {
-  // Futuro: Si el nodo tiene un targetMapId, cambiar currentMapId a ese valor
   if (locationNode.data.targetMapId) {
     console.log(`Navegar al mapa: ${locationNode.data.targetMapId}`);
     currentMapId.value = locationNode.data.targetMapId;
   } else {
     console.log(`Clic en localización: ${locationNode.label}`);
-    // Aquí podrías abrir un panel de edición para la localización, por ejemplo.
   }
 }
 </script>

@@ -78,6 +78,9 @@
           :data="props.data"
         />
       </template>
+      <template #node-location="props">
+        <BookLocationNode v-bind="props" />
+      </template>
     </VueFlow>
 
     <!-- El resto del componente no necesita cambios -->
@@ -134,6 +137,7 @@ import type { MenuItem } from './ContextMenu.vue';
 import BookStartNode from './BookStartNode.vue';
 import BookStoryNode from './BookStoryNode.vue';
 import BookEndNode from './BookEndNode.vue';
+import BookLocationNode from './BookLocationNode.vue';
 import NodeEditorPanel from './NodeEditorPanel.vue';
 import EdgeEditorPanel from './EdgeEditorPanel.vue';
 import type { BookEdge, BookNode } from 'src/stores/types';
@@ -148,7 +152,7 @@ const isMenuOpen = ref(false);
 const menuPosition = ref({ x: 0, y: 0 });
 const contextMenuItems = computed<MenuItem[]>(() => [
   { action: 'add_story', label: 'Añadir Párrafo', icon: 'add_circle' },
-  { action: 'add_location', label: 'Añadir Localización', icon: 'add_location' },
+  { action: 'add_location', label: 'Añadir Localización', icon: 'map' },
   { action: 'add_end', label: 'Añadir Final', icon: 'flag' },
 ]);
 const menuProjectedPosition = ref<{ x: number; y: number } | null>(null);
@@ -278,6 +282,16 @@ function handleMenuAction(actionId: string) {
   isMenuOpen.value = false;
   menuProjectedPosition.value = null;
 }
+
+function clearSelection() {
+  selectedNode.value = null;
+  selectedEdge.value = null;
+  console.log('[BookGraph] Selección limpiada.'); // Añadimos un log para depurar
+}
+
+defineExpose({
+  clearSelection,
+});
 </script>
 
 <style lang="scss" scoped>
