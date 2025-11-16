@@ -2,6 +2,12 @@
 <template>
   <div class="book-node location-node" :class="{ 'is-selected': selected }" :style="nodeStyle">
     <div class="node-header">
+      <span
+        v-if="data.paragraphNumber"
+        class="paragraph-number q-mr-sm"
+      >
+        #{{ data.paragraphNumber }}
+      </span>
       <q-icon name="place" class="q-mr-sm" />
       <span class="text-weight-bold">{{ label }}</span>
     </div>
@@ -27,6 +33,7 @@ const props = defineProps<{
   label?: string;
   data?: {
     color?: string;
+    paragraphNumber?: number;
   };
   selected?: boolean;
 }>();

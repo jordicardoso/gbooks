@@ -1,26 +1,26 @@
 <!-- src/components/AddAssetDialog.vue -->
 <template>
-  <q-dialog :model-value="modelValue" @update:model-value="closeDialog" persistent>
+  <q-dialog :model-value="modelValue" @update:model-value="closeDialog" persistent @hide="resetForm">
     <q-card class="bg-grey-9 text-white" style="width: 500px; max-width: 90vw;">
-      <q-form @submit="onSubmit">
+      <q-form @submit.prevent="onSubmit" ref="formRef">
         <q-card-section class="row items-center q-pb-none">
           <div class="text-h6">Añadir Nuevo Asset</div>
           <q-space />
           <q-btn icon="close" flat round dense @click="closeDialog" />
         </q-card-section>
 
-        <q-card-section>
-          <!-- Campo para seleccionar el archivo -->
+        <q-card-section class="q-gutter-y-md">
+          <!-- Campo para el fichero -->
           <q-file
             v-model="file"
-            label="Seleccionar imagen"
+            label="Seleccionar archivo"
             dark
             standout="bg-grey-8"
             accept="image/*"
             :rules="[val => !!val || 'Debes seleccionar un archivo']"
             lazy-rules
           >
-            <template #prepend>
+            <template v-slot:prepend>
               <q-icon name="attach_file" />
             </template>
           </q-file>
@@ -29,23 +29,22 @@
           <q-input
             v-model="assetName"
             label="Nombre del Asset"
-            class="q-mt-md"
             dark
             standout="bg-grey-8"
             :rules="[val => (val && val.length > 0) || 'El nombre es requerido']"
             lazy-rules
           />
 
-          <!-- Campo para la categoría -->
-          <q-input
+          <!-- [NUEVO] Campo para la categoría ahora es un q-select -->
+          <q-select
             v-model="assetCategory"
+            :options="categoryOptions"
             label="Categoría"
-            class="q-mt-md"
             dark
+            dense
             standout="bg-grey-8"
-            :rules="[val => (val && val.length > 0) || 'La categoría es requerida']"
+            :rules="[val => !!val || 'La categoría es requerida']"
             lazy-rules
-            hint="Ej: personaje, mapa, objeto, etc."
           />
         </q-card-section>
 
@@ -53,7 +52,7 @@
 
         <q-card-actions align="right">
           <q-btn flat label="Cancelar" @click="closeDialog" />
-          <q-btn color="primary" label="Guardar Asset" type="submit" :loading="isSubmitting" />
+          <q-btn color="primary" label="Añadir Asset" type="submit" />
         </q-card-actions>
       </q-form>
     </q-card>
@@ -61,51 +60,50 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
+import type { QForm } from 'quasar';
 
-// Props y Emits para la comunicación con el padre
-const props = defineProps<{ modelValue: boolean }>();
+// Props y Emits
+const props = defineProps({
+  modelValue: {
+    type: Boolean,
+    required: true,
+  },
+});
 const emit = defineEmits(['update:modelValue', 'submit']);
 
-// Estado del formulario
+// Referencias del formulario
+const formRef = ref<QForm | null>(null);
 const file = ref<File | null>(null);
 const assetName = ref('');
-const assetCategory = ref('general');
-const isSubmitting = ref(false);
+const assetCategory = ref('');
 
-// UX: Cuando se selecciona un archivo, rellenamos el nombre automáticamente
-watch(file, (newFile) => {
-  if (newFile) {
-    // Quita la extensión del nombre del archivo
-    assetName.value = newFile.name.replace(/\.[^/.]+$/, '');
-  }
-});
+// [NUEVO] Opciones fijas para la categoría
+const categoryOptions = [
+  'General',
+  'Personaje',
+  'Mapa',
+  'Objecto'
+];
 
 const closeDialog = () => {
   emit('update:modelValue', false);
 };
 
-const onSubmit = async () => {
-  if (!file.value) return;
+const resetForm = () => {
+  file.value = null;
+  assetName.value = '';
+  assetCategory.value = '';
+  formRef.value?.resetValidation();
+};
 
-  isSubmitting.value = true;
-  try {
-    // --- INICIO DEPURACIÓN ---
-    console.log('1. [AddAssetDialog] Contenido de file.value:', file.value);
-    console.log('2. [AddAssetDialog] ¿Es file.value una instancia de File?', file.value instanceof File);
-    // --- FIN DEPURACIÓN ---
-
-    // Emitimos los datos al componente padre para que los procese
+const onSubmit = () => {
+  if (file.value && assetName.value && assetCategory.value) {
     emit('submit', {
       file: file.value,
       name: assetName.value,
       category: assetCategory.value,
     });
-    // El padre se encargará de cerrar el diálogo si todo va bien
-  } finally {
-    // En caso de que el padre no cierre el diálogo (por un error),
-    // dejamos de mostrar el estado de carga.
-    isSubmitting.value = false;
   }
 };
 </script>

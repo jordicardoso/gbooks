@@ -44,7 +44,7 @@
             dense
             clearable
             standout="bg-grey-8"
-            :disable="!bookId || categoryOptions.length === 0"
+            :disable="!bookId"
           />
         </div>
 
@@ -72,7 +72,14 @@
         class="col-12 col-sm-6 col-md-4 col-lg-3"
       >
         <q-card class="asset-card bg-grey-10">
-          <q-img :src="assetsStore.getAssetUrl(asset.filename)" :ratio="16 / 9">
+          <!-- La imagen ahora es clicable y muestra un tooltip -->
+          <q-img
+            :src="assetsStore.getAssetUrl(asset.filename)"
+            :ratio="16 / 9"
+            class="cursor-pointer"
+            @click="openPreview(asset)"
+          >
+            <q-tooltip>Ampliar imagen</q-tooltip>
             <div class="absolute-bottom-right text-subtitle2 q-pa-xs bg-primary" style="border-top-left-radius: 3px;">
               {{ asset.category }}
             </div>
@@ -116,13 +123,27 @@
       @submit="handleAssetUpdate"
       @update:modelValue="handleDialogClose"
     />
+
+    <!-- Diálogo para previsualizar la imagen -->
+    <q-dialog v-model="isPreviewOpen" maximized>
+      <q-card class="bg-transparent no-shadow flex flex-center" @click="isPreviewOpen = false">
+        <q-img
+          v-if="previewImageUrl"
+          :src="previewImageUrl"
+          fit="contain"
+          style="max-width: 90vw; max-height: 90vh; border-radius: 4px;"
+          class="cursor-pointer"
+        />
+      </q-card>
+    </q-dialog>
+
   </q-page>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useQuasar } from 'quasar';
-import { useI18n } from 'vue-i18n'; // <-- 1. Importar useI18n
+import { useI18n } from 'vue-i18n';
 import { type Asset } from 'src/stores/types';
 import { useAssetsStore } from 'src/stores/assets-store';
 import { storeToRefs } from 'pinia';
@@ -136,7 +157,7 @@ const props = defineProps<{
 
 // --- INICIALIZACIÓN ---
 const $q = useQuasar();
-const { t } = useI18n(); // <-- 2. Obtener la función de traducción 't'
+const { t } = useI18n();
 const assetsStore = useAssetsStore();
 const { assets } = storeToRefs(assetsStore);
 
@@ -150,16 +171,23 @@ const isAddDialogOpen = ref(false);
 const isEditDialogOpen = ref(false);
 const editingAsset = ref<Asset | null>(null);
 
-const categoryOptions = computed(() => {
-  if (!assets.value || assets.value.length === 0) return [];
-  const categories = assets.value.map(asset => asset.category);
-  return [...new Set(categories)];
-});
+// --- State para la previsualización de imagen ---
+const isPreviewOpen = ref(false);
+const previewImageUrl = ref<string | null>(null);
+
+const categoryOptions = [
+  'General',
+  'Personaje',
+  'Mapa',
+  'Objecto'
+];
 
 const filteredAssets = computed(() => {
   if (!assets.value || assets.value.length === 0) return [];
+
   let filtered = assets.value;
 
+  // Aplicar filtros
   if (searchTerm.value) {
     const lowerCaseSearch = searchTerm.value.toLowerCase();
     filtered = filtered.filter(asset =>
@@ -175,7 +203,9 @@ const filteredAssets = computed(() => {
     filtered = filtered.filter(asset => asset.type === typeFilter.value);
   }
 
-  return filtered;
+  // [CAMBIO] Ordenar los resultados para mostrar los más nuevos primero.
+  // Se crea una copia con [...filtered] para no mutar el estado original.
+  return [...filtered].sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime());
 });
 
 // --- ACCIONES DE LA UI ---
@@ -186,6 +216,12 @@ const openAddDialog = () => {
 const openEditDialog = (asset: Asset) => {
   editingAsset.value = { ...asset };
   isEditDialogOpen.value = true;
+};
+
+// --- Acción para abrir la previsualización ---
+const openPreview = (asset: Asset) => {
+  previewImageUrl.value = assetsStore.getAssetUrl(asset.filename);
+  isPreviewOpen.value = true;
 };
 
 const handleDialogClose = (isOpen: boolean) => {

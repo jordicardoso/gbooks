@@ -208,6 +208,30 @@ export const useNodesStore = defineStore('nodes', {
       return newNode;
     },
 
+    applyFilters(filters: { types: string[]; tags: string[] }) {
+      const { types, tags } = filters;
+      const hasTypeFilter = types.length > 0;
+      const hasTagFilter = tags.length > 0;
+
+      // Si no hay filtros, mostramos todos los nodos y terminamos.
+      if (!hasTypeFilter && !hasTagFilter) {
+        this.nodes.forEach(node => (node.hidden = false));
+        return;
+      }
+
+      this.nodes.forEach(node => {
+        // El nodo debe cumplir con el filtro de tipo (si está activo)
+        const typeMatch = !hasTypeFilter || types.includes(node.type as string);
+
+        // El nodo debe tener al menos una de las etiquetas seleccionadas (si el filtro está activo)
+        const tagMatch = !hasTagFilter || (node.data.tags?.some(tag => tags.includes(tag)) ?? false);
+
+        // El nodo se oculta si NO cumple con ambas condiciones (typeMatch Y tagMatch)
+        node.hidden = !(typeMatch && tagMatch);
+      });
+    },
+
+
     /**
      * Actualiza las propiedades de un nodo existente.
      */

@@ -1,7 +1,6 @@
-<!-- src/pages/BookPage.vue (CORREGIDO) -->
+<!-- src/pages/BookPage.vue -->
 <template>
   <q-page class="fit column no-wrap">
-    <!-- ... (barra de herramientas y pestañas no cambian) ... -->
     <q-tabs
       v-model="tab"
       dense
@@ -24,21 +23,69 @@
 
     <q-tab-panels v-model="tab" animated keep-alive class="fit col bg-blue-grey-10">
       <!-- Panel de Diseño (Grafo) -->
-      <q-tab-panel name="design" class="q-pa-none">
-        <!-- Añadimos una referencia (ref) al componente -->
+      <q-tab-panel name="design" class="q-pa-none fit column no-wrap">
+        <q-toolbar class="bg-grey-10 text-white q-px-md q-py-xs col-auto">
+          <q-select
+            v-model="filterNodeTypes"
+            :options="nodeTypeOptions"
+            label="Filtrar por Tipo"
+            multiple
+            dense
+            dark
+            clearable
+            borderless
+            emit-value
+            map-options
+            options-dense
+            style="min-width: 200px"
+            class="q-mr-md"
+          >
+            <template v-slot:option="scope">
+              <q-item v-bind="scope.itemProps">
+                <q-item-section>
+                  <q-item-label>{{ scope.opt.label }}</q-item-label>
+                </q-item-section>
+              </q-item>
+            </template>
+          </q-select>
+
+          <q-select
+            v-model="filterTags"
+            :options="allAvailableTags"
+            label="Filtrar por Etiqueta"
+            multiple
+            dense
+            dark
+            clearable
+            borderless
+            use-chips
+            options-dense
+            style="min-width: 250px"
+          />
+
+          <q-space />
+
+          <q-btn
+            v-if="isFilterActive"
+            flat
+            round
+            dense
+            icon="close"
+            @click="clearFilters"
+            title="Limpiar filtros"
+          />
+        </q-toolbar>
+
         <BookGraph
           ref="bookGraphRef"
           v-if="bookStore.activeBook"
-          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"
+          style="position: absolute; top: 48px; width: 100%; height: 95%;"
         />
       </q-tab-panel>
-
-      <!-- ... (otros paneles como assets, meta, character) ... -->
       <q-tab-panel name="assets" class="q-pa-none">
         <AssetsPage v-if="props.id" :book-id="props.id" />
       </q-tab-panel>
       <q-tab-panel name="meta">
-        <!-- ... -->
       </q-tab-panel>
       <q-tab-panel name="character" class="q-pa-none">
         <CharacterSheetPage v-if="props.id" :id="props.id" />
@@ -46,12 +93,7 @@
 
       <!-- Panel de Mapas -->
       <q-tab-panel name="maps" class="q-pa-none">
-        <!-- [1. AÑADIDO] Añadimos una referencia (ref) al componente -->
-        <BookMap
-          ref="bookMapRef"
-          v-if="props.id"
-          :book-id="props.id"
-        />
+        <BookMap ref="bookMapRef" v-if="props.id" :book-id="props.id"/>
       </q-tab-panel>
 
       <!-- ... (resto de paneles) ... -->
@@ -74,6 +116,7 @@ import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { useBookStore } from 'src/stores/book-store';
 import { useAssetsStore } from 'src/stores/assets-store';
+import { useNodesStore } from 'src/stores/nodes-store';
 
 // Componentes para las pestañas
 import BookGraph from 'src/components/BookGraph.vue';
@@ -89,13 +132,42 @@ const { t } = useI18n();
 const $q = useQuasar();
 const bookStore = useBookStore();
 const assetsStore = useAssetsStore();
+const nodesStore = useNodesStore();
 
 const tab = ref('design');
 const isSaving = ref(false);
 
-// [2. AÑADIDO] Creamos las referencias para apuntar a los componentes hijos
 const bookGraphRef = ref<InstanceType<typeof BookGraph> | null>(null);
 const bookMapRef = ref<InstanceType<typeof BookMap> | null>(null);
+
+const filterNodeTypes = ref<string[]>([]);
+const filterTags = ref<string[]>([]);
+
+const nodeTypeOptions = [
+  { label: 'Inicio', value: 'start' },
+  { label: 'Párrafo', value: 'story' },
+  { label: 'Final', value: 'end' },
+  { label: 'Localización', value: 'location' },
+];
+
+const allAvailableTags = computed(() => {
+  const tags = new Set<string>();
+  nodesStore.nodes.forEach(node => {
+    node.data?.tags?.forEach(tag => tags.add(tag));
+  });
+  return Array.from(tags).sort();
+});
+
+const isFilterActive = computed(() => filterNodeTypes.value.length > 0 || filterTags.value.length > 0);
+
+function clearFilters() {
+  filterNodeTypes.value = [];
+  filterTags.value = [];
+}
+
+watch([filterNodeTypes, filterTags], ([types, tags]) => {
+  nodesStore.applyFilters({ types, tags });
+}, { deep: true });
 
 const imageAssetOptions = computed(() =>
   assetsStore.assets
@@ -122,14 +194,11 @@ watch(() => props.id, (newBookId) => {
   }
 }, { immediate: true });
 
-// [3. LA CLAVE] Observamos la variable 'tab' para controlar los paneles
 watch(tab, (newTab, oldTab) => {
-  // Lógica para el panel de edición del grafo
   if (newTab !== 'design' && oldTab === 'design') {
     bookGraphRef.value?.clearSelection();
   }
 
-  // Lógica para el panel lateral de mapas
   if (newTab === 'maps') {
     bookMapRef.value?.openDrawer();
   } else if (oldTab === 'maps') {
@@ -141,6 +210,7 @@ onUnmounted(() => {
   if (bookStore.isDirty) {
     void saveBook();
   }
+  nodesStore.applyFilters({ types: [], tags: [] });
   bookStore.clearBook();
 });
 

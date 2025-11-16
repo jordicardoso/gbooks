@@ -1,18 +1,18 @@
 <!-- src/components/BookGraph.vue (CORREGIDO Y MEJORADO) -->
 <template>
-  <div v-if="isGraphReady" class="fit absolute">
+  <div class="book-graph-wrapper">
     <VueFlow
       v-model:nodes="nodes"
       v-model:edges="edges"
       :min-zoom="0.2"
       :max-zoom="4"
-      class="book-graph"
       @connect="onConnect"
       @move-end="onMoveEnd"
       @pane-context-menu="onPaneContextMenu"
       @node-click="onNodeClick"
       @edge-click="onEdgeClick"
       multi-selection-key-code="Shift"
+      class="fit"
     >
       <Background :variant="BackgroundVariant.Dots" :gap="24" :size="1" />
       <MiniMap
@@ -163,13 +163,14 @@ const selectedNode = ref<BookNode | null>(null);
 const isEdgeEditorOpen = ref(false);
 const selectedEdge = ref<BookEdge | null>(null);
 
+/*
 onMounted(() => {
   // Usamos nextTick para asegurarnos de que el DOM está listo antes de cambiar la variable.
   nextTick(() => {
     isGraphReady.value = true;
   });
 });
-
+*/
 onInit(() => {
   console.log('[LOG BookGraph] VueFlow instance is ready via onInit hook.');
   const bookStore = useBookStore();
@@ -295,6 +296,13 @@ defineExpose({
 </script>
 
 <style lang="scss" scoped>
+.book-graph-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+
+}
 .node-editor-container {
   position: absolute;
   top: 10px;

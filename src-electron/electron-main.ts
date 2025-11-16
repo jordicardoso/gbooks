@@ -48,6 +48,8 @@ async function createWindow() {
     },
   });
 
+  mainWindow.setMenu(null);
+
   if (process.env.DEV) {
     await mainWindow.loadURL(process.env.APP_URL);
   } else {

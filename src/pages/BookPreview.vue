@@ -46,8 +46,8 @@ import { useBookStore } from 'stores/book-store';
 import { useAssetsStore } from 'stores/assets-store';
 import { storeToRefs } from 'pinia';
 import { useQuasar } from 'quasar';
-// [1. LA CLAVE] Cambiamos la importación para mayor compatibilidad
 import * as pdfLib from 'pdf-lib';
+import type { AnyAction, AnyChoice, BookNode } from 'src/stores/types';
 
 const $q = useQuasar();
 const assetsStore = useAssetsStore();
@@ -64,7 +64,6 @@ function mmToPt(mm: number) {
 }
 
 async function getImageAsDataUrl(url: string): Promise<string | null> {
-  // Esta función no necesita cambios
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'Anonymous';
@@ -86,16 +85,21 @@ async function buildPdfNative(options: {
   imageId?: string | null;
   title: string;
   author: string;
-  blocks: { number: string | number; description: string }[];
+  blocks: {
+    number: string | number;
+    description: string;
+    actions: AnyAction[];
+    choices: AnyChoice[];
+  }[];
+  allNodes: BookNode[];
 }) {
-  const { imageId, title, author, blocks } = options;
+  const { imageId, blocks, allNodes } = options;
 
   if (!activeBook.value) {
     $q.notify({ type: 'negative', message: 'No hay un libro activo para generar el PDF.' });
     return;
   }
 
-  // [2. LA CLAVE] Usamos el objeto 'pdfLib' para acceder a las funciones y constantes
   const pdfDoc = await pdfLib.PDFDocument.create();
 
   const font = await pdfDoc.embedFont(pdfLib.StandardFonts.TimesRoman);
@@ -110,8 +114,6 @@ async function buildPdfNative(options: {
     boldItalic: fontBoldItalic,
   };
 
-  const fontSizeTitle = 36;
-  const fontSizeAuthor = 14;
   const fontSizeNumber = 11;
   const fontSizeText = 10;
   const lineHeight = 1.4;
@@ -125,7 +127,7 @@ async function buildPdfNative(options: {
   const gapBetweenColumnsPt = mmToPt(10);
   const columnWidthPt = (pageWidthPt - marginLeftPt - marginRightPt - gapBetweenColumnsPt) / 2;
 
-  // --------------- PORTADA (Lógica simplificada y corregida) ----------------
+  // --------------- PORTADA ----------------
   const coverPage = pdfDoc.addPage([pageWidthPt, pageHeightPt]);
   if (imageId) {
     const asset = assetsStore.getAssetById(imageId);
@@ -144,13 +146,43 @@ async function buildPdfNative(options: {
       }
     }
   }
-  // ... (puedes añadir aquí el título sobre la imagen si lo deseas)
 
   // --------------- LÓGICA DE CONTENIDO Y RENDERIZADO ----------------
   let currentPage: pdfLib.PDFPage = pdfDoc.addPage([pageWidthPt, pageHeightPt]);
   let cursorY = pageHeightPt - marginTopPt;
   let currentColumn = 0; // 0 for left, 1 for right
   const columnX = [marginLeftPt, marginLeftPt + columnWidthPt + gapBetweenColumnsPt];
+
+  const nodeMap = new Map(allNodes.map(n => [n.id, n]));
+  const getParagraphNumber = (nodeId: string): string => {
+    const targetNode = nodeMap.get(nodeId);
+    return targetNode?.data?.paragraphNumber ? String(targetNode.data.paragraphNumber) : '???';
+  };
+
+  const formatActionText = (action: AnyAction): string => {
+    switch (action.type) {
+      case 'set_variable':
+        return `[Se establece la variable '${action.variable}' a '${action.value}']`;
+      case 'add_item':
+        return `[Se añade el objeto '${action.itemId}' al inventario]`;
+      default:
+        return `[Acción: ${action.type}]`;
+    }
+  };
+
+  const formatChoiceText = (choice: AnyChoice): string => {
+    let text = `${choice.label || 'Sigue leyendo el párrafo'}`;
+    if (choice.targetNodeId) {
+      const targetPara = getParagraphNumber(choice.targetNodeId);
+      text += ` ${targetPara}`;
+    }
+
+    if (choice.conditions && choice.conditions.length > 0) {
+      const conditionStr = choice.conditions.map((c: any) => `${c.variable} ${c.operator} ${c.value}`).join(' y ');
+      text = `Si (${conditionStr}), ${text}`;
+    }
+    return text;
+  };
 
   const checkAndSwitchColumn = (neededHeight = fontSizeText * lineHeight) => {
     if (cursorY - neededHeight < marginBottomPt) {
@@ -165,56 +197,106 @@ async function buildPdfNative(options: {
     return false;
   };
 
-  const drawStyledHtmlText = (htmlText: string) => {
+  // --- [FUNCIÓN DE DIBUJO MEJORADA CON JUSTIFICACIÓN E INDENTACIÓN] ---
+  const drawStyledHtmlText = (htmlText: string, options: { isChoiceOrAction?: boolean; indent?: number } = {}) => {
+    const indent = options.indent || 0;
+    const availableWidth = columnWidthPt - indent;
+
+    // Si es un elemento de lista, dibujamos la viñeta primero
+    if (indent > 0) {
+      checkAndSwitchColumn();
+      const bullet = '•';
+      const bulletFont = fonts.bold;
+      const bulletSize = fontSizeText;
+      // Centramos la viñeta en el espacio de la sangría para un mejor aspecto
+      const bulletX = columnX[currentColumn] + (indent / 2) - (bulletFont.widthOfTextAtSize(bullet, bulletSize) / 2);
+      currentPage.drawText(bullet, { x: bulletX, y: cursorY, font: bulletFont, size: bulletSize, color: pdfLib.rgb(0, 0, 0) });
+    }
+
+    // 1. Parsear HTML a una lista plana de palabras con su estilo
+    const wordParts: { text: string; font: pdfLib.PDFFont; width: number }[] = [];
     const parts = htmlText.split(/(<(?:strong|b|em|i)>|<\/(?:strong|b|em|i)>)/gi).filter(Boolean);
-    let cursorX = columnX[currentColumn];
     const styleStack: ('normal' | 'bold' | 'italic')[] = ['normal'];
-    const spaceWidth = fonts.normal.widthOfTextAtSize(' ', fontSizeText);
 
     for (const part of parts) {
       const lowerPart = part.toLowerCase();
-
       if (lowerPart === '<strong>' || lowerPart === '<b>') { styleStack.push('bold'); continue; }
       if (lowerPart === '<em>' || lowerPart === '<i>') { styleStack.push('italic'); continue; }
       if (lowerPart === '</strong>' || lowerPart === '</b>') {
         const idx = styleStack.lastIndexOf('bold');
-        if (idx > 0) styleStack.splice(idx, 1);
+        if (idx > -1) styleStack.splice(idx, 1);
         continue;
       }
       if (lowerPart === '</em>' || lowerPart === '</i>') {
         const idx = styleStack.lastIndexOf('italic');
-        if (idx > 0) styleStack.splice(idx, 1);
+        if (idx > -1) styleStack.splice(idx, 1);
         continue;
       }
 
       const hasBold = styleStack.includes('bold');
       const hasItalic = styleStack.includes('italic');
-      let currentFont = fonts.normal;
+      let currentFont = options.isChoiceOrAction ? fonts.italic : fonts.normal;
       if (hasBold && hasItalic) currentFont = fonts.boldItalic;
       else if (hasBold) currentFont = fonts.bold;
       else if (hasItalic) currentFont = fonts.italic;
 
-      const words = part.split(/\s+/);
+      const words = part.split(/\s+/).filter(Boolean);
       for (const word of words) {
-        if (!word) continue;
-        const wordWidth = currentFont.widthOfTextAtSize(word, fontSizeText);
-
-        if (cursorX > columnX[currentColumn] && cursorX + wordWidth > columnX[currentColumn] + columnWidthPt) {
-          cursorX = columnX[currentColumn];
-          cursorY -= fontSizeText * lineHeight;
-          if (checkAndSwitchColumn()) {
-            cursorX = columnX[currentColumn];
-          }
-        }
-
-        currentPage.drawText(word, { x: cursorX, y: cursorY, font: currentFont, size: fontSizeText, color: pdfLib.rgb(0, 0, 0) });
-        cursorX += wordWidth + spaceWidth;
+        wordParts.push({
+          text: word,
+          font: currentFont,
+          width: currentFont.widthOfTextAtSize(word, fontSizeText),
+        });
       }
     }
-    if (cursorX > columnX[currentColumn]) {
-      cursorX = columnX[currentColumn];
-      cursorY -= fontSizeText * lineHeight;
+
+    // 2. Agrupar palabras en líneas
+    const lines: typeof wordParts[] = [];
+    let currentLine: typeof wordParts = [];
+    let currentLineWidth = 0;
+    const spaceWidth = fonts.normal.widthOfTextAtSize(' ', fontSizeText);
+
+    for (const part of wordParts) {
+      const potentialWidth = currentLineWidth + (currentLine.length > 0 ? spaceWidth : 0) + part.width;
+      if (potentialWidth > availableWidth && currentLine.length > 0) {
+        lines.push(currentLine);
+        currentLine = [part];
+        currentLineWidth = part.width;
+      } else {
+        currentLine.push(part);
+        currentLineWidth += (currentLine.length > 1 ? spaceWidth : 0) + part.width;
+      }
+    }
+    if (currentLine.length > 0) {
+      lines.push(currentLine);
+    }
+
+    // 3. Dibujar las líneas, justificando todas menos la última
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const isLastLine = i === lines.length - 1;
       checkAndSwitchColumn();
+      let cursorX = columnX[currentColumn] + indent;
+
+      // No justificar la última línea, ni las de acciones/elecciones, ni las de una sola palabra
+      if (isLastLine || options.isChoiceOrAction || line.length <= 1) {
+        // Dibujar alineado a la izquierda
+        for (const part of line) {
+          currentPage.drawText(part.text, { x: cursorX, y: cursorY, font: part.font, size: fontSizeText, color: pdfLib.rgb(0, 0, 0) });
+          cursorX += part.width + spaceWidth;
+        }
+      } else {
+        // Dibujar con justificación
+        const totalWordsWidth = line.reduce((sum, part) => sum + part.width, 0);
+        const totalSpacing = availableWidth - totalWordsWidth;
+        const gap = totalSpacing / (line.length - 1);
+
+        for (const part of line) {
+          currentPage.drawText(part.text, { x: cursorX, y: cursorY, font: part.font, size: fontSizeText, color: pdfLib.rgb(0, 0, 0) });
+          cursorX += part.width + gap;
+        }
+      }
+      cursorY -= fontSizeText * lineHeight;
     }
   };
 
@@ -224,24 +306,65 @@ async function buildPdfNative(options: {
 
     checkAndSwitchColumn((fontSizeNumber * lineHeight) + (fontSizeText * lineHeight));
 
-    currentPage.drawText(nro, { x: columnX[currentColumn], y: cursorY, font: fontBold, size: fontSizeNumber, color: pdfLib.rgb(0, 0, 0) });
-    cursorY -= fontSizeNumber * lineHeight;
+    const numberWidth = fontBold.widthOfTextAtSize(nro, fontSizeNumber);
+    const numberX = columnX[currentColumn] + (columnWidthPt - numberWidth) / 2;
+    currentPage.drawText(nro, { x: numberX, y: cursorY, font: fontBold, size: fontSizeNumber, color: pdfLib.rgb(0, 0, 0) });
+
+    cursorY -= fontSizeNumber * lineHeight * 1.5; // Un poco más de espacio tras el número
+
+    if (blk.actions?.length > 0) {
+      for (const action of blk.actions) {
+        drawStyledHtmlText(formatActionText(action), { isChoiceOrAction: true });
+      }
+      cursorY -= mmToPt(2);
+      checkAndSwitchColumn();
+    }
 
     if (desc) {
-      const paragraphs = desc.split(/\n+/);
+      const bulletMarker = '##BULLET##';
+      // Pre-procesamos el HTML para marcar los <li> y limpiar las etiquetas de lista
+      const processedHtml = desc
+        .replace(/<li>/gi, `${bulletMarker} `) // Marcamos cada elemento de lista
+        .replace(/<\/?(ul|ol).*?>/gi, ''); // Eliminamos las etiquetas <ul> y <ol>
+
+      const textWithNewlines = processedHtml
+        .replace(/<\/p>|<\/div>|<\/li>|<br\s*\/?>/gi, '\n')
+        .replace(/<p.*?>|<div>/gi, '')
+        .trim();
+
+      const paragraphs = textWithNewlines.split(/\n+/);
       for (const paragraph of paragraphs) {
-        if (checkAndSwitchColumn()) {
-          // Si cambiamos de columna, el cursor Y ya está reseteado
+        if (paragraph.trim()) {
+          const isListItem = paragraph.startsWith(bulletMarker);
+          const textToDraw = isListItem ? paragraph.substring(bulletMarker.length) : paragraph;
+          const indentSize = mmToPt(5);
+
+          drawStyledHtmlText(textToDraw, { indent: isListItem ? indentSize : 0 });
+
+          // Añadimos un espacio extra solo después de un párrafo completo, no entre elementos de lista
+          if (!isListItem) {
+            cursorY -= fontSizeText * lineHeight;
+            checkAndSwitchColumn();
+          }
         }
-        drawStyledHtmlText(paragraph);
       }
     }
 
-    cursorY -= mmToPt(4); // Margen inferior tras el bloque
+    if (blk.choices?.length > 0) {
+      // Quitamos el espacio extra que se añadía después del último párrafo de descripción
+      cursorY += fontSizeText * lineHeight;
+      cursorY -= mmToPt(2);
+      checkAndSwitchColumn();
+      for (const choice of blk.choices) {
+        drawStyledHtmlText(formatChoiceText(choice), { isChoiceOrAction: true });
+      }
+    }
+
+    cursorY -= mmToPt(4);
   }
 
   const pages = pdfDoc.getPages();
-  for (let i = 1; i < pages.length; i++) { // Empezamos en 1 para saltar la portada
+  for (let i = 1; i < pages.length; i++) {
     const p = pages[i];
     const pageNumberText = `Página ${i}`;
     const textWidth = font.widthOfTextAtSize(pageNumberText, 8);
@@ -283,6 +406,8 @@ async function generatePdf() {
       .map(n => ({
         number: n.data.paragraphNumber,
         description: n.data.description || '(Sin descripción)',
+        actions: n.actions || [],
+        choices: n.choices || [],
       }));
 
     const blob = await buildPdfNative({
@@ -290,6 +415,7 @@ async function generatePdf() {
       title: activeBook.value.meta.title || 'Sin Título',
       author: activeBook.value.meta.author || 'Autor Desconocido',
       blocks,
+      allNodes: sortedNodes,
     });
 
     pdfDataUrl.value = URL.createObjectURL(blob);

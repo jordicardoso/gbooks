@@ -21,16 +21,17 @@
             lazy-rules
           />
 
-          <!-- Campo para la categoría -->
-          <q-input
+          <!-- [CAMBIO] Campo para la categoría ahora es un q-select -->
+          <q-select
             v-model="assetCategory"
+            :options="categoryOptions"
             label="Categoría"
             class="q-mt-md"
             dark
+            dense
             standout="bg-grey-8"
-            :rules="[val => (val && val.length > 0) || 'La categoría es requerida']"
+            :rules="[val => !!val || 'La categoría es requerida']"
             lazy-rules
-            hint="Ej: personaje, mapa, objeto, etc."
           />
         </q-card-section>
 
@@ -48,7 +49,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import type { PropType } from 'vue';
-import type { Asset } from 'src/stores/assets-store';
+import type { Asset } from 'src/stores/types';
 
 // Props y Emits para la comunicación con el padre
 const props = defineProps({
@@ -66,6 +67,14 @@ const emit = defineEmits(['update:modelValue', 'submit']);
 // Estado del formulario
 const assetName = ref('');
 const assetCategory = ref('');
+
+// [NUEVO] Opciones fijas para la categoría
+const categoryOptions = [
+  'General',
+  'Personaje',
+  'Mapa',
+  'Objecto'
+];
 
 // Observador para rellenar el formulario cuando el asset cambie
 watch(() => props.asset, (newAsset) => {

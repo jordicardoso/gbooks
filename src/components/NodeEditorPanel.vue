@@ -1,13 +1,13 @@
-<!-- src/components/NodeEditorPanel.vue (ACTUALIZADO) -->
+<!-- src/components/NodeEditorPanel.vue -->
 <template>
-  <!-- Añadimos la clase dinámica 'fullscreen' -->
   <q-card v-if="localNode" :class="['node-editor-panel bg-grey-9 text-white no-shadow column no-wrap', { 'fullscreen': isFullScreen }]">
-    <q-toolbar class="bg-grey-10">
+
+    <!-- 1. CABECERA: Ocupa su altura natural -->
+    <q-toolbar class="bg-grey-10 col-auto">
       <q-toolbar-title class="text-subtitle1">
         Editar Nodo
       </q-toolbar-title>
       <q-space />
-      <!-- Botón para modo pantalla completa -->
       <q-btn
         flat round dense
         :icon="isFullScreen ? 'fullscreen_exit' : 'fullscreen'"
@@ -18,189 +18,179 @@
       <q-btn flat round dense icon="close" @click="emit('close')" />
     </q-toolbar>
 
-    <q-card-section class="col q-pt-md q-gutter-y-md scroll">
-      <!-- Los v-model ahora apuntan directamente a las propiedades de localNode -->
-      <div class="row q-col-gutter-md">
-        <div class="col-8">
-          <q-input
-            v-model="localNode.label"
-            label="Nombre del Nodo"
-            dark dense clearable
+    <q-scroll-area class="col" style="min-height: 0;">
+      <q-card-section class="q-pt-md q-gutter-y-md">
+        <!-- ... (inputs de nombre, párrafo, etc.) ... -->
+        <div class="row q-col-gutter-md">
+          <div class="col-8">
+            <q-input
+              v-model="localNode.label"
+              label="Nombre del Nodo"
+              dark dense clearable
+            />
+          </div>
+          <div class="col-4">
+            <q-input
+              v-model.number="localNode.data.paragraphNumber"
+              label="Nº Párrafo"
+              type="number"
+              dark dense
+            />
+          </div>
+        </div>
+
+        <q-select
+          v-model="localNode.data.tags"
+          label="Etiquetas"
+          dark dense multiple use-chips use-input hide-dropdown-icon
+          new-value-mode="add-unique"
+          :options="allTagsOptions"
+          @new-value="createTag"
+        >
+          <template #no-option>
+            <q-item>
+              <q-item-section class="text-grey">
+                Escribe para añadir una nueva etiqueta
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+
+        <q-select
+          v-model="localNode.type"
+          :options="nodeTypeOptions"
+          label="Tipo de Nodo"
+          dark dense emit-value map-options
+        >
+          <template #option="scope">
+            <q-item v-bind="scope.itemProps">
+              <q-item-section avatar>
+                <q-icon :name="scope.opt.icon" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>{{ scope.opt.label }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+
+        <q-input
+          v-model="localNode.data.color"
+          label="Color del Nodo"
+          dark dense clearable readonly
+          class="color-input"
+        >
+          <template #prepend>
+            <q-icon name="circle" :style="{ color: localNode.data.color || '#455a64' }" />
+          </template>
+          <template #append>
+            <q-icon name="colorize" class="cursor-pointer">
+              <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                <q-color
+                  v-model="localNode.data.color"
+                  dark no-header no-footer
+                  default-view="palette"
+                />
+              </q-popup-proxy>
+            </q-icon>
+          </template>
+        </q-input>
+
+        <q-select
+          v-model="localNode.data.imageId"
+          :options="imageAssetOptions"
+          option-value="id"
+          option-label="name"
+          emit-value map-options
+          label="Imagen del Nodo"
+          dark dense clearable
+        >
+          <template #option="scope">
+            <q-item v-bind="scope.itemProps">
+              <q-item-section avatar>
+                <q-img :src="scope.opt.src" fit="cover" />
+              </q-item-section>
+              <q-item-section>
+                <q-item-label>{{ scope.opt.name }}</q-item-label>
+                <q-item-label caption class="text-grey-5">{{ scope.opt.category }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </template>
+          <template #no-option>
+            <q-item>
+              <q-item-section class="text-grey">
+                No hay imágenes en los assets.
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+
+        <div v-if="currentImageUrl" class="image-preview-container">
+          <q-img
+            v-if="currentImageUrl"
+            :src="currentImageUrl"
+            fit="contain"
+            style="max-height: 400px; border-radius: 4px;"
+          />
+          <div v-else class="text-center text-grey-6 q-pa-md">
+            <q-icon name="image" size="2rem" />
+            <p class="q-mt-sm text-caption">Sin imagen seleccionada</p>
+          </div>
+        </div>
+
+        <div class="q-pa-none node-content">
+          <p class="text-caption text-grey-5 q-mb-xs">TEXTO DEL NODO</p>
+          <q-editor
+            v-model="localNode.data.description"
+            dark
+            :toolbar="toolbarOptions"
+            min-height="10rem"
+            content-class="bg-grey-9"
+            toolbar-bg="grey-10"
           />
         </div>
-        <div class="col-4">
-          <q-input
-            v-model.number="localNode.data.paragraphNumber"
-            label="Nº Párrafo"
-            type="number"
-            dark dense
-          />
-        </div>
-      </div>
+      </q-card-section>
 
-      <q-select
-        v-model="localNode.data.tags"
-        label="Etiquetas"
-        dark
-        dense
-        multiple
-        use-chips
-        use-input
-        hide-dropdown-icon
-        new-value-mode="add-unique"
-        :options="allTagsOptions"
-        @new-value="createTag"
-      >
-        <template #no-option>
-          <q-item>
-            <q-item-section class="text-grey">
-              Escribe para añadir una nueva etiqueta
-            </q-item-section>
-          </q-item>
-        </template>
-      </q-select>
-
-      <q-select
-        v-model="localNode.type"
-        :options="nodeTypeOptions"
-        label="Tipo de Nodo"
-        dark
-        dense
-        emit-value
-        map-options
-      >
-        <template #option="scope">
-          <q-item v-bind="scope.itemProps">
-            <q-item-section avatar>
-              <q-icon :name="scope.opt.icon" />
-            </q-item-section>
-            <q-item-section>
-              <q-item-label>{{ scope.opt.label }}</q-item-label>
-            </q-item-section>
-          </q-item>
-        </template>
-      </q-select>
-
-      <q-input
-        v-model="localNode.data.color"
-        label="Color del Nodo"
-        dark
-        dense
-        clearable
-        readonly
-        class="color-input"
-      >
-        <template #prepend>
-          <q-icon name="circle" :style="{ color: localNode.data.color || '#455a64' }" />
-        </template>
-        <template #append>
-          <q-icon name="colorize" class="cursor-pointer">
-            <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-              <q-color
-                v-model="localNode.data.color"
-                dark
-                no-header
-                no-footer
-                default-view="palette"
-              />
-            </q-popup-proxy>
-          </q-icon>
-        </template>
-      </q-input>
-
-      <q-select
-        v-model="localNode.data.imageId"
-        :options="imageAssetOptions"
-        option-value="id"
-        option-label="name"
-        emit-value
-        map-options
-        label="Imagen del Nodo"
-        dark
-        dense
-        clearable
-      >
-        <template #option="scope">
-          <q-item v-bind="scope.itemProps">
-            <q-item-section avatar>
-              <q-img :src="scope.opt.src" fit="cover" />
-            </q-item-section>
-            <q-item-section>
-              <q-item-label>{{ scope.opt.name }}</q-item-label>
-              <q-item-label caption class="text-grey-5">{{ scope.opt.category }}</q-item-label>
-            </q-item-section>
-          </q-item>
-        </template>
-        <template #no-option>
-          <q-item>
-            <q-item-section class="text-grey">
-              No hay imágenes en los assets.
-            </q-item-section>
-          </q-item>
-        </template>
-      </q-select>
-
-      <div class="image-preview-container">
-        <q-img
-          v-if="currentImageUrl"
-          :src="currentImageUrl"
-          fit="contain"
-          style="max-height: 400px; border-radius: 4px;"
+      <q-card-section>
+        <ActionsEditor
+          :actions="localNode.actions || []"
+          @update:actions="updateNodeActions"
         />
-        <div v-else class="text-center text-grey-6 q-pa-md">
-          <q-icon name="image" size="2rem" />
-          <p class="q-mt-sm text-caption">Sin imagen seleccionada</p>
-        </div>
-      </div>
+      </q-card-section>
 
-      <div class="q-pa-none node-content">
-        <p class="text-caption text-grey-5 q-mb-xs">TEXTO DEL NODO</p>
-        <q-editor
-          v-model="localNode.data.description"
-          dark
-          :toolbar="toolbarOptions"
-          min-height="10rem"
-          content-class="bg-grey-9"
-          toolbar-bg="grey-10"
+      <q-separator dark />
+
+      <q-card-section>
+        <ChoicesEditor
+          :choices="localNode.choices || []"
+          @update:choices="updateNodeChoices"
         />
-      </div>
-    </q-card-section>
+      </q-card-section>
 
-    <!-- El editor de acciones de ENTRADA -->
-    <q-card-section>
-      <ActionsEditor
-        :actions="localNode.actions || []"
-        @update:actions="updateNodeActions"
-      />
-    </q-card-section>
+      <!-- 3. PIE DE PÁGINA: Ocupa su altura natural y está FUERA del scroll -->
+      <q-card-actions
+        align="right"
+        class="q-pa-md col-auto bg-grey-10"
+        style="position: sticky; bottom: 0; z-index: 10;"
+      >
+        <q-btn flat label="Eliminar" color="negative" @click="confirmDeleteNode" />
+        <q-space />
+        <q-btn flat label="Cancelar" color="grey-5" @click="emit('close')" />
+        <q-btn label="Guardar" color="primary" @click="saveChanges" />
+      </q-card-actions>
+    </q-scroll-area>
 
-    <q-separator dark />
-
-    <!-- El nuevo editor de acciones de SALIDA -->
-    <q-card-section>
-      <ChoicesEditor
-        :choices="localNode.choices || []"
-        @update:choices="updateNodeChoices"
-      />
-    </q-card-section>
-
-    <!-- Acciones del pie de página con el nuevo botón de eliminar -->
-    <q-card-actions align="right" class="q-pa-md">
-      <q-btn flat label="Eliminar" color="negative" @click="confirmDeleteNode" />
-      <q-space />
-      <q-btn flat label="Cancelar" color="grey-5" @click="emit('close')" />
-      <q-btn label="Guardar" color="primary" @click="saveChanges" />
-    </q-card-actions>
   </q-card>
 </template>
 
 <script setup lang="ts">
+// El script no necesita cambios
 import { ref, watch, computed } from 'vue';
 import { useQuasar } from 'quasar';
 import { useAssetsStore } from 'src/stores/assets-store';
 import { useNodesStore } from 'src/stores/nodes-store';
 import { storeToRefs } from 'pinia';
-import type { BookNode, AnyAction, AnyChoice } from 'src/stores/types';
+import type { BookNode, AnyAction, AnyChoice, SimpleChoice } from 'src/stores/types';
 import ActionsEditor from './ActionsEditor.vue';
 import ChoicesEditor from './ChoicesEditor.vue';
 
@@ -209,20 +199,17 @@ interface Props {
 }
 
 const props = defineProps<Props>();
-// Añadimos 'delete' a los emits
 const emit = defineEmits(['save', 'close', 'delete']);
 
-// --- STORES Y QUASAR ---
 const $q = useQuasar();
 const assetsStore = useAssetsStore();
 const nodesStore = useNodesStore();
 const { assets } = storeToRefs(assetsStore);
 const { nodes } = storeToRefs(nodesStore);
 
-// --- ESTADO LOCAL DEL FORMULARIO ---
 const localNode = ref<BookNode | null>(null);
 const allTagsOptions = ref<string[]>([]);
-const isFullScreen = ref(false); // Estado para el modo pantalla completa
+const isFullScreen = ref(false);
 
 const nodeTypeOptions = [
   { value: 'story', label: 'Párrafo (Historia)', icon: 'menu_book' },
@@ -245,13 +232,11 @@ const toolbarOptions = [
   ['removeFormat']
 ];
 
-// Obtiene todas las etiquetas únicas de todos los nodos del libro.
 const allBookTags = computed(() => {
   const all = nodes.value.flatMap(node => node.data.tags || []);
   return [...new Set(all)];
 });
 
-// Opciones para el selector de imágenes, basadas en los assets.
 const imageAssetOptions = computed(() =>
   assets.value
     .filter(asset => asset.type === 'image')
@@ -263,16 +248,12 @@ const imageAssetOptions = computed(() =>
     }))
 );
 
-// URL de la imagen seleccionada para la vista previa.
 const currentImageUrl = computed(() => {
   if (!localNode.value?.data.imageId) return null;
   const selectedOption = imageAssetOptions.value.find(opt => opt.id === localNode.value?.data.imageId);
   return selectedOption ? selectedOption.src : null;
 });
 
-// --- FUNCIONES ---
-
-// Actualiza las acciones en nuestra copia local del nodo.
 function updateNodeActions(newActions: AnyAction[]) {
   if (localNode.value) {
     localNode.value.actions = newActions;
@@ -285,7 +266,6 @@ function updateNodeChoices(newChoices: AnyChoice[]) {
   }
 }
 
-// Permite crear nuevas etiquetas desde el QSelect.
 function createTag(inputValue: string, doneFn: (item: string, mode: 'add-unique') => void) {
   const newTag = inputValue.trim();
   if (newTag && !allTagsOptions.value.includes(newTag)) {
@@ -294,7 +274,6 @@ function createTag(inputValue: string, doneFn: (item: string, mode: 'add-unique'
   doneFn(newTag, 'add-unique');
 }
 
-// Carga el nodo en la copia local cuando cambia la prop.
 watch(() => props.node, (newNode) => {
   if (newNode) {
     localNode.value = JSON.parse(JSON.stringify(newNode));
@@ -312,8 +291,6 @@ watch(() => props.node, (newNode) => {
   }
 }, { immediate: true, deep: true });
 
-
-// Nueva función para confirmar y eliminar el nodo
 function confirmDeleteNode() {
   if (!localNode.value) return;
   $q.dialog({
@@ -331,7 +308,7 @@ function confirmDeleteNode() {
   });
 }
 
-async function saveChanges() { // La hacemos async
+async function saveChanges() {
   if (props.node && localNode.value) {
     const paragraphNumberToSave = localNode.value.data.paragraphNumber;
 
@@ -357,19 +334,13 @@ async function saveChanges() { // La hacemos async
       return;
     }
 
-    // Procesar las opciones de salida para crear nuevos nodos si es necesario.
     if (localNode.value.choices) {
       for (const choice of localNode.value.choices) {
         if (choice.targetNodeId === '--CREATE-NEW--') {
-          // [CAMBIO] Recibimos el objeto del nodo completo
           const newNode = await nodesStore.createNodeAndConnect(props.node.id, choice);
-
-          // [MEJORA] Comprobamos que el nodo se creó correctamente
           if (newNode) {
-            // Asignamos el ID a la choice para que el guardado sea correcto
             choice.targetNodeId = newNode.id;
           } else {
-            // Si algo falla, evitamos que la choice quede en un estado inválido
             choice.targetNodeId = '';
           }
         }
@@ -378,7 +349,6 @@ async function saveChanges() { // La hacemos async
 
     if (localNode.value.choices) {
       for (const choice of localNode.value.choices) {
-        // Por ahora, solo las 'simple' choices tienen un sourceHandle editable.
         if (choice.type === 'simple' && choice.targetNodeId && choice.sourceHandle) {
           const simpleChoice = choice as SimpleChoice;
           nodesStore.updateEdgeSourceHandle(
@@ -387,7 +357,6 @@ async function saveChanges() { // La hacemos async
             simpleChoice.sourceHandle
           );
         }
-        // Aquí podrías añadir lógica para otros tipos de 'choice' si también tuvieran handles.
       }
     }
 
@@ -407,15 +376,22 @@ async function saveChanges() { // La hacemos async
   flex-direction: column;
 }
 
-/* Estilos para el modo pantalla completa */
 .node-editor-panel.fullscreen {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 3000; /* Asegurarse de que esté por encima de todo */
+  z-index: 3000;
   border-radius: 0;
+}
+
+.image-preview-container {
+  position: relative; /* Necesario para que el .fit del placeholder funcione */
+  min-height: 100px;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
 }
 
 .node-content {

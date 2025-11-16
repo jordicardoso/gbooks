@@ -1,63 +1,88 @@
-<!-- src/components/MapNode.vue (NUEVO) -->
+<!-- src/components/MapNode.vue -->
 <template>
   <div
     class="map-node"
     :style="nodeStyle"
+    draggable="true"
+    @dragstart="onDragStart"
     :title="node.label"
   >
-    <q-icon name="location_on" size="sm" class="map-node-icon" />
-    <q-tooltip anchor="top middle" self="bottom middle" :offset="[10, 10]">
-      {{ node.label }}
-    </q-tooltip>
+    <q-icon
+      :name="node.data.icon || 'place'"
+      size="24px"
+      class="map-node-icon"
+      :style="{ color: node.data.color || 'white' }"
+    />
+    <div class="map-node-label">{{ node.label }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, type PropType } from 'vue';
+import { computed } from 'vue';
 import type { BookNode } from 'src/stores/types';
 
-const props = defineProps({
-  node: {
-    type: Object as PropType<BookNode>,
-    required: true,
-  },
-});
+const props = defineProps<{
+  node: BookNode;
+}>();
 
+// Calcula la posición absoluta del nodo en el mapa
 const nodeStyle = computed(() => {
-  if (!props.node.data.mapPosition) return {};
+  if (!props.node.data.mapPosition) {
+    return { display: 'none' };
+  }
+  const backgroundColor = 'rgba(255, 255, 255, 0.1)';
   return {
-    position: 'absolute',
     left: `${props.node.data.mapPosition.x}%`,
     top: `${props.node.data.mapPosition.y}%`,
-    transform: 'translate(-50%, -50%)', // Centra el nodo en el cursor
-    '--node-color': props.node.data.color || '#795548',
+    backgroundColor: backgroundColor,
   };
 });
+
+/**
+ * [LA CLAVE] Al empezar a arrastrar, guardamos el ID del nodo.
+ * La función handleDrop del padre (BookMap.vue) lo recogerá.
+ */
+function onDragStart(event: DragEvent) {
+  if (event.dataTransfer) {
+    event.dataTransfer.setData('text/plain', props.node.id);
+    event.dataTransfer.effectAllowed = 'move';
+  }
+}
 </script>
 
 <style lang="scss" scoped>
 .map-node {
+  position: absolute;
+  transform: translate(-50%, -50%); // Centra el nodo en el cursor
+  padding: 4px 8px;
+  border-radius: 16px;
+  color: white;
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background-color: rgba(0, 0, 0, 0.5);
-  border: 2px solid var(--node-color);
-  cursor: pointer;
+  cursor: grab;
+  user-select: none; // Evita que el texto se seleccione al arrastrar
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 
-  &:hover {
-    transform: translate(-50%, -50%) scale(1.2);
-    box-shadow: 0 0 15px var(--node-color);
-    z-index: 10;
+  &:active {
+    cursor: grabbing;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    transform: translate(-50%, -50%) scale(1.05);
   }
+}
 
-  .map-node-icon {
-    color: var(--node-color);
-    filter: drop-shadow(0 0 3px rgba(0,0,0,0.8));
-  }
+.map-node-icon {
+  margin-right: 5px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+.map-node-label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
 }
 </style>
