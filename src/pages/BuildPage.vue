@@ -2,7 +2,7 @@
 <template>
   <q-page class="row items-center justify-evenly">
     <!-- El contenido de tu página de inicio va aquí -->
-    <div class="text-h4 text-white">Build</div>
+    <div class="text-h4 text-white">{{ $t('buildPage.title') }}</div>
   </q-page>
 </template>
 

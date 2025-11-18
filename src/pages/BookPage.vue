@@ -15,7 +15,7 @@
       <q-tab name="meta" :label="$t('bookPage.tabs.metadata')" />
       <q-tab name="character" :label="$t('bookPage.tabs.characterSheet')" />
       <q-tab name="maps" :label="$t('bookPage.tabs.maps')" />
-      <q-tab name="preview" :label="$t('bookPage.tabs.preview')"/>
+      <q-tab name="preview" :label="$t('bookPage.tabs.preview')" />
       <q-tab name="testing" :label="$t('bookPage.tabs.testing')" />
     </q-tabs>
 
@@ -28,7 +28,7 @@
           <q-select
             v-model="filterNodeTypes"
             :options="nodeTypeOptions"
-            label="Filtrar por Tipo"
+            :label="$t('bookPage.filters.filterByType')"
             multiple
             dense
             dark
@@ -52,7 +52,7 @@
           <q-select
             v-model="filterTags"
             :options="allAvailableTags"
-            label="Filtrar por Etiqueta"
+            :label="$t('bookPage.filters.filterByTag')"
             multiple
             dense
             dark
@@ -72,14 +72,14 @@
             dense
             icon="close"
             @click="clearFilters"
-            title="Limpiar filtros"
+            :title="$t('bookPage.filters.clearFilters')"
           />
         </q-toolbar>
 
         <BookGraph
           ref="bookGraphRef"
           v-if="bookStore.activeBook"
-          style="position: absolute; top: 48px; width: 100%; height: 95%;"
+          style="position: absolute; top: 48px; width: 100%; height: 95%"
         />
       </q-tab-panel>
       <q-tab-panel name="assets" class="q-pa-none">
@@ -94,12 +94,15 @@
 
       <!-- Panel de Mapas -->
       <q-tab-panel name="maps" class="q-pa-none">
-        <BookMap ref="bookMapRef" v-if="props.id" :book-id="props.id"/>
+        <BookMap ref="bookMapRef" v-if="props.id" :book-id="props.id" />
       </q-tab-panel>
 
       <!-- ... (resto de paneles) ... -->
-      <q-tab-panel name="preview" class="fit col q-pa-none column" style="flex: 1; min-height: 0;">
-        <BookPreview v-if="props.id" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"/>
+      <q-tab-panel name="preview" class="fit col q-pa-none column" style="flex: 1; min-height: 0">
+        <BookPreview
+          v-if="props.id"
+          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%"
+        />
       </q-tab-panel>
       <q-tab-panel name="testing" class="q-pa-none">
         <TestingPage />
@@ -112,7 +115,7 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted, watch, computed } from 'vue';
-import { useRouter} from 'vue-router';
+import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { useBookStore } from 'src/stores/book-store';
@@ -146,40 +149,46 @@ const filterNodeTypes = ref<string[]>([]);
 const filterTags = ref<string[]>([]);
 
 const nodeTypeOptions = [
-  { label: 'Inicio', value: 'start' },
-  { label: 'Párrafo', value: 'story' },
-  { label: 'Final', value: 'end' },
-  { label: 'Localización', value: 'location' },
+  { label: t('bookPage.filters.types.start'), value: 'start' },
+  { label: t('bookPage.filters.types.story'), value: 'story' },
+  { label: t('bookPage.filters.types.end'), value: 'end' },
+  { label: t('bookPage.filters.types.location'), value: 'location' },
 ];
 
 const allAvailableTags = computed(() => {
   const tags = new Set<string>();
-  nodesStore.nodes.forEach(node => {
-    node.data?.tags?.forEach(tag => tags.add(tag));
+  nodesStore.nodes.forEach((node) => {
+    node.data?.tags?.forEach((tag) => tags.add(tag));
   });
   return Array.from(tags).sort();
 });
 
-const isFilterActive = computed(() => filterNodeTypes.value.length > 0 || filterTags.value.length > 0);
+const isFilterActive = computed(
+  () => filterNodeTypes.value.length > 0 || filterTags.value.length > 0,
+);
 
 function clearFilters() {
   filterNodeTypes.value = [];
   filterTags.value = [];
 }
 
-watch([filterNodeTypes, filterTags], ([types, tags]) => {
-  nodesStore.applyFilters({ types, tags });
-}, { deep: true });
+watch(
+  [filterNodeTypes, filterTags],
+  ([types, tags]) => {
+    nodesStore.applyFilters({ types, tags });
+  },
+  { deep: true },
+);
 
 const imageAssetOptions = computed(() =>
   assetsStore.assets
-    .filter(asset => asset.type === 'image')
-    .map(asset => ({
+    .filter((asset) => asset.type === 'image')
+    .map((asset) => ({
       id: asset.id,
       name: asset.name,
       category: asset.category,
-      src: assetsStore.getAssetUrl(asset.filename)
-    }))
+      src: assetsStore.getAssetUrl(asset.filename),
+    })),
 );
 
 const coverImageUrl = computed(() => {
@@ -188,13 +197,17 @@ const coverImageUrl = computed(() => {
   return asset ? assetsStore.getAssetUrl(asset.filename) : null;
 });
 
-watch(() => props.id, (newBookId) => {
-  if (newBookId) {
-    bookStore.loadBookById(newBookId);
-  } else {
-    bookStore.clearBook();
-  }
-}, { immediate: true });
+watch(
+  () => props.id,
+  (newBookId) => {
+    if (newBookId) {
+      bookStore.loadBookById(newBookId);
+    } else {
+      bookStore.clearBook();
+    }
+  },
+  { immediate: true },
+);
 
 watch(tab, (newTab, oldTab) => {
   if (newTab !== 'design' && oldTab === 'design') {

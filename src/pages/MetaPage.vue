@@ -1,7 +1,7 @@
 <!-- src/pages/MetaPage.vue -->
 <template>
   <q-page padding>
-    <div v-if="bookStore.activeBook" class="q-gutter-y-md" style="max-width: 700px; margin: 0 auto;">
+    <div v-if="bookStore.activeBook" class="q-gutter-y-md" style="max-width: 700px; margin: 0 auto">
       <q-input
         filled
         dark
@@ -43,7 +43,7 @@
         <template #option="scope">
           <q-item v-bind="scope.itemProps">
             <q-item-section avatar>
-              <q-img :src="scope.opt.src" style="width: 50px; height: 50px;" fit="cover" />
+              <q-img :src="scope.opt.src" style="width: 50px; height: 50px" fit="cover" />
             </q-item-section>
             <q-item-section>
               <q-item-label>{{ scope.opt.name }}</q-item-label>
@@ -66,16 +66,16 @@
           v-if="coverImageUrl"
           :src="coverImageUrl"
           fit="contain"
-          style="max-height: 400px; border-radius: 4px; background-color: rgba(0,0,0,0.2);"
+          style="max-height: 400px; border-radius: 4px; background-color: rgba(0, 0, 0, 0.2)"
         />
-        <div v-else class="text-center text-grey-6 q-pa-xl bg-grey-9" style="border-radius: 4px;">
+        <div v-else class="text-center text-grey-6 q-pa-xl bg-grey-9" style="border-radius: 4px">
           <q-icon name="image" size="3rem" />
           <p class="q-mt-sm text-caption">{{ $t('bookPage.meta.noCoverSelected') }}</p>
         </div>
       </div>
     </div>
     <div v-else class="text-center text-grey-6 q-mt-xl">
-      <p>No hay un libro activo.</p>
+      <p>{{ $t('bookPage.bookNotFound') }}</p>
     </div>
   </q-page>
 </template>
@@ -90,13 +90,13 @@ const assetsStore = useAssetsStore();
 
 const imageAssetOptions = computed(() =>
   assetsStore.assets
-    .filter(asset => asset.type === 'image')
-    .map(asset => ({
+    .filter((asset) => asset.type === 'image')
+    .map((asset) => ({
       id: asset.id,
       name: asset.name,
       category: asset.category,
-      src: assetsStore.getAssetUrl(asset.filename)
-    }))
+      src: assetsStore.getAssetUrl(asset.filename),
+    })),
 );
 
 const coverImageUrl = computed(() => {

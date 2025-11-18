@@ -34,21 +34,22 @@ export default {
       title: 'Выберите тип варианта',
       simple: 'Простой выбор',
       conditional: 'Проверка условия (Характеристика/Предмет/Событие)',
-      diceRoll: 'Бросок кубиков'
+      diceRoll: 'Бросок кубиков',
     },
     description: {
       simple: 'Напрямую к параграфу: {paragraph}',
       conditional: 'Если {subject} {operator} {value} → {success} | Иначе → {failure}',
       diceRoll: 'Бросок {dice} с {count} исходами.',
-      unknown: 'Неизвестный вариант'
-    }
+      unknown: 'Неизвестный вариант',
+    },
   },
 
   // Тексты для диалогов подтверждения
   dialogs: {
     deleteBook: {
       title: 'Подтвердить удаление',
-      message: 'Вы уверены, что хотите удалить книгу "<strong>{bookName}</strong>"? Это действие необратимо и удалит все ее файлы.',
+      message:
+        'Вы уверены, что хотите удалить книгу "<strong>{bookName}</strong>"? Это действие необратимо и удалит все ее файлы.',
       okButton: 'Удалить',
     },
   },
@@ -77,7 +78,8 @@ export default {
     dialogs: {
       deleteAsset: {
         title: 'Подтвердить удаление',
-        message: 'Вы уверены, что хотите удалить ассет "<b>{assetName}</b>"? Это действие необратимо.',
+        message:
+          'Вы уверены, что хотите удалить ассет "<b>{assetName}</b>"? Это действие необратимо.',
         okButton: 'Удалить',
         cancelButton: 'Отмена',
       },
@@ -95,7 +97,7 @@ export default {
           bottom: 'Низ',
           right: 'Справа',
           left: 'Слева',
-          top: 'Верх'
+          top: 'Верх',
         },
         condition: 'Условие',
         stat: 'Характеристика',
@@ -111,11 +113,11 @@ export default {
         conditionPlaceholder: 'Условие (напр., 1-3, 4, 5-6)',
         buttons: {
           cancel: 'Отмена',
-          save: 'Сохранить'
+          save: 'Сохранить',
         },
-        newNode: 'Новый узел'
+        newNode: 'Новый узел',
       },
-    }
+    },
   },
   bookPage: {
     // Общие и панель инструментов
@@ -148,6 +150,17 @@ export default {
       coverPreviewTitle: 'Предпросмотр обложки:',
       noCoverSelected: 'Изображение обложки не выбрано',
     },
+    filters: {
+      filterByType: 'Фильтр по типу',
+      filterByTag: 'Фильтр по тегу',
+      clearFilters: 'Очистить фильтры',
+      types: {
+        start: 'Начало',
+        story: 'Фрагмент',
+        end: 'Конец',
+        location: 'Локация',
+      },
+    },
 
     // Сообщения, когда книга не найдена
     bookNotFound: 'Книга не найдена',
@@ -172,7 +185,7 @@ export default {
       },
       warnings: {
         statNotFound: 'Попытка применить эффект к несуществующей характеристике: "{statName}"',
-      }
+      },
     },
     // Тексты для SheetDesigner.vue (диалог)
     designer: {
@@ -223,7 +236,7 @@ export default {
     // Тексты для StatsSection.vue
     statsSection: {
       addTooltip: 'Добавить характеристику',
-      noStats: '(Нет характеристик. Нажмите \'+\', чтобы добавить.)',
+      noStats: "(Нет характеристик. Нажмите '+', чтобы добавить.)",
       editTooltip: 'Изменить диапазон (мин/макс)',
       progressTooltip: '{current} / {max}',
       rangeLabel: 'Диапазон: {min} ↔ {max}',
@@ -250,8 +263,8 @@ export default {
     itemSection: {
       addSlotTooltip: 'Добавить слот снаряжения',
       addItemTooltip: 'Добавить предмет',
-      noSlots: '(Нет слотов снаряжения. Нажмите \'+\', чтобы добавить.)',
-      noItems: '(Пусто. Нажмите \'+\', чтобы добавить предмет.)',
+      noSlots: "(Нет слотов снаряжения. Нажмите '+', чтобы добавить.)",
+      noItems: "(Пусто. Нажмите '+', чтобы добавить предмет.)",
       emptySlot: 'Пусто',
       editTooltip: 'Изменить',
       equipTooltip: 'Надеть',
@@ -271,7 +284,7 @@ export default {
     // Тексты для EventsSection.vue
     eventsSection: {
       addTooltip: 'Добавить веху события',
-      noEvents: '(Нет вех. Нажмите \'+\', чтобы добавить.)',
+      noEvents: "(Нет вех. Нажмите '+', чтобы добавить.)",
       editTooltip: 'Изменить',
       removeTooltip: 'Удалить',
       dialog: {
@@ -304,7 +317,8 @@ export default {
   },
   bookPreview: {
     title: 'Предпросмотр книги',
-    subtitle: 'Создайте PDF-предпросмотр вашей книги. Содержимое будет отсортировано по номеру параграфа.',
+    subtitle:
+      'Создайте PDF-предпросмотр вашей книги. Содержимое будет отсортировано по номеру параграфа.',
     generateButton: 'Создать PDF',
     placeholder: 'Нажмите "Создать PDF", чтобы увидеть предпросмотр.',
     generating: 'Создание PDF, это может занять некоторое время...',
@@ -317,6 +331,32 @@ export default {
       untitled: 'Без названия',
       noDescription: '(Без описания)',
       pageNumbering: 'Страница {currentPage} из {totalPages}',
-    }
+    },
+  },
+  bookMap: {
+    drawerTitle: 'Локации',
+    unplacedLabel: 'Не размещено',
+    allPlaced: 'Все локации размещены.',
+    selectMapLabel: 'Выберите общую карту',
+    noMapSelected: 'Выберите карту, чтобы начать.',
+    dragDropHint: 'Перетащите локации сюда',
+  },
+  buildPage: {
+    title: 'Сборка',
+  },
+  helpPage: {
+    title: 'Помощь',
+  },
+  indexPage: {
+    title: 'Главная страница',
+  },
+  testingPage: {
+    title: 'Страница тестирования',
+    content: 'Это содержимое вкладки тестирования.',
+    futureTools: 'Здесь вы сможете добавить свои инструменты или тесты в будущем.',
+  },
+  errorNotFound: {
+    errorMessage: 'Упс. Здесь ничего нет...',
+    goHome: 'На главную',
   },
 };

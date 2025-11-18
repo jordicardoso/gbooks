@@ -2,18 +2,13 @@
 <template>
   <q-page class="row no-wrap">
     <!-- Panel lateral con localizaciones sin posicionar -->
-    <q-drawer
-      v-model="isDrawerOpen"
-      :width="250"
-      bordered
-      class="bg-grey-9 text-white column"
-    >
+    <q-drawer v-model="isDrawerOpen" :width="250" bordered class="bg-grey-9 text-white column">
       <q-toolbar class="bg-grey-10">
-        <q-toolbar-title>Localizaciones</q-toolbar-title>
+        <q-toolbar-title>{{ $t('bookMap.drawerTitle') }}</q-toolbar-title>
       </q-toolbar>
       <q-scroll-area class="col">
         <q-list dark separator>
-          <q-item-label header>Sin Posicionar</q-item-label>
+          <q-item-label header>{{ $t('bookMap.unplacedLabel') }}</q-item-label>
           <q-item
             v-for="loc in unplacedLocations"
             :key="loc.id"
@@ -32,7 +27,7 @@
           </q-item>
           <q-item v-if="!unplacedLocations.length">
             <q-item-section class="text-grey-6 text-center">
-              Todas las localizaciones están en su sitio.
+              {{ $t('bookMap.allPlaced') }}
             </q-item-section>
           </q-item>
         </q-list>
@@ -45,26 +40,21 @@
         <q-select
           v-model="currentMapId"
           :options="mapAssetOptions"
-          label="Seleccionar Mapa General"
-          dark dense clearable emit-value map-options
+          :label="$t('bookMap.selectMapLabel')"
+          dark
+          dense
+          clearable
+          emit-value
+          map-options
           class="q-mb-md"
         />
       </div>
 
-      <div
-        class="col map-container bg-grey-10"
-        @dragover.prevent
-        @drop="handleDrop"
-      >
-        <q-img
-          v-if="currentMapUrl"
-          :src="currentMapUrl"
-          fit="contain"
-          class="map-image"
-        />
+      <div class="col map-container bg-grey-10" @dragover.prevent @drop="handleDrop">
+        <q-img v-if="currentMapUrl" :src="currentMapUrl" fit="contain" class="map-image" />
         <div v-else class="fit flex flex-center text-grey-6">
           <q-icon name="map" size="4rem" />
-          <p class="q-mt-md">Selecciona un mapa para empezar.</p>
+          <p class="q-mt-md">{{ $t('bookMap.noMapSelected') }}</p>
         </div>
 
         <!-- Renderizar nodos ya posicionados en este mapa -->
@@ -101,8 +91,8 @@ const currentMapId = ref<string | null>(null);
 
 const mapAssetOptions = computed(() =>
   assets.value
-    .filter(asset => asset.category === 'map' && asset.type === 'image')
-    .map(asset => ({ label: asset.name, value: asset.id }))
+    .filter((asset) => asset.category === 'map' && asset.type === 'image')
+    .map((asset) => ({ label: asset.name, value: asset.id })),
 );
 
 const currentMapUrl = computed(() => {
@@ -112,15 +102,13 @@ const currentMapUrl = computed(() => {
 });
 
 const unplacedLocations = computed(() =>
-  nodes.value.filter(n => n.type === 'location' && !n.data.mapPosition)
+  nodes.value.filter((n) => n.type === 'location' && !n.data.mapPosition),
 );
 
 const placedLocations = computed(() =>
-  nodes.value.filter(n =>
-    n.type === 'location' &&
-    n.data.mapPosition &&
-    n.data.mapId === currentMapId.value
-  )
+  nodes.value.filter(
+    (n) => n.type === 'location' && n.data.mapPosition && n.data.mapId === currentMapId.value,
+  ),
 );
 
 // [3. AÑADIDO] Funciones para controlar el panel desde fuera
@@ -136,7 +124,6 @@ defineExpose({
   openDrawer,
   closeDrawer,
 });
-
 
 function handleDragStart(event: DragEvent, nodeId: string) {
   if (event.dataTransfer) {

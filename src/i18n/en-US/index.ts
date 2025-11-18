@@ -34,21 +34,22 @@ export default {
       title: 'Choose an Option Type',
       simple: 'Simple Choice',
       conditional: 'Conditional Check (Stat/Item/Event)',
-      diceRoll: 'Dice Roll'
+      diceRoll: 'Dice Roll',
     },
     description: {
       simple: 'Direct to paragraph: {paragraph}',
       conditional: 'If {subject} {operator} {value} → {success} | Else → {failure}',
       diceRoll: 'Roll {dice} with {count} outcomes.',
-      unknown: 'Unknown option'
-    }
+      unknown: 'Unknown option',
+    },
   },
 
   // Confirmation dialog texts
   dialogs: {
     deleteBook: {
       title: 'Confirm Deletion',
-      message: 'Are you sure you want to delete the book "<strong>{bookName}</strong>"? This action cannot be undone and will delete all its files.',
+      message:
+        'Are you sure you want to delete the book "<strong>{bookName}</strong>"? This action cannot be undone and will delete all its files.',
       okButton: 'Delete',
     },
   },
@@ -77,7 +78,8 @@ export default {
     dialogs: {
       deleteAsset: {
         title: 'Confirm Deletion',
-        message: 'Are you sure you want to delete the asset "<b>{assetName}</b>"? This action cannot be undone.',
+        message:
+          'Are you sure you want to delete the asset "<b>{assetName}</b>"? This action cannot be undone.',
         okButton: 'Delete',
         cancelButton: 'Cancel',
       },
@@ -95,7 +97,7 @@ export default {
           bottom: 'Bottom',
           right: 'Right',
           left: 'Left',
-          top: 'Top'
+          top: 'Top',
         },
         condition: 'Condition',
         stat: 'Stat',
@@ -111,11 +113,11 @@ export default {
         conditionPlaceholder: 'Condition (e.g., 1-3, 4, 5-6)',
         buttons: {
           cancel: 'Cancel',
-          save: 'Save'
+          save: 'Save',
         },
-        newNode: 'New node'
+        newNode: 'New node',
       },
-    }
+    },
   },
   bookPage: {
     // General and toolbar
@@ -148,6 +150,17 @@ export default {
       coverPreviewTitle: 'Cover preview:',
       noCoverSelected: 'No cover image selected',
     },
+    filters: {
+      filterByType: 'Filter by Type',
+      filterByTag: 'Filter by Tag',
+      clearFilters: 'Clear filters',
+      types: {
+        start: 'Start',
+        story: 'Passage',
+        end: 'End',
+        location: 'Location',
+      },
+    },
 
     // Messages for when a book is not found
     bookNotFound: 'Book not found',
@@ -166,18 +179,18 @@ export default {
       designButton: 'Design Sheet',
       designTooltip: 'Add/remove sections (Stats, Inventory...)',
       create: {
-        title: 'This book doesn\'t have a character sheet yet.',
+        title: "This book doesn't have a character sheet yet.",
         subtitle: 'Create one to start defining stats and inventory.',
         button: 'Create Character Sheet',
       },
       warnings: {
         statNotFound: 'Attempt to apply effect to non-existent stat: "{statName}"',
-      }
+      },
     },
     // Texts for SheetDesigner.vue (the dialog)
     designer: {
       title: 'Sheet Designer',
-      subtitle: 'Add, remove, and reorder your sheet\'s sections.',
+      subtitle: "Add, remove, and reorder your sheet's sections.",
       currentSections: 'Current Sections',
       noSections: '(No sections. Click "Add Section" to begin.)',
       addSection: 'Add Section',
@@ -207,7 +220,7 @@ export default {
       },
       promptTitle: {
         title: 'Add "{sectionLabel}"',
-        message: 'Enter a title for this section (e.g., Attributes, Hero\'s Gear, Backpack).',
+        message: "Enter a title for this section (e.g., Attributes, Hero's Gear, Backpack).",
       },
       errors: {
         uniqueKey: 'Error generating unique key. Please try again.',
@@ -223,7 +236,7 @@ export default {
     // Texts for StatsSection.vue
     statsSection: {
       addTooltip: 'Add stat',
-      noStats: '(No stats. Click \'+\' to add one.)',
+      noStats: "(No stats. Click '+' to add one.)",
       editTooltip: 'Edit Range (min/max)',
       progressTooltip: '{current} / {max}',
       rangeLabel: 'Range: {min} ↔ {max}',
@@ -250,8 +263,8 @@ export default {
     itemSection: {
       addSlotTooltip: 'Add equipment slot',
       addItemTooltip: 'Add item',
-      noSlots: '(No equipment slots. Click \'+\' to add one.)',
-      noItems: '(Empty. Click \'+\' to add an item.)',
+      noSlots: "(No equipment slots. Click '+' to add one.)",
+      noItems: "(Empty. Click '+' to add an item.)",
       emptySlot: 'Empty',
       editTooltip: 'Edit',
       equipTooltip: 'Equip',
@@ -271,14 +284,14 @@ export default {
     // Texts for EventsSection.vue
     eventsSection: {
       addTooltip: 'Add event milestone',
-      noEvents: '(No milestones. Click \'+\' to add one.)',
+      noEvents: "(No milestones. Click '+' to add one.)",
       editTooltip: 'Edit',
       removeTooltip: 'Remove',
       dialog: {
         newTitle: 'New Milestone',
         newMessage: 'Enter a name for this milestone (e.g., "The Dragon\'s Cave was found").',
         editTitle: 'Edit Milestone',
-        editMessage: 'Change the milestone\'s name:',
+        editMessage: "Change the milestone's name:",
         confirmRemoveTitle: 'Confirm',
         confirmRemoveMessage: 'Are you sure you want to delete this milestone?',
       },
@@ -317,6 +330,32 @@ export default {
       untitled: 'Untitled',
       noDescription: '(No description)',
       pageNumbering: 'Page {currentPage} of {totalPages}',
-    }
+    },
+  },
+  bookMap: {
+    drawerTitle: 'Locations',
+    unplacedLabel: 'Unplaced',
+    allPlaced: 'All locations are placed.',
+    selectMapLabel: 'Select General Map',
+    noMapSelected: 'Select a map to start.',
+    dragDropHint: 'Drag locations here',
+  },
+  buildPage: {
+    title: 'Build',
+  },
+  helpPage: {
+    title: 'Help',
+  },
+  indexPage: {
+    title: 'Home Page',
+  },
+  testingPage: {
+    title: 'Testing Page',
+    content: 'This is the content of the Testing tab.',
+    futureTools: 'Here you can add your tools or tests in the future.',
+  },
+  errorNotFound: {
+    errorMessage: 'Oops. Nothing here...',
+    goHome: 'Go Home',
   },
 };

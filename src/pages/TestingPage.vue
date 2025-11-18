@@ -1,9 +1,9 @@
 <!-- src/pages/TestingPage.vue -->
 <template>
   <q-page class="q-pa-md bg-blue-grey-9 text-white">
-    <div class="text-h5 q-mb-md">Página de Testing</div>
-    <p>Este es el contenido de la pestaña de Testing.</p>
-    <p>Aquí podrás añadir tus herramientas o pruebas en el futuro.</p>
+    <div class="text-h5 q-mb-md">{{ $t('testingPage.title') }}</div>
+    <p>{{ $t('testingPage.content') }}</p>
+    <p>{{ $t('testingPage.futureTools') }}</p>
   </q-page>
 </template>
 

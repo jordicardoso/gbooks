@@ -34,21 +34,22 @@ export default {
       title: 'Elige un tipo de Opción',
       simple: 'Decisión Simple',
       conditional: 'Prueba Condicional (Stat/Item/Evento)',
-      diceRoll: 'Tirada de Dados'
+      diceRoll: 'Tirada de Dados',
     },
     description: {
       simple: 'Directo a párrafo: {paragraph}',
       conditional: 'Si {subject} {operator} {value} → {success} | Si no → {failure}',
       diceRoll: 'Tirada de {dice} con {count} resultados.',
-      unknown: 'Opción desconocida'
-    }
+      unknown: 'Opción desconocida',
+    },
   },
 
   // Textos para diálogos de confirmación
   dialogs: {
     deleteBook: {
       title: 'Confirmar eliminación',
-      message: '¿Estás seguro de que quieres eliminar el libro "<strong>{bookName}</strong>"? Esta acción no se puede deshacer y borrará todos sus archivos.',
+      message:
+        '¿Estás seguro de que quieres eliminar el libro "<strong>{bookName}</strong>"? Esta acción no se puede deshacer y borrará todos sus archivos.',
       okButton: 'Eliminar',
     },
     editChoice: {
@@ -65,7 +66,7 @@ export default {
         bottom: 'Abajo',
         right: 'Derecha',
         left: 'Izquierda',
-        top: 'Arriba'
+        top: 'Arriba',
       },
       condition: 'Condición',
       stat: 'Stat',
@@ -81,10 +82,10 @@ export default {
       conditionPlaceholder: 'Condición (ej: 1-3, 4, 5-6)',
       buttons: {
         cancel: 'Cancelar',
-        save: 'Guardar'
+        save: 'Guardar',
       },
-      newNode: 'Nuevo nodo'
-    }
+      newNode: 'Nuevo nodo',
+    },
   },
   assetsPage: {
     title: 'Gestor de Assets',
@@ -111,11 +112,12 @@ export default {
     dialogs: {
       deleteAsset: {
         title: 'Confirmar eliminación',
-        message: '¿Estás seguro de que quieres eliminar el asset "<b>{assetName}</b>"? Esta acción no se puede deshacer.',
+        message:
+          '¿Estás seguro de que quieres eliminar el asset "<b>{assetName}</b>"? Esta acción no se puede deshacer.',
         okButton: 'Eliminar',
         cancelButton: 'Cancelar',
-      }
-    }
+      },
+    },
   },
   bookPage: {
     // Generales y de la barra de herramientas
@@ -148,6 +150,17 @@ export default {
       coverPreviewTitle: 'Vista previa de la portada:',
       noCoverSelected: 'Sin imagen de portada seleccionada',
     },
+    filters: {
+      filterByType: 'Filtrar por Tipo',
+      filterByTag: 'Filtrar por Etiqueta',
+      clearFilters: 'Limpiar filtros',
+      types: {
+        start: 'Inicio',
+        story: 'Párrafo',
+        end: 'Final',
+        location: 'Localización',
+      },
+    },
 
     // Mensajes para cuando no se encuentra un libro
     bookNotFound: 'Libro no encontrado',
@@ -172,7 +185,7 @@ export default {
       },
       warnings: {
         statNotFound: 'Intento de aplicar efecto a una estadística no existente: "{statName}"',
-      }
+      },
     },
     // Textos para SheetDesigner.vue (el diálogo)
     designer: {
@@ -207,7 +220,8 @@ export default {
       },
       promptTitle: {
         title: 'Añadir "{sectionLabel}"',
-        message: 'Introduce un título para esta sección (ej: Atributos, Equipo del Héroe, Mochila).',
+        message:
+          'Introduce un título para esta sección (ej: Atributos, Equipo del Héroe, Mochila).',
       },
       errors: {
         uniqueKey: 'Error al generar clave única. Inténtalo de nuevo.',
@@ -223,7 +237,7 @@ export default {
     // Textos para StatsSection.vue
     statsSection: {
       addTooltip: 'Añadir estadística',
-      noStats: '(No hay estadísticas. Haz clic en \'+\' para añadir una.)',
+      noStats: "(No hay estadísticas. Haz clic en '+' para añadir una.)",
       editTooltip: 'Editar Rango (min/max)',
       progressTooltip: '{current} / {max}',
       rangeLabel: 'Rango: {min} ↔ {max}',
@@ -250,8 +264,8 @@ export default {
     itemSection: {
       addSlotTooltip: 'Añadir ranura de equipo',
       addItemTooltip: 'Añadir objeto',
-      noSlots: '(No hay ranuras de equipo. Haz clic en \'+\' para añadir una.)',
-      noItems: '(Vacío. Haz clic en \'+\' para añadir un objeto.)',
+      noSlots: "(No hay ranuras de equipo. Haz clic en '+' para añadir una.)",
+      noItems: "(Vacío. Haz clic en '+' para añadir un objeto.)",
       emptySlot: 'Vacío',
       editTooltip: 'Editar',
       equipTooltip: 'Equipar',
@@ -271,12 +285,13 @@ export default {
     // Textos para EventsSection.vue
     eventsSection: {
       addTooltip: 'Añadir hito de evento',
-      noEvents: '(No hay hitos. Haz clic en \'+\' para añadir uno.)',
+      noEvents: "(No hay hitos. Haz clic en '+' para añadir uno.)",
       editTooltip: 'Editar',
       removeTooltip: 'Eliminar',
       dialog: {
         newTitle: 'Nuevo Hito',
-        newMessage: 'Introduce un nombre para este hito (ej: "La Cueva del Dragón fue encontrada").',
+        newMessage:
+          'Introduce un nombre para este hito (ej: "La Cueva del Dragón fue encontrada").',
         editTitle: 'Editar Hito',
         editMessage: 'Cambia el nombre del hito:',
         confirmRemoveTitle: 'Confirmar',
@@ -304,7 +319,8 @@ export default {
   },
   bookPreview: {
     title: 'Vista Previa del Libro',
-    subtitle: 'Genera una vista previa en PDF de tu libro. El contenido se ordenará por el número de párrafo.',
+    subtitle:
+      'Genera una vista previa en PDF de tu libro. El contenido se ordenará por el número de párrafo.',
     generateButton: 'Generar PDF',
     placeholder: 'Haz clic en "Generar PDF" para ver la previsualización.',
     generating: 'Generando PDF, esto puede tardar un momento...',
@@ -317,6 +333,32 @@ export default {
       untitled: 'Sin Título',
       noDescription: '(Sin descripción)',
       pageNumbering: 'Página {currentPage} de {totalPages}',
-    }
+    },
+  },
+  bookMap: {
+    drawerTitle: 'Localizaciones',
+    unplacedLabel: 'Sin Posicionar',
+    allPlaced: 'Todas las localizaciones están en su sitio.',
+    selectMapLabel: 'Seleccionar Mapa General',
+    noMapSelected: 'Selecciona un mapa para empezar.',
+    dragDropHint: 'Arrastra localizaciones aquí',
+  },
+  buildPage: {
+    title: 'Construcción',
+  },
+  helpPage: {
+    title: 'Ayuda',
+  },
+  indexPage: {
+    title: 'Página de Inicio',
+  },
+  testingPage: {
+    title: 'Página de Testing',
+    content: 'Este es el contenido de la pestaña de Testing.',
+    futureTools: 'Aquí podrás añadir tus herramientas o pruebas en el futuro.',
+  },
+  errorNotFound: {
+    errorMessage: 'Vaya. Nada por aquí...',
+    goHome: 'Ir al Inicio',
   },
 };

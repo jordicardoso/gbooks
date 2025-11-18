@@ -27,8 +27,10 @@ const { locale } = useI18n({ useScope: 'global' });
 
 // Opciones de idioma disponibles
 const languageOptions = [
-  { value: 'es', label: 'Español' },
+  { value: 'es-ES', label: 'Español' },
+  { value: 'ca-ES', label: 'Català' },
   { value: 'en-US', label: 'English' },
+  { value: 'ru-RU', label: 'Русский' },
 ];
 
 // Observamos cambios en la variable 'locale'

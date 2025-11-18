@@ -31,30 +31,31 @@ export default {
     editTooltip: 'Editar',
     deleteTooltip: 'Eliminar',
     addDialog: {
-      title: 'Tria un tipus d\'Opció',
+      title: "Tria un tipus d'Opció",
       simple: 'Decisió Simple',
       conditional: 'Prova Condicional (Estadística/Objecte/Esdeveniment)',
-      diceRoll: 'Llançament de Daus'
+      diceRoll: 'Llançament de Daus',
     },
     description: {
       simple: 'Directe al paràgraf: {paragraph}',
       conditional: 'Si {subject} {operator} {value} → {success} | Si no → {failure}',
       diceRoll: 'Llançament de {dice} amb {count} resultats.',
-      unknown: 'Opció desconeguda'
-    }
+      unknown: 'Opció desconeguda',
+    },
   },
 
   // Textos per a diàlegs de confirmació
   dialogs: {
     deleteBook: {
       title: 'Confirmar eliminació',
-      message: 'Estàs segur que vols eliminar el llibre "<strong>{bookName}</strong>"? Aquesta acció no es pot desfer i esborrarà tots els seus fitxers.',
+      message:
+        'Estàs segur que vols eliminar el llibre "<strong>{bookName}</strong>"? Aquesta acció no es pot desfer i esborrarà tots els seus fitxers.',
       okButton: 'Eliminar',
     },
     editChoice: {
       titleEdit: 'Editar Opció de Sortida',
       titleNew: 'Nova Opció de Sortida',
-      label: 'Text de l\'opció (el que veu el jugador)',
+      label: "Text de l'opció (el que veu el jugador)",
       labelRequired: 'El text és obligatori',
       destinationNode: 'Node de destinació',
       destinationNodeRequired: 'Has de seleccionar un node de destinació',
@@ -65,7 +66,7 @@ export default {
         bottom: 'A baix',
         right: 'Dreta',
         left: 'Esquerra',
-        top: 'A dalt'
+        top: 'A dalt',
       },
       condition: 'Condició',
       stat: 'Estadística',
@@ -81,41 +82,42 @@ export default {
       conditionPlaceholder: 'Condició (ex: 1-3, 4, 5-6)',
       buttons: {
         cancel: 'Cancel·lar',
-        save: 'Desar'
+        save: 'Desar',
       },
-      newNode: 'Node nou'
-    }
+      newNode: 'Node nou',
+    },
   },
   assetsPage: {
-    title: 'Gestor d\'Assets',
+    title: "Gestor d'Assets",
     addAsset: 'Afegir Asset',
     searchPlaceholder: 'Cercar per nom...',
     categoryLabel: 'Categoria',
     typeLabel: 'Tipus',
     dateAdded: 'Afegit',
     noBookSelected: 'Selecciona un llibre per gestionar els seus assets.',
-    noAssetsFound: 'No s\'han trobat assets amb els filtres actuals.',
+    noAssetsFound: "No s'han trobat assets amb els filtres actuals.",
     notifications: {
       noBookError: 'Error: No hi ha cap llibre seleccionat.',
       saving: 'Desant asset...',
       savedSuccess: 'Asset "{assetName}" afegit correctament.',
-      saveFailed: 'No s\'ha pogut desar l\'asset.',
-      savedError: 'Error en afegir l\'asset.',
+      saveFailed: "No s'ha pogut desar l'asset.",
+      savedError: "Error en afegir l'asset.",
       updating: 'Actualitzant asset...',
       updatedSuccess: 'Asset "{assetName}" actualitzat correctament.',
-      updatedError: 'Error en actualitzar l\'asset.',
+      updatedError: "Error en actualitzar l'asset.",
       deleting: 'Eliminant asset...',
       deletedSuccess: 'Asset "{assetName}" eliminat.',
-      deletedError: 'Error en eliminar l\'asset.',
+      deletedError: "Error en eliminar l'asset.",
     },
     dialogs: {
       deleteAsset: {
         title: 'Confirmar eliminació',
-        message: 'Estàs segur que vols eliminar l\'asset "<b>{assetName}</b>"? Aquesta acció no es pot desfer.',
+        message:
+          'Estàs segur que vols eliminar l\'asset "<b>{assetName}</b>"? Aquesta acció no es pot desfer.',
         okButton: 'Eliminar',
         cancelButton: 'Cancel·lar',
-      }
-    }
+      },
+    },
   },
   bookPage: {
     // Generals i de la barra d'eines
@@ -148,6 +150,17 @@ export default {
       coverPreviewTitle: 'Vista prèvia de la portada:',
       noCoverSelected: 'Sense imatge de portada seleccionada',
     },
+    filters: {
+      filterByType: 'Filtrar per Tipus',
+      filterByTag: 'Filtrar per Etiqueta',
+      clearFilters: 'Netejar filtres',
+      types: {
+        start: 'Inici',
+        story: 'Paràgraf',
+        end: 'Final',
+        location: 'Localització',
+      },
+    },
 
     // Missatges per quan no es troba un llibre
     bookNotFound: 'Llibre no trobat',
@@ -167,12 +180,12 @@ export default {
       designTooltip: 'Afegir/eliminar seccions (Estadístiques, Inventari...)',
       create: {
         title: 'Aquest llibre encara no té una fitxa de personatge.',
-        subtitle: 'Crea\'n una per començar a definir les estadístiques i l\'inventari.',
+        subtitle: "Crea'n una per començar a definir les estadístiques i l'inventari.",
         button: 'Crear Fitxa de Personatge',
       },
       warnings: {
         statNotFound: 'Intent d\'aplicar efecte a una estadística no existent: "{statName}"',
-      }
+      },
     },
     // Textos per a SheetDesigner.vue (el diàleg)
     designer: {
@@ -188,7 +201,7 @@ export default {
         title: 'Tria un tipus de secció',
         templates: {
           stats: {
-            label: 'Bloc d\'Estadístiques',
+            label: "Bloc d'Estadístiques",
             description: 'Valors numèrics (ex: Vida, Força, Mana).',
           },
           itemSlots: {
@@ -200,14 +213,15 @@ export default {
             description: 'Una llista simple per a objectes, consumibles, etc.',
           },
           events: {
-            label: 'Cronologia d\'Esdeveniments',
+            label: "Cronologia d'Esdeveniments",
             description: 'Una llista de successos importants a la història.',
           },
         },
       },
       promptTitle: {
         title: 'Afegir "{sectionLabel}"',
-        message: 'Introdueix un títol per a aquesta secció (ex: Atributs, Equip de l\'Heroi, Motxilla).',
+        message:
+          "Introdueix un títol per a aquesta secció (ex: Atributs, Equip de l'Heroi, Motxilla).",
       },
       errors: {
         uniqueKey: 'Error en generar la clau única. Intenta-ho de nou.',
@@ -216,14 +230,14 @@ export default {
         slots: 'Equip (Ranures)',
         list: 'Inventari (Llista)',
         stats: 'Estadístiques',
-        events: 'Cronologia d\'Esdeveniments',
+        events: "Cronologia d'Esdeveniments",
         unknown: 'Tipus: {type}',
       },
     },
     // Textos per a StatsSection.vue
     statsSection: {
       addTooltip: 'Afegir estadística',
-      noStats: '(No hi ha estadístiques. Fes clic a \'+\' per afegir-ne.)',
+      noStats: "(No hi ha estadístiques. Fes clic a '+' per afegir-ne.)",
       editTooltip: 'Editar Rang (min/max)',
       progressTooltip: '{current} / {max}',
       rangeLabel: 'Rang: {min} ↔ {max}',
@@ -232,7 +246,7 @@ export default {
         titleNew: 'Nova Estadística',
         nameLabel: 'Nom',
         nameRequired: 'El nom és obligatori',
-        nameExists: 'L\'estadística ja existeix',
+        nameExists: "L'estadística ja existeix",
         maxLabel: 'Valor Màxim',
         numberRequired: 'Ha de ser un número',
         minLabel: 'Valor Mínim (opcional)',
@@ -248,10 +262,10 @@ export default {
 
     // Textos per a ItemSection.vue
     itemSection: {
-      addSlotTooltip: 'Afegir ranura d\'equip',
+      addSlotTooltip: "Afegir ranura d'equip",
       addItemTooltip: 'Afegir objecte',
-      noSlots: '(No hi ha ranures d\'equip. Fes clic a \'+\' per afegir-ne.)',
-      noItems: '(Buit. Fes clic a \'+\' per afegir un objecte.)',
+      noSlots: "(No hi ha ranures d'equip. Fes clic a '+' per afegir-ne.)",
+      noItems: "(Buit. Fes clic a '+' per afegir un objecte.)",
       emptySlot: 'Buit',
       editTooltip: 'Editar',
       equipTooltip: 'Equipar',
@@ -259,7 +273,7 @@ export default {
       useTooltip: 'Usar / Consumir',
       removeItemTooltip: 'Eliminar',
       dialog: {
-        newSlotTitle: 'Nova Ranura d\'Equip',
+        newSlotTitle: "Nova Ranura d'Equip",
         newSlotMessage: 'Nom de la ranura (ex: Cap, Mans).',
         confirmRemoveSlotTitle: 'Confirmar',
         confirmRemoveSlotMessage: 'Vols eliminar la ranura "{slotName}"?',
@@ -270,13 +284,14 @@ export default {
 
     // Textos per a EventsSection.vue
     eventsSection: {
-      addTooltip: 'Afegir fita d\'esdeveniment',
-      noEvents: '(No hi ha fites. Fes clic a \'+\' per afegir-ne.)',
+      addTooltip: "Afegir fita d'esdeveniment",
+      noEvents: "(No hi ha fites. Fes clic a '+' per afegir-ne.)",
       editTooltip: 'Editar',
       removeTooltip: 'Eliminar',
       dialog: {
         newTitle: 'Nova Fita',
-        newMessage: 'Introdueix un nom per a aquesta fita (ex: "La Cova del Drac ha estat trobada").',
+        newMessage:
+          'Introdueix un nom per a aquesta fita (ex: "La Cova del Drac ha estat trobada").',
         editTitle: 'Editar Fita',
         editMessage: 'Canvia el nom de la fita:',
         confirmRemoveTitle: 'Confirmar',
@@ -288,7 +303,7 @@ export default {
     editItemDialog: {
       titleEdit: 'Editar Objecte a "{slotName}"',
       titleEquip: 'Equipar Objecte a "{slotName}"',
-      nameLabel: 'Nom de l\'Objecte',
+      nameLabel: "Nom de l'Objecte",
       nameRequired: 'El nom és obligatori',
       descriptionLabel: 'Descripció (opcional)',
       effectsTitle: 'Efectes',
@@ -304,7 +319,8 @@ export default {
   },
   bookPreview: {
     title: 'Vista Prèvia del Llibre',
-    subtitle: 'Genera una vista prèvia en PDF del teu llibre. El contingut s\'ordenarà pel número de paràgraf.',
+    subtitle:
+      "Genera una vista prèvia en PDF del teu llibre. El contingut s'ordenarà pel número de paràgraf.",
     generateButton: 'Generar PDF',
     placeholder: 'Fes clic a "Generar PDF" per veure la previsualització.',
     generating: 'Generant PDF, això pot trigar un moment...',
@@ -317,6 +333,32 @@ export default {
       untitled: 'Sense Títol',
       noDescription: '(Sense descripció)',
       pageNumbering: 'Pàgina {currentPage} de {totalPages}',
-    }
+    },
+  },
+  bookMap: {
+    drawerTitle: 'Localitzacions',
+    unplacedLabel: 'Sense Posicionar',
+    allPlaced: 'Totes les localitzacions estan al seu lloc.',
+    selectMapLabel: 'Seleccionar Mapa General',
+    noMapSelected: 'Selecciona un mapa per començar.',
+    dragDropHint: 'Arrossega localitzacions aquí',
+  },
+  buildPage: {
+    title: 'Construcció',
+  },
+  helpPage: {
+    title: 'Ajuda',
+  },
+  indexPage: {
+    title: "Pàgina d'Inici",
+  },
+  testingPage: {
+    title: 'Pàgina de Testing',
+    content: 'Aquest és el contingut de la pestanya de Testing.',
+    futureTools: 'Aquí podràs afegir les teves eines o proves en el futur.',
+  },
+  errorNotFound: {
+    errorMessage: 'Vaja. Res per aquí...',
+    goHome: "Anar a l'Inici",
   },
 };
