@@ -81,10 +81,58 @@ async function getImageAsDataUrl(url: string): Promise<string | null> {
   });
 }
 
+/**
+ * [NUEVO] Dibuja un texto con ajuste de línea automático en una página.
+ * Maneja saltos de línea explícitos (\n) para crear párrafos.
+ */
+function drawSimpleWrappedText(
+  page: pdfLib.PDFPage,
+  text: string,
+  options: {
+    x: number;
+    y: number;
+    font: pdfLib.PDFFont;
+    fontSize: number;
+    lineHeight: number;
+    maxWidth: number;
+    color: pdfLib.RGB;
+  }
+) {
+  const { x, y, font, fontSize, lineHeight, maxWidth, color } = options;
+  const paragraphs = text.split(/\n/);
+  let cursorY = y;
+
+  for (const paragraph of paragraphs) {
+    if (paragraph.trim() === '') {
+      cursorY -= lineHeight; // Handle empty lines as paragraph breaks
+      continue;
+    }
+    const words = paragraph.split(' ');
+    let currentLine = '';
+    for (const word of words) {
+      const testLine = currentLine.length > 0 ? `${currentLine} ${word}` : word;
+      const width = font.widthOfTextAtSize(testLine, fontSize);
+
+      if (width > maxWidth && currentLine.length > 0) {
+        page.drawText(currentLine, { x, y: cursorY, font, size: fontSize, color });
+        cursorY -= lineHeight;
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+    // Draw the last line of the paragraph
+    page.drawText(currentLine, { x, y: cursorY, font, size: fontSize, color });
+    cursorY -= lineHeight * 1.5; // Move to the next line and add space for the next paragraph
+  }
+}
+
+
 async function buildPdfNative(options: {
   imageId?: string | null;
   title: string;
   author: string;
+  description: string; // [CAMBIO]
   blocks: {
     number: string | number;
     description: string;
@@ -93,7 +141,7 @@ async function buildPdfNative(options: {
   }[];
   allNodes: BookNode[];
 }) {
-  const { imageId, blocks, allNodes } = options;
+  const { imageId, title, author, description, blocks, allNodes } = options; // [CAMBIO]
 
   if (!activeBook.value) {
     $q.notify({ type: 'negative', message: 'No hay un libro activo para generar el PDF.' });
@@ -106,6 +154,7 @@ async function buildPdfNative(options: {
   const fontBold = await pdfDoc.embedFont(pdfLib.StandardFonts.TimesRomanBold);
   const fontItalic = await pdfDoc.embedFont(pdfLib.StandardFonts.TimesRomanItalic);
   const fontBoldItalic = await pdfDoc.embedFont(pdfLib.StandardFonts.TimesRomanBoldItalic);
+  const fontTitle = await pdfDoc.embedFont(pdfLib.StandardFonts.HelveticaBold);
 
   const fonts = {
     normal: font,
@@ -136,15 +185,87 @@ async function buildPdfNative(options: {
       const imgDataUrl = await getImageAsDataUrl(assetUrl);
       if (imgDataUrl) {
         const img = await pdfDoc.embedJpg(imgDataUrl);
-        const imgDims = img.scaleToFit(pageWidthPt, pageHeightPt);
         coverPage.drawImage(img, {
-          x: (pageWidthPt - imgDims.width) / 2,
-          y: (pageHeightPt - imgDims.height) / 2,
-          width: imgDims.width,
-          height: imgDims.height,
+          x: 0,
+          y: 0,
+          width: pageWidthPt,
+          height: pageHeightPt,
         });
       }
     }
+  }
+
+  // Añadir el título del libro en la portada
+  if (title) {
+    const titleText = title.toUpperCase();
+    let titleFontSize = 60; // Tamaño de fuente inicial grande
+    const margin = mmToPt(20);
+    const maxWidth = pageWidthPt - (margin * 2);
+
+    // Ajustar el tamaño de la fuente para que el título quepa en el ancho de la página
+    let textWidth = fontTitle.widthOfTextAtSize(titleText, titleFontSize);
+    while (textWidth > maxWidth && titleFontSize > 12) {
+      titleFontSize -= 2;
+      textWidth = fontTitle.widthOfTextAtSize(titleText, titleFontSize);
+    }
+
+    const x = (pageWidthPt - textWidth) / 2; // Centrado horizontalmente
+    const y = pageHeightPt * 0.6; // Posicionado verticalmente en el 60% superior
+
+    // --- Simulación de sombra difuminada (blur) ---
+    const blurRadius = 5; // Radio del difuminado
+    const blurSteps = 8;  // Número de capas de sombra
+    const blurOpacity = 0.20; // Opacidad de cada capa de sombra
+
+    for (let i = 0; i < blurSteps; i++) {
+      const angle = (i / blurSteps) * 2 * Math.PI;
+      const offsetX = Math.cos(angle) * blurRadius;
+      const offsetY = Math.sin(angle) * blurRadius;
+      coverPage.drawText(titleText, {
+        x: x + offsetX,
+        y: y + offsetY,
+        font: fontTitle,
+        size: titleFontSize,
+        color: pdfLib.rgb(0, 0, 0),
+        opacity: blurOpacity,
+      });
+    }
+    // --- Fin de la simulación de sombra ---
+
+    // Texto principal en blanco (se dibuja encima de la sombra)
+    coverPage.drawText(titleText, {
+      x: x,
+      y: y,
+      font: fontTitle,
+      size: titleFontSize,
+      color: pdfLib.rgb(1, 1, 1),
+    });
+  }
+
+  // Añadir el nombre del autor en la portada
+  if (author) {
+    const authorText = author.toUpperCase();
+    const authorFontSize = 12;
+    const authorFont = fontBold;
+
+    // Para mejorar la legibilidad, dibujamos una sombra sutil
+    coverPage.drawText(authorText, {
+      x: marginLeftPt + 3,
+      y: marginBottomPt - 3,
+      font: authorFont,
+      size: authorFontSize,
+      color: pdfLib.rgb(0, 0, 0),
+      opacity: 0.5,
+    });
+
+    // Dibujamos el texto principal en blanco
+    coverPage.drawText(authorText, {
+      x: marginLeftPt,
+      y: marginBottomPt,
+      font: authorFont,
+      size: authorFontSize,
+      color: pdfLib.rgb(1, 1, 1),
+    });
   }
 
   // --------------- LÓGICA DE CONTENIDO Y RENDERIZADO ----------------
@@ -161,12 +282,14 @@ async function buildPdfNative(options: {
 
   const formatActionText = (action: AnyAction): string => {
     switch (action.type) {
-      case 'set_variable':
+      case 'setVariable':
         return `[Se establece la variable '${action.variable}' a '${action.value}']`;
-      case 'add_item':
+      case 'addItem':
         return `[Se añade el objeto '${action.itemId}' al inventario]`;
-      default:
-        return `[Acción: ${action.type}]`;
+      case 'delItem':
+        return `[Se añade el objeto '${action.itemId}' al inventario]`;
+      case 'setFlag':
+        return `Marca el evento ${action.flag}`;
     }
   };
 
@@ -377,6 +500,21 @@ async function buildPdfNative(options: {
     });
   }
 
+  // --------------- [NUEVO] CONTRAPORTADA ----------------
+  if (description) {
+    const backCoverPage = pdfDoc.addPage([pageWidthPt, pageHeightPt]);
+    const backCoverMargin = mmToPt(25);
+    drawSimpleWrappedText(backCoverPage, description, {
+      x: backCoverMargin,
+      y: pageHeightPt - backCoverMargin,
+      font: fontItalic, // Usamos cursiva para un estilo clásico de contraportada
+      fontSize: 11,
+      lineHeight: 11 * 1.5,
+      maxWidth: pageWidthPt - (backCoverMargin * 2),
+      color: pdfLib.rgb(0.1, 0.1, 0.1)
+    });
+  }
+
   const pdfBytes = await pdfDoc.save();
   return new Blob([pdfBytes], { type: 'application/pdf' });
 }
@@ -414,6 +552,7 @@ async function generatePdf() {
       imageId: activeBook.value.meta.imageId,
       title: activeBook.value.meta.title || 'Sin Título',
       author: activeBook.value.meta.author || 'Autor Desconocido',
+      description: activeBook.value.meta.description || '', // [CAMBIO]
       blocks,
       allNodes: sortedNodes,
     });

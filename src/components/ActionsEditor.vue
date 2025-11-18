@@ -1,4 +1,4 @@
-<!-- src/components/ActionsEditor.vue (NUEVO FICHERO) -->
+<!-- src/components/ActionsEditor.vue -->
 <template>
   <div class="q-mt-md">
     <div class="row items-center q-mb-sm">
@@ -27,7 +27,6 @@
           <div class="text-h6">Elige un tipo de Acción</div>
         </q-card-section>
         <q-list dark separator>
-          <!-- Aquí irían los tipos de acción que has definido -->
           <q-item clickable v-ripple @click="promptAddAction('modifyStat')">
             <q-item-section avatar><q-icon name="trending_up" /></q-item-section>
             <q-item-section>Modificar Estadística</q-item-section>
@@ -71,10 +70,10 @@ function removeAction(index: number) {
   emitUpdate();
 }
 
-// Lógica para añadir nuevas acciones (simplificada)
-// Una implementación real tendría diálogos específicos para cada tipo de acción.
+// Lógica para añadir nuevas acciones
 function promptAddAction(type: 'modifyStat' | 'setFlag') {
   isAddActionDialogOpen.value = false;
+
   if (type === 'modifyStat') {
     // Ejemplo: diálogo simple para añadir una acción de estadística
     $q.dialog({
@@ -95,8 +94,31 @@ function promptAddAction(type: 'modifyStat' | 'setFlag') {
       localActions.value.push(newAction);
       emitUpdate();
     });
+  } else if (type === 'setFlag') {
+    // [CAMBIO] Añadimos el diálogo para establecer una variable
+    $q.dialog({
+      title: 'Establecer Variable',
+      message: 'Introduce el nombre del evento o variable (ej: "puerta_abierta" o "evento_101"). Se establecerá a "true".',
+      prompt: {
+        model: '',
+        type: 'text',
+      },
+      dark: true,
+      cancel: true,
+    }).onOk(flagName => {
+      // Solo añadimos la acción si el usuario introduce un nombre
+      if (flagName && flagName.trim()) {
+        const newAction: SetFlagAction = {
+          id: uid(),
+          type: 'setFlag',
+          flag: flagName.trim(),
+          value: true, // Por defecto, las flags se establecen a true
+        };
+        localActions.value.push(newAction);
+        emitUpdate();
+      }
+    });
   }
-  // Añadir lógica para otros tipos de acción aquí...
 }
 
 // Función para mostrar una descripción legible de la acción
@@ -105,7 +127,8 @@ function getActionDescription(action: AnyAction): string {
     case 'modifyStat':
       return `Estadística: ${action.stat} ${action.operation} ${action.value}`;
     case 'setFlag':
-      return `Variable: ${action.flag} = ${action.value}`;
+      // [CAMBIO] Aseguramos que el valor booleano se muestre correctamente como string
+      return `Variable: ${action.flag} = ${String(action.value)}`;
     // Añadir casos para otros tipos de acción
     default:
       return `Acción desconocida`;

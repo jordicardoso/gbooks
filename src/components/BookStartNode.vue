@@ -38,8 +38,10 @@
       ></div>
     </div>
 
-    <!-- [LA CLAVE] Añadimos el 'id' que faltaba para que las conexiones se guarden bien -->
+    <!-- Conexiones de SALIDA (source) -->
+    <Handle type="source" :position="Position.Left" id="left-source" />
     <Handle type="source" :position="Position.Bottom" id="bottom-source" />
+    <Handle type="source" :position="Position.Right" id="right-source" />
 
     <NodeResizer :node-id="id" :min-width="150" :min-height="100" @resize-end="onResizeEnd"/>
   </div>

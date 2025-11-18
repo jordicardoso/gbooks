@@ -85,7 +85,8 @@
       <q-tab-panel name="assets" class="q-pa-none">
         <AssetsPage v-if="props.id" :book-id="props.id" />
       </q-tab-panel>
-      <q-tab-panel name="meta">
+      <q-tab-panel name="meta" class="q-pa-none">
+        <MetaPage />
       </q-tab-panel>
       <q-tab-panel name="character" class="q-pa-none">
         <CharacterSheetPage v-if="props.id" :id="props.id" />
@@ -125,6 +126,7 @@ import BookMap from 'pages/BookMap.vue';
 import AssetsPage from 'pages/AssetsPage.vue';
 import TestingPage from 'pages/TestingPage.vue';
 import BookPreview from 'pages/BookPreview.vue';
+import MetaPage from 'pages/MetaPage.vue';
 
 const props = defineProps<{ id: string }>();
 const router = useRouter();
