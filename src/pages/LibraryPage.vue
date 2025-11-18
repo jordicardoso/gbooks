@@ -96,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
@@ -109,6 +109,10 @@ const libraryStore = useLibraryStore();
 const router = useRouter();
 const $q = useQuasar();
 const { t } = useI18n(); // <-- 2. Obtener la función de traducción 't'
+
+onMounted(() => {
+  libraryStore.initializeLibrary();
+});
 
 // State para los diálogos
 const isAddBookDialogOpen = ref(false);

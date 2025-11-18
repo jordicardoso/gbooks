@@ -1,67 +1,91 @@
 <!-- src/layouts/MainLayout.vue -->
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
-      <q-toolbar class="bg-grey-10">
-        <q-toolbar-title>
-          Gbooks Editor
-        </q-toolbar-title>
+    <q-header elevated class="bg-grey-9">
+      <q-toolbar>
+        <template v-if="isBookEditorPage">
+          <q-btn
+            flat
+            round
+            dense
+            icon="arrow_back"
+            @click="goBackToLibrary"
+            :title="$t('bookPage.backToLibrary')"
+          />
+          <q-toolbar-title class="ellipsis">
+            {{ bookStore.activeBook?.meta.title || 'Cargando...' }}
+          </q-toolbar-title>
+          <q-space />
+          <q-btn
+            flat
+            :label="$t('bookPage.save')"
+            icon="save"
+            @click="saveBook"
+            :disable="!bookStore.isDirty || isSaving"
+            :loading="isSaving"
+          />
+        </template>
 
-        <!-- Selector de Idioma -->
-        <q-select
-          v-model="locale"
-          :options="localeOptions"
-          dense
-          borderless
-          emit-value
-          map-options
-          options-dense
-          dark
-          color="white"
-          style="min-width: 120px;"
-        >
-          <!-- Esto muestra el icono del mundo y el label del idioma seleccionado -->
-          <template #prepend>
-            <q-icon name="language" color="white" class="q-mr-sm" />
-          </template>
-        </q-select>
+        <!-- B. Barra de herramientas por defecto para el resto de la app -->
+        <template v-else>
+          <q-toolbar-title>
+            G-Books
+          </q-toolbar-title>
+        </template>
+
+        <LanguageSwitcher />
 
       </q-toolbar>
     </q-header>
 
-    <q-page-container class="bg-dark">
+    <q-page-container class="bg-grey-8">
       <router-view />
     </q-page-container>
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'; // 1. Importamos 'onMounted'
+import { ref, computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
-import { useLibraryStore } from 'src/stores/library-store'; // 2. Importamos el store
+import { useBookStore } from 'src/stores/book-store';
+import LanguageSwitcher from 'src/components/LanguageSwitcher.vue';
 
-// --- INICIALIZACIÓN DE STORES ---
-const libraryStore = useLibraryStore();
+const { t } = useI18n();
+const $q = useQuasar();
+const route = useRoute();
+const router = useRouter();
+const bookStore = useBookStore();
 
-// 3. onMounted se ejecuta una sola vez cuando el layout está listo.
-// Es el lugar perfecto y más seguro para cargar datos iniciales desde Electron.
-onMounted(() => {
-  libraryStore.initializeLibrary();
-});
+const isSaving = ref(false);
 
+// Computada para saber si estamos en la página del editor de libros
+const isBookEditorPage = computed(() => route.name === 'book-editor');
 
-// --- LÓGICA DE INTERNACIONALIZACIÓN (i18n) ---
-const { locale } = useI18n({ useScope: 'global' });
+// Función para volver a la biblioteca
+function goBackToLibrary() {
+  // Aquí podrías añadir una confirmación si hay cambios sin guardar
+  router.push({ name: 'library' });
+}
 
-const localeOptions = [
-  { value: 'es-ES', label: 'Español' },
-  { value: 'en-US', label: 'English' },
-  { value: 'ca-ES', label: 'Català' },
-  { value: 'ru-RU', label: 'Русский' },
-];
-
-watch(locale, (newLocale) => {
-  console.log(`Idioma cambiado a: ${newLocale}, guardando en localStorage.`);
-  localStorage.setItem('user-locale', newLocale);
-});
+// Función para guardar el libro (lógica movida desde BookPage.vue)
+async function saveBook() {
+  isSaving.value = true;
+  try {
+    await bookStore.saveCurrentBook();
+    $q.notify({
+      type: 'positive',
+      message: t('bookPage.saveSuccess'),
+      timeout: 1500,
+    });
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: t('bookPage.saveError'),
+    });
+  } finally {
+    isSaving.value = false;
+  }
+}
 </script>

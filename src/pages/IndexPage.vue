@@ -7,5 +7,4 @@
 </template>
 
 <script setup lang="ts">
-// CORRECCIÓN: Script limpio, sin variables no utilizadas.
 </script>
