@@ -80,7 +80,10 @@
             @click="openPreview(asset)"
           >
             <q-tooltip>Ampliar imagen</q-tooltip>
-            <div class="absolute-bottom-right text-subtitle2 q-pa-xs bg-primary" style="border-top-left-radius: 3px;">
+            <div
+              class="absolute-bottom-right text-subtitle2 q-pa-xs bg-primary"
+              style="border-top-left-radius: 3px"
+            >
               {{ asset.category }}
             </div>
           </q-img>
@@ -88,7 +91,8 @@
           <q-card-section>
             <div class="text-h6 ellipsis" :title="asset.name">{{ asset.name }}</div>
             <div class="text-caption text-grey-5">
-              {{ $t('assetsPage.dateAdded') }}: {{ new Date(asset.creationDate).toLocaleDateString() }}
+              {{ $t('assetsPage.dateAdded') }}:
+              {{ new Date(asset.creationDate).toLocaleDateString() }}
             </div>
           </q-card-section>
 
@@ -110,10 +114,7 @@
     </div>
 
     <!-- Diálogo para añadir assets -->
-    <add-asset-dialog
-      v-model="isAddDialogOpen"
-      @submit="handleAssetSubmit"
-    />
+    <add-asset-dialog v-model="isAddDialogOpen" @submit="handleAssetSubmit" />
 
     <!-- Diálogo para editar assets -->
     <edit-asset-dialog
@@ -131,12 +132,11 @@
           v-if="previewImageUrl"
           :src="previewImageUrl"
           fit="contain"
-          style="max-width: 90vw; max-height: 90vh; border-radius: 4px;"
+          style="max-width: 90vw; max-height: 90vh; border-radius: 4px"
           class="cursor-pointer"
         />
       </q-card>
     </q-dialog>
-
   </q-page>
 </template>
 
@@ -144,7 +144,7 @@
 import { ref, computed } from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
-import { type Asset } from 'src/stores/types';
+import { type BookAsset } from 'src/stores/types';
 import { useAssetsStore } from 'src/stores/assets-store';
 import { storeToRefs } from 'pinia';
 import AddAssetDialog from 'src/components/AddAssetDialog.vue';
@@ -164,23 +164,18 @@ const { assets } = storeToRefs(assetsStore);
 // --- STATE PARA FILTROS ---
 const searchTerm = ref('');
 const categoryFilter = ref<string | null>(null);
-const typeFilter = ref<Asset['type'] | null>('image');
+const typeFilter = ref<BookAsset['type'] | null>('image');
 
 // --- STATE PARA DIÁLOGOS ---
 const isAddDialogOpen = ref(false);
 const isEditDialogOpen = ref(false);
-const editingAsset = ref<Asset | null>(null);
+const editingAsset = ref<BookAsset | null>(null);
 
 // --- State para la previsualización de imagen ---
 const isPreviewOpen = ref(false);
 const previewImageUrl = ref<string | null>(null);
 
-const categoryOptions = [
-  'General',
-  'Personaje',
-  'Mapa',
-  'Objecto'
-];
+const categoryOptions = ['General', 'Personaje', 'Mapa', 'Objecto'];
 
 const filteredAssets = computed(() => {
   if (!assets.value || assets.value.length === 0) return [];
@@ -190,22 +185,22 @@ const filteredAssets = computed(() => {
   // Aplicar filtros
   if (searchTerm.value) {
     const lowerCaseSearch = searchTerm.value.toLowerCase();
-    filtered = filtered.filter(asset =>
-      asset.name.toLowerCase().includes(lowerCaseSearch)
-    );
+    filtered = filtered.filter((asset) => asset.name.toLowerCase().includes(lowerCaseSearch));
   }
 
   if (categoryFilter.value) {
-    filtered = filtered.filter(asset => asset.category === categoryFilter.value);
+    filtered = filtered.filter((asset) => asset.category === categoryFilter.value);
   }
 
   if (typeFilter.value) {
-    filtered = filtered.filter(asset => asset.type === typeFilter.value);
+    filtered = filtered.filter((asset) => asset.type === typeFilter.value);
   }
 
   // [CAMBIO] Ordenar los resultados para mostrar los más nuevos primero.
   // Se crea una copia con [...filtered] para no mutar el estado original.
-  return [...filtered].sort((a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime());
+  return [...filtered].sort(
+    (a, b) => new Date(b.creationDate).getTime() - new Date(a.creationDate).getTime(),
+  );
 });
 
 // --- ACCIONES DE LA UI ---
@@ -213,13 +208,13 @@ const openAddDialog = () => {
   isAddDialogOpen.value = true;
 };
 
-const openEditDialog = (asset: Asset) => {
+const openEditDialog = (asset: BookAsset) => {
   editingAsset.value = { ...asset };
   isEditDialogOpen.value = true;
 };
 
 // --- Acción para abrir la previsualización ---
-const openPreview = (asset: Asset) => {
+const openPreview = (asset: BookAsset) => {
   previewImageUrl.value = assetsStore.getAssetUrl(asset.filename);
   isPreviewOpen.value = true;
 };
@@ -285,12 +280,11 @@ const handleAssetUpdate = async (data: { id: string; name: string; category: str
   }
 };
 
-const confirmDelete = (asset: Asset) => {
+const confirmDelete = (asset: BookAsset) => {
   $q.dialog({
     title: t('assetsPage.dialogs.deleteAsset.title'),
     message: t('assetsPage.dialogs.deleteAsset.message', { assetName: asset.name }),
     html: true,
-    cancel: true,
     persistent: true,
     dark: true,
     ok: { color: 'negative', label: t('assetsPage.dialogs.deleteAsset.okButton') },
@@ -319,7 +313,9 @@ const confirmDelete = (asset: Asset) => {
 
 <style lang="scss" scoped>
 .asset-card {
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
 
   &:hover {
     transform: translateY(-5px);

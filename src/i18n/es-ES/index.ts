@@ -1,6 +1,12 @@
 // src/i18n/es-ES/index.ts
 
 export default {
+  languages: {
+    es: 'Español',
+    ca: 'Catalán',
+    en: 'Inglés',
+    ru: 'Ruso',
+  },
   // Textos de la interfaz principal de la biblioteca
   library: {
     title: 'Biblioteca',
@@ -87,6 +93,18 @@ export default {
       newNode: 'Nuevo nodo',
     },
   },
+  actionEditors: {
+    diceRoll: {
+      descriptionLabel: 'Descripción de la tirada',
+      diceLabel: 'Dados a tirar',
+      dicePlaceholder: 'Ej: 1d6, 2d10+3',
+      outcomesTitle: 'Resultados Posibles',
+      addOutcomeButton: 'Añadir Resultado',
+      noOutcomes: 'Añade al menos un resultado.',
+      outcomeLabel: 'Resultado para [{range}]',
+      newOutcomeDescription: 'Nuevo resultado',
+    }
+  },
   assetsPage: {
     title: 'Gestor de Assets',
     addAsset: 'Añadir Asset',
@@ -117,6 +135,33 @@ export default {
         okButton: 'Eliminar',
         cancelButton: 'Cancelar',
       },
+    },
+  },
+  addAssetDialog: {
+    title: 'Añadir Nuevo Asset',
+    fileLabel: 'Seleccionar archivo',
+    fileRequired: 'Debes seleccionar un archivo',
+    nameLabel: 'Nombre del Asset',
+    nameRequired: 'El nombre es requerido',
+    categoryLabel: 'Categoría',
+    categoryRequired: 'La categoría es requerida',
+    cancelButton: 'Cancelar',
+    submitButton: 'Añadir Asset',
+  },
+  editAssetDialog: {
+    title: 'Editar Asset',
+    nameLabel: 'Nombre del Asset',
+    nameRequired: 'El nombre es requerido',
+    categoryLabel: 'Categoría',
+    categoryRequired: 'La categoría es requerida',
+    cancelButton: 'Cancelar',
+    submitButton: 'Guardar Cambios',
+  },
+  bookGraph: {
+    contextMenu: {
+      addStory: 'Añadir Párrafo',
+      addLocation: 'Añadir Localización',
+      addEnd: 'Añadir Final',
     },
   },
   bookPage: {

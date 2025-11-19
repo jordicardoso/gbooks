@@ -20,24 +20,24 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { watch } from 'vue';
+import { watch, computed } from 'vue'; // 1. Importar 'computed'
 
-// Usamos 'useScope: global' para asegurarnos de que estamos cambiando el idioma de toda la app
-const { locale } = useI18n({ useScope: 'global' });
+// 2. Obtener la función de traducción 't'
+const { locale, t } = useI18n({ useScope: 'global' });
 
-// Opciones de idioma disponibles
-const languageOptions = [
-  { value: 'es-ES', label: 'Español' },
-  { value: 'ca-ES', label: 'Català' },
-  { value: 'en-US', label: 'English' },
-  { value: 'ru-RU', label: 'Русский' },
-];
+// 3. Usar una propiedad computada para que las etiquetas se actualicen al cambiar de idioma
+const languageOptions = computed(() => [
+  { value: 'es-ES', label: t('languages.es') },
+  { value: 'ca-ES', label: t('languages.ca') },
+  { value: 'en-US', label: t('languages.en') },
+  { value: 'ru-RU', label: t('languages.ru') },
+]);
 
 // Observamos cambios en la variable 'locale'
 watch(locale, (newLocale) => {
   // Guardamos el nuevo idioma en el localStorage para que se recuerde
   // en futuras visitas.
-  localStorage.setItem('user-locale', newLocale);
+  localStorage.setItem('user-locale', newLocale as string);
   console.log(`Idioma cambiado a: ${newLocale}`);
 });
 </script>

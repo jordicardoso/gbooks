@@ -1,10 +1,15 @@
 <!-- src/components/AddAssetDialog.vue -->
 <template>
-  <q-dialog :model-value="modelValue" @update:model-value="closeDialog" persistent @hide="resetForm">
-    <q-card class="bg-grey-9 text-white" style="width: 500px; max-width: 90vw;">
+  <q-dialog
+    :model-value="modelValue"
+    @update:model-value="closeDialog"
+    persistent
+    @hide="resetForm"
+  >
+    <q-card class="bg-grey-9 text-white" style="width: 500px; max-width: 90vw">
       <q-form @submit.prevent="onSubmit" ref="formRef">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Añadir Nuevo Asset</div>
+          <div class="text-h6">{{ $t('addAssetDialog.title') }}</div>
           <q-space />
           <q-btn icon="close" flat round dense @click="closeDialog" />
         </q-card-section>
@@ -13,11 +18,11 @@
           <!-- Campo para el fichero -->
           <q-file
             v-model="file"
-            label="Seleccionar archivo"
+            :label="$t('addAssetDialog.fileLabel')"
             dark
             standout="bg-grey-8"
             accept="image/*"
-            :rules="[val => !!val || 'Debes seleccionar un archivo']"
+            :rules="[(val) => !!val || $t('addAssetDialog.fileRequired')]"
             lazy-rules
           >
             <template v-slot:prepend>
@@ -28,10 +33,10 @@
           <!-- Campo para el nombre del asset -->
           <q-input
             v-model="assetName"
-            label="Nombre del Asset"
+            :label="$t('addAssetDialog.nameLabel')"
             dark
             standout="bg-grey-8"
-            :rules="[val => (val && val.length > 0) || 'El nombre es requerido']"
+            :rules="[(val) => (val && val.length > 0) || $t('addAssetDialog.nameRequired')]"
             lazy-rules
           />
 
@@ -39,11 +44,11 @@
           <q-select
             v-model="assetCategory"
             :options="categoryOptions"
-            label="Categoría"
+            :label="$t('addAssetDialog.categoryLabel')"
             dark
             dense
             standout="bg-grey-8"
-            :rules="[val => !!val || 'La categoría es requerida']"
+            :rules="[(val) => !!val || $t('addAssetDialog.categoryRequired')]"
             lazy-rules
           />
         </q-card-section>
@@ -51,8 +56,8 @@
         <q-separator dark />
 
         <q-card-actions align="right">
-          <q-btn flat label="Cancelar" @click="closeDialog" />
-          <q-btn color="primary" label="Añadir Asset" type="submit" />
+          <q-btn flat :label="$t('addAssetDialog.cancelButton')" @click="closeDialog" />
+          <q-btn color="primary" :label="$t('addAssetDialog.submitButton')" type="submit" />
         </q-card-actions>
       </q-form>
     </q-card>
@@ -64,7 +69,7 @@ import { ref } from 'vue';
 import type { QForm } from 'quasar';
 
 // Props y Emits
-const props = defineProps({
+defineProps({
   modelValue: {
     type: Boolean,
     required: true,
@@ -79,12 +84,7 @@ const assetName = ref('');
 const assetCategory = ref('');
 
 // [NUEVO] Opciones fijas para la categoría
-const categoryOptions = [
-  'General',
-  'Personaje',
-  'Mapa',
-  'Objecto'
-];
+const categoryOptions = ['General', 'Personaje', 'Mapa', 'Objecto'];
 
 const closeDialog = () => {
   emit('update:modelValue', false);

@@ -1,6 +1,12 @@
 // src/i18n/en-US/index.ts
 
 export default {
+  languages: {
+    es: 'Spanish',
+    ca: 'Catalan',
+    en: 'English',
+    ru: 'Russian',
+  },
   // Main library interface texts
   library: {
     title: 'Library',
@@ -52,6 +58,18 @@ export default {
         'Are you sure you want to delete the book "<strong>{bookName}</strong>"? This action cannot be undone and will delete all its files.',
       okButton: 'Delete',
     },
+  },
+  actionEditors: {
+    diceRoll: {
+      descriptionLabel: 'Roll Description',
+      diceLabel: 'Dice to Roll',
+      dicePlaceholder: 'e.g., 1d6, 2d10+3',
+      outcomesTitle: 'Possible Outcomes',
+      addOutcomeButton: 'Add Outcome',
+      noOutcomes: 'Add at least one outcome.',
+      outcomeLabel: 'Outcome for [{range}]',
+      newOutcomeDescription: 'New outcome',
+    }
   },
   assetsPage: {
     title: 'Asset Manager',
@@ -117,6 +135,33 @@ export default {
         },
         newNode: 'New node',
       },
+    },
+  },
+  addAssetDialog: {
+    title: 'Add New Asset',
+    fileLabel: 'Select File',
+    fileRequired: 'You must select a file',
+    nameLabel: 'Asset Name',
+    nameRequired: 'Name is required',
+    categoryLabel: 'Category',
+    categoryRequired: 'Category is required',
+    cancelButton: 'Cancel',
+    submitButton: 'Add Asset',
+  },
+  editAssetDialog: {
+    title: 'Edit Asset',
+    nameLabel: 'Asset Name',
+    nameRequired: 'Name is required',
+    categoryLabel: 'Category',
+    categoryRequired: 'Category is required',
+    cancelButton: 'Cancel',
+    submitButton: 'Save Changes',
+  },
+  bookGraph: {
+    contextMenu: {
+      addStory: 'Add Passage',
+      addLocation: 'Add Location',
+      addEnd: 'Add Ending',
     },
   },
   bookPage: {

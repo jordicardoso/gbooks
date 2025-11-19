@@ -1,6 +1,12 @@
 // src/i18n/ru-RU/index.ts
 
 export default {
+  languages: {
+    es: 'Испанский',
+    ca: 'Каталанский',
+    en: 'Английский',
+    ru: 'Русский',
+  },
   // Тексты основного интерфейса библиотеки
   library: {
     title: 'Библиотека',
@@ -52,6 +58,18 @@ export default {
         'Вы уверены, что хотите удалить книгу "<strong>{bookName}</strong>"? Это действие необратимо и удалит все ее файлы.',
       okButton: 'Удалить',
     },
+  },
+  actionEditors: {
+    diceRoll: {
+      descriptionLabel: 'Описание броска',
+      diceLabel: 'Кости для броска',
+      dicePlaceholder: 'напр., 1d6, 2d10+3',
+      outcomesTitle: 'Возможные исходы',
+      addOutcomeButton: 'Добавить исход',
+      noOutcomes: 'Добавьте хотя бы один исход.',
+      outcomeLabel: 'Исход для [{range}]',
+      newOutcomeDescription: 'Новый исход',
+    }
   },
   assetsPage: {
     title: 'Менеджер ассетов',

@@ -1,10 +1,10 @@
 <!-- src/components/EditAssetDialog.vue -->
 <template>
   <q-dialog :model-value="modelValue" @update:model-value="closeDialog" persistent>
-    <q-card class="bg-grey-9 text-white" style="width: 500px; max-width: 90vw;">
+    <q-card class="bg-grey-9 text-white" style="width: 500px; max-width: 90vw">
       <q-form @submit="onSubmit">
         <q-card-section class="row items-center q-pb-none">
-          <div class="text-h6">Editar Asset</div>
+          <div class="text-h6">{{ $t('editAssetDialog.title') }}</div>
           <q-space />
           <q-btn icon="close" flat round dense @click="closeDialog" />
         </q-card-section>
@@ -13,11 +13,11 @@
           <!-- Campo para el nombre del asset -->
           <q-input
             v-model="assetName"
-            label="Nombre del Asset"
+            :label="$t('editAssetDialog.nameLabel')"
             class="q-mt-md"
             dark
             standout="bg-grey-8"
-            :rules="[val => (val && val.length > 0) || 'El nombre es requerido']"
+            :rules="[(val) => (val && val.length > 0) || $t('editAssetDialog.nameRequired')]"
             lazy-rules
           />
 
@@ -25,12 +25,12 @@
           <q-select
             v-model="assetCategory"
             :options="categoryOptions"
-            label="Categoría"
+            :label="$t('editAssetDialog.categoryLabel')"
             class="q-mt-md"
             dark
             dense
             standout="bg-grey-8"
-            :rules="[val => !!val || 'La categoría es requerida']"
+            :rules="[(val) => !!val || $t('editAssetDialog.categoryRequired')]"
             lazy-rules
           />
         </q-card-section>
@@ -38,8 +38,8 @@
         <q-separator dark />
 
         <q-card-actions align="right">
-          <q-btn flat label="Cancelar" @click="closeDialog" />
-          <q-btn color="primary" label="Guardar Cambios" type="submit" />
+          <q-btn flat :label="$t('editAssetDialog.cancelButton')" @click="closeDialog" />
+          <q-btn color="primary" :label="$t('editAssetDialog.submitButton')" type="submit" />
         </q-card-actions>
       </q-form>
     </q-card>
@@ -49,7 +49,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import type { PropType } from 'vue';
-import type { Asset } from 'src/stores/types';
+import type { BookAsset } from 'src/stores/types';
 
 // Props y Emits para la comunicación con el padre
 const props = defineProps({
@@ -58,7 +58,7 @@ const props = defineProps({
     required: true,
   },
   asset: {
-    type: Object as PropType<Asset | null>,
+    type: Object as PropType<BookAsset | null>,
     required: true,
   },
 });
@@ -69,20 +69,19 @@ const assetName = ref('');
 const assetCategory = ref('');
 
 // [NUEVO] Opciones fijas para la categoría
-const categoryOptions = [
-  'General',
-  'Personaje',
-  'Mapa',
-  'Objecto'
-];
+const categoryOptions = ['General', 'Personaje', 'Mapa', 'Objecto'];
 
 // Observador para rellenar el formulario cuando el asset cambie
-watch(() => props.asset, (newAsset) => {
-  if (newAsset) {
-    assetName.value = newAsset.name;
-    assetCategory.value = newAsset.category;
-  }
-}, { immediate: true }); // `immediate` para que se ejecute al montar
+watch(
+  () => props.asset,
+  (newAsset) => {
+    if (newAsset) {
+      assetName.value = newAsset.name;
+      assetCategory.value = newAsset.category;
+    }
+  },
+  { immediate: true },
+); // `immediate` para que se ejecute al montar
 
 const closeDialog = () => {
   emit('update:modelValue', false);

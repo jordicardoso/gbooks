@@ -122,6 +122,7 @@ import '@vue-flow/controls/dist/style.css';
 import '@vue-flow/minimap/dist/style.css';
 
 import { ref, nextTick, onMounted, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { VueFlow, useVueFlow } from '@vue-flow/core';
 import type { Connection, NodeMouseEvent, Viewport } from '@vue-flow/core';
 import { Background, BackgroundVariant } from '@vue-flow/background';
@@ -148,12 +149,14 @@ const { nodes, edges } = storeToRefs(nodesStore);
 // Desestructuramos las funciones que vamos a usar a lo largo del componente.
 const { setViewport, project, onInit } = useVueFlow();
 
+const { t } = useI18n();
+
 const isMenuOpen = ref(false);
 const menuPosition = ref({ x: 0, y: 0 });
 const contextMenuItems = computed<MenuItem[]>(() => [
-  { action: 'add_story', label: 'Añadir Párrafo', icon: 'add_circle' },
-  { action: 'add_location', label: 'Añadir Localización', icon: 'map' },
-  { action: 'add_end', label: 'Añadir Final', icon: 'flag' },
+  { action: 'add_story', label: t('bookGraph.contextMenu.addStory'), icon: 'add_circle' },
+  { action: 'add_location', label: t('bookGraph.contextMenu.addLocation'), icon: 'map' },
+  { action: 'add_end', label: t('bookGraph.contextMenu.addEnd'), icon: 'flag' },
 ]);
 const menuProjectedPosition = ref<{ x: number; y: number } | null>(null);
 
@@ -229,10 +232,7 @@ function handleEditorSave(payload: {
   handleEditorClose();
 }
 
-function handleEdgeEditorSave(payload: {
-  edgeId: string;
-  updates: Partial<Omit<BookEdge, 'id'>>;
-}) {
+function handleEdgeEditorSave(payload: { edgeId: string; updates: Partial<Omit<BookEdge, 'id'>> }) {
   nodesStore.updateEdge(payload.edgeId, payload.updates);
   handleEdgeEditorClose();
 }
@@ -259,7 +259,7 @@ function onPaneContextMenu(event: MouseEvent) {
 
 function handleMenuAction(actionId: string) {
   if (!menuProjectedPosition.value) {
-    console.error("handleMenuAction was called but no projected position was found.");
+    console.error('handleMenuAction was called but no projected position was found.');
     isMenuOpen.value = false;
     return;
   }
@@ -269,7 +269,8 @@ function handleMenuAction(actionId: string) {
     nodeType = 'story';
   } else if (actionId === 'add_end') {
     nodeType = 'end';
-  } else if (actionId === 'add_location') { // [NUEVO]
+  } else if (actionId === 'add_location') {
+    // [NUEVO]
     nodeType = 'location';
   }
 
@@ -301,7 +302,6 @@ defineExpose({
   height: 100%;
   position: relative;
   overflow: hidden;
-
 }
 .node-editor-container {
   position: absolute;
@@ -311,7 +311,9 @@ defineExpose({
   width: 350px;
   z-index: 10;
   border-radius: 8px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2), 0 6px 6px rgba(0, 0, 0, 0.25);
+  box-shadow:
+    0 10px 20px rgba(0, 0, 0, 0.2),
+    0 6px 6px rgba(0, 0, 0, 0.25);
 }
 .slide-fade-right-enter-active,
 .slide-fade-right-leave-active {

@@ -1,6 +1,12 @@
 // src/i18n/ca-ES/index.ts
 
 export default {
+  languages: {
+    es: 'Espanyol',
+    ca: 'Català',
+    en: 'Anglès',
+    ru: 'Rus',
+  },
   // Textos de la interfície principal de la biblioteca
   library: {
     title: 'Biblioteca',
@@ -86,6 +92,18 @@ export default {
       },
       newNode: 'Node nou',
     },
+  },
+  actionEditors: {
+    diceRoll: {
+      descriptionLabel: 'Descripció de la tirada',
+      diceLabel: 'Daus a tirar',
+      dicePlaceholder: 'Ex: 1d6, 2d10+3',
+      outcomesTitle: 'Resultats Possibles',
+      addOutcomeButton: 'Afegir Resultat',
+      noOutcomes: 'Afegeix almenys un resultat.',
+      outcomeLabel: 'Resultat per a [{range}]',
+      newOutcomeDescription: 'Nou resultat',
+    }
   },
   assetsPage: {
     title: "Gestor d'Assets",

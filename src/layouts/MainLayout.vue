@@ -16,14 +16,6 @@
             {{ bookStore.activeBook?.meta.title || 'Cargando...' }}
           </q-toolbar-title>
           <q-space />
-          <q-btn
-            flat
-            :label="$t('bookPage.save')"
-            icon="save"
-            @click="saveBook"
-            :disable="!bookStore.isDirty || isSaving"
-            :loading="isSaving"
-          />
         </template>
 
         <!-- B. Barra de herramientas por defecto para el resto de la app -->
