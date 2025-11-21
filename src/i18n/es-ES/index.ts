@@ -105,6 +105,49 @@ export default {
       newOutcomeDescription: 'Nuevo resultado',
     }
   },
+  actionsEditor: {
+    title: 'Acciones al Entrar al Nodo',
+    addActionTooltip: 'Añadir una nueva acción',
+    noActions: 'No hay acciones definidas para este nodo.',
+    noNestedActions: 'Sin acciones',
+    successActionsTitle: 'Si se CUMPLE, hacer:',
+    failureActionsTitle: 'Si FALLA, hacer:',
+    removeConditionButton: 'Eliminar Condición',
+    condition: {
+      title: 'Condición',
+      sourceLabel: 'Tipo',
+      subjectLabelStat: 'Estadística a comprobar',
+      subjectLabelFlag: 'Evento a comprobar', // <-- CAMBIO
+      valueLabel: 'Valor',
+      sources: {
+        stat: 'Estadística',
+        flag: 'Evento', // <-- CAMBIO
+      },
+    },
+    dialog: {
+      title: 'Elige un tipo de Acción',
+      conditional: 'Acción Condicional (Si... entonces...)',
+      modifyStat: 'Modificar Estadística',
+      setFlag: 'Establecer Evento', // <-- CAMBIO
+    },
+    dialogs: {
+      modifyStat: {
+        title: 'Modificar Estadística',
+        message: 'Define la estadística, la operación y el valor.',
+      },
+      setFlag: {
+        title: 'Establecer Evento', // <-- CAMBIO
+        message:
+          'Introduce el nombre del evento (ej: "puerta_abierta"). Se establecerá a "true".',
+      },
+    },
+    descriptions: {
+      modifyStat: 'Estadística: {stat} {operation} {value}',
+      setFlag: 'Evento: {flag} = {value}', // <-- CAMBIO
+      conditional: 'SI ({subject} {operator} {value}) ENTONCES...',
+      unknown: 'Acción desconocida',
+    },
+  },
   assetsPage: {
     title: 'Gestor de Assets',
     addAsset: 'Añadir Asset',

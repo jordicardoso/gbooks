@@ -4,13 +4,14 @@
     <q-header elevated class="bg-grey-9">
       <q-toolbar>
         <template v-if="isBookEditorPage">
+          <!-- [CORRECCIÓN] Usamos la clave correcta que sí existe en los ficheros i18n -->
           <q-btn
             flat
             round
             dense
             icon="arrow_back"
             @click="goBackToLibrary"
-            :title="$t('bookPage.backToLibrary')"
+            :title="$t('bookPage.returnToLibrary')"
           />
           <q-toolbar-title class="ellipsis">
             {{ bookStore.activeBook?.meta.title || 'Cargando...' }}

@@ -1,10 +1,11 @@
 // src/stores/book-store.ts
 
 import { defineStore } from 'pinia';
-import { toRaw } from 'vue';
+import { toRaw, type Viewport } from 'vue';
 import { useNodesStore } from './nodes-store';
 import { useAssetsStore } from './assets-store';
-import type { BookData, BookNode, CharacterSheet, CharacterSheetSchema, CharacterSheetSectionSchema } from './types';
+import type { BookData, BookNode, CharacterSheet, CharacterSheetSchema,
+  CharacterSheetSectionSchema, BookEvent } from './types';
 
 export interface BookState {
   activeBook: BookData | null;
@@ -33,8 +34,6 @@ function generateDefaultSheetFromSchema(schema: CharacterSheetSchema): Character
   for (const section of schema.layout) {
     (newSheet as any)[section.dataKey] = getInitialDataForSection(section);
   }
-  // Aseguramos que la sección 'stats' siempre exista si está en el schema,
-  // aunque la clave sea dinámica.
   const statsSection = schema.layout.find(s => s.type === 'stats');
   if (statsSection && !newSheet.stats) {
     newSheet.stats = (newSheet as any)[statsSection.dataKey] || {};
@@ -51,7 +50,7 @@ function validateAndRepairBookData(data: any): BookData {
     nodes: [],
     edges: [],
     assets: [],
-    variables: [],
+    events: [], // La única fuente de verdad
     viewport: { x: 0, y: 0, zoom: 1 },
     characterSheetSchema: null,
     characterSheet: null,
@@ -59,13 +58,22 @@ function validateAndRepairBookData(data: any): BookData {
 
   if (!data || typeof data !== 'object') return defaults;
 
+  const rawEvents = data.events || [];
+  const migratedEvents: BookEvent[] = rawEvents.map((event: any) => {
+    // Solo se procesan objetos con 'name'. La migración de strings se elimina.
+    if (typeof event === 'object' && event.name) {
+      // Asegura que los eventos tengan un id.
+      return { id: event.id || event.name.replace(/\s+/g, '_').toLowerCase(), name: event.name };
+    }
+    return null;
+  }).filter((e): e is BookEvent => e !== null);
+
+
   let cleanViewport = { ...defaults.viewport };
   if (data.viewport) {
-    // Si encontramos la estructura antigua y compleja, extraemos lo que nos interesa.
     if (data.viewport.flowTransform) {
       cleanViewport = { ...defaults.viewport, ...data.viewport.flowTransform };
     } else {
-      // Si no, asumimos que es la estructura nueva y limpia.
       cleanViewport = { ...defaults.viewport, ...data.viewport };
     }
   }
@@ -83,7 +91,7 @@ function validateAndRepairBookData(data: any): BookData {
     nodes: migratedNodes,
     edges: Array.isArray(data.edges) ? data.edges : defaults.edges,
     assets: Array.isArray(data.assets) ? data.assets : defaults.assets,
-    variables: Array.isArray(data.variables) ? data.variables : defaults.variables,
+    events: migratedEvents, // Usamos los eventos limpios
     viewport: cleanViewport,
     characterSheetSchema: data.characterSheetSchema || defaults.characterSheetSchema,
     characterSheet: data.characterSheet || defaults.characterSheet,
@@ -111,37 +119,30 @@ export const useBookStore = defineStore('book', {
   actions: {
     getViewport(): Viewport {
       if (this.activeBook && this.activeBook.viewport) {
-        // Devuelve el viewport limpio y validado del libro activo
         return this.activeBook.viewport;
       }
-      // Fallback seguro si no hay libro o viewport
       return { x: 0, y: 0, zoom: 1 };
     },
 
     createInitialCharacterSheet() {
       if (!this.activeBook) return;
-
       const initialSchema: CharacterSheetSchema = {
         layout: [
           {
             type: 'stats',
             title: 'Estadísticas Principales',
             icon: 'analytics',
-            dataKey: 'stats', // Usamos 'stats' como clave fija para la sección principal
+            dataKey: 'stats',
           },
         ],
       };
-
-      // Usamos $patch para modificar el estado de forma segura
       this.$patch(state => {
         if (state.activeBook) {
           state.activeBook.characterSheetSchema = initialSchema;
           state.activeBook.characterSheet = generateDefaultSheetFromSchema(initialSchema);
         }
       });
-
-      this.setDirty(); // Reutilizamos la lógica de guardado automático
-      console.log('Ficha de personaje inicial creada.');
+      this.setDirty();
     },
 
     setCharacterSheet(newSheet: CharacterSheet) {
@@ -156,35 +157,35 @@ export const useBookStore = defineStore('book', {
         console.error('No se puede actualizar el schema si no hay ficha activa.');
         return;
       }
-
       const oldSchema = this.characterSheetSchema;
       const oldDataKeys = new Set(oldSchema.layout.map(s => s.dataKey));
       const newDataKeys = new Set(newSchema.layout.map(s => s.dataKey));
       const newCharacterSheet = { ...this.characterSheet };
-
-      // 1. Eliminar datos de secciones que ya no existen
       for (const key of oldDataKeys) {
         if (!newDataKeys.has(key)) {
           delete (newCharacterSheet as any)[key];
         }
       }
-
-      // 2. Añadir datos iniciales para las nuevas secciones
       for (const section of newSchema.layout) {
         if (!oldDataKeys.has(section.dataKey)) {
           (newCharacterSheet as any)[section.dataKey] = getInitialDataForSection(section);
         }
       }
-
-      // 3. Actualizar el estado de forma segura con $patch
       this.$patch(state => {
         if (state.activeBook) {
           state.activeBook.characterSheetSchema = newSchema;
           state.activeBook.characterSheet = newCharacterSheet;
         }
       });
+      this.setDirty();
+    },
 
-      // 4. Disparamos el guardado automático
+    addEvent(newEvent: { id: string; name: string }) {
+      if (!this.activeBook) return;
+      if (!this.activeBook.events) {
+        this.activeBook.events = [];
+      }
+      this.activeBook.events.push(newEvent);
       this.setDirty();
     },
 
@@ -192,22 +193,16 @@ export const useBookStore = defineStore('book', {
       if (!bookId) return;
       this.isLoading = true;
       this.isDirty = false;
-
       if (this.debounceSaveTimer) clearTimeout(this.debounceSaveTimer);
-
       try {
         const content = await window.electronAPI.loadBook(bookId);
         const bookData = validateAndRepairBookData(JSON.parse(content));
-
         this.activeBook = bookData;
         this.activeBookId = bookId;
-
         const nodesStore = useNodesStore();
         const assetsStore = useAssetsStore();
-
         nodesStore.setElements(bookData.nodes, bookData.edges, bookData.viewport);
         assetsStore.setAssets(bookId, bookData.assets);
-
       } catch (error) {
         console.error(`Error al cargar el libro con ID "${bookId}":`, error);
         this.clearBook();
@@ -219,30 +214,21 @@ export const useBookStore = defineStore('book', {
 
     async saveCurrentBook(force = false) {
       if (this.debounceSaveTimer) clearTimeout(this.debounceSaveTimer);
-
-      if (!this.activeBook || !this.activeBookId) {
-        return;
-      }
-
-      if (!this.isDirty && !force) {
-        console.log('[BookStore] Guardado omitido: no hay cambios y no se ha forzado.');
-        return;
-      }
+      if (!this.activeBook || !this.activeBookId) return;
+      if (!this.isDirty && !force) return;
 
       this.isLoading = true;
       try {
         const nodesStore = useNodesStore();
         const assetsStore = useAssetsStore();
 
-        // [LA CLAVE] Aquí está la corrección.
-        // Ahora incluimos `markerEnd` en el objeto que se guarda.
         const cleanEdges = toRaw(nodesStore.edges).map(edge => ({
           id: edge.id,
           source: edge.source,
           target: edge.target,
           sourceHandle: edge.sourceHandle,
           targetHandle: edge.targetHandle,
-          markerEnd: edge.markerEnd, // <-- AÑADIDO
+          markerEnd: edge.markerEnd,
           label: edge.label,
           data: edge.data,
         }));
@@ -251,6 +237,7 @@ export const useBookStore = defineStore('book', {
           ...this.activeBook,
           nodes: nodesStore.nodes,
           edges: cleanEdges,
+          events: this.activeBook.events,
           assets: assetsStore.assets,
           viewport: nodesStore.viewport,
         };
@@ -271,11 +258,9 @@ export const useBookStore = defineStore('book', {
     clearBook() {
       if (this.debounceSaveTimer) clearTimeout(this.debounceSaveTimer);
       this.debounceSaveTimer = null;
-
       this.activeBook = null;
       this.activeBookId = null;
       this.isDirty = false;
-
       useNodesStore().clearElements();
       useAssetsStore().clearAssets();
     },

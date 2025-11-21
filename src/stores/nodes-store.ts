@@ -106,9 +106,7 @@ export const useNodesStore = defineStore('nodes', {
      * Crea un nuevo nodo en una posición específica.
      */
     createNode(options: { position: { x: number; y: number }; type: string }) {
-      // ... (código existente)
 
-      // [MODIFICADO] Lógica para determinar la etiqueta y el color
       let label = 'Nuevo Párrafo';
       let color = '#455a64'; // Color por defecto para 'story'
 
@@ -334,9 +332,22 @@ export const useNodesStore = defineStore('nodes', {
      * Helper para obtener un número de párrafo único y consecutivo.
      */
     getNewParagraphNumber(): number {
-      const existingNumbers = this.nodes.map(n => n.data.paragraphNumber || 0);
-      const maxNumber = Math.max(0, ...existingNumbers);
-      return maxNumber + 1;
+      // 1. Recolecta todos los números de párrafo existentes que sean válidos (números positivos).
+      const existingNumbers = this.nodes
+        .map(n => n.data?.paragraphNumber)
+        .filter((n): n is number => typeof n === 'number' && !isNaN(n) && n > 0);
+
+      // 2. Crea un Set para una búsqueda de existencia muy eficiente (O(1)).
+      const numberSet = new Set(existingNumbers);
+
+      // 3. Empieza a buscar desde el 1 en adelante.
+      let nextNumber = 1;
+      while (numberSet.has(nextNumber)) {
+        nextNumber++;
+      }
+
+      // 4. Devuelve el primer número que no se encontró en el Set.
+      return nextNumber;
     },
   },
 });

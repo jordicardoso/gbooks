@@ -2,7 +2,6 @@
 <template>
   <q-card v-if="localNode" :class="['node-editor-panel bg-grey-9 text-white no-shadow column no-wrap', { 'fullscreen': isFullScreen }]">
 
-    <!-- 1. CABECERA: Ocupa su altura natural -->
     <q-toolbar class="bg-grey-10 col-auto">
       <q-toolbar-title class="text-subtitle1">
         Editar Nodo
@@ -20,7 +19,6 @@
 
     <q-scroll-area class="col" style="min-height: 0;">
       <q-card-section class="q-pt-md q-gutter-y-md">
-        <!-- ... (inputs de nombre, párrafo, etc.) ... -->
         <div class="row q-col-gutter-md">
           <div class="col-8">
             <q-input
@@ -152,9 +150,13 @@
       </q-card-section>
 
       <q-card-section>
+        <!-- [CAMBIO] Pasamos la nueva lista de eventos y escuchamos la creación -->
         <ActionsEditor
-          :actions="localNode.actions || []"
+          :actions="localNode.data.actions || []"
           @update:actions="updateNodeActions"
+          :available-stats="availableStats"
+          :available-events="availableEvents"
+          @create-event="handleCreateEvent"
         />
       </q-card-section>
 
@@ -162,12 +164,11 @@
 
       <q-card-section>
         <ChoicesEditor
-          :choices="localNode.choices || []"
+          :choices="localNode.data.choices || []"
           @update:choices="updateNodeChoices"
         />
       </q-card-section>
 
-      <!-- 3. PIE DE PÁGINA: Ocupa su altura natural y está FUERA del scroll -->
       <q-card-actions
         align="right"
         class="q-pa-md col-auto bg-grey-10"
@@ -184,13 +185,13 @@
 </template>
 
 <script setup lang="ts">
-// El script no necesita cambios
 import { ref, watch, computed } from 'vue';
 import { useQuasar } from 'quasar';
 import { useAssetsStore } from 'src/stores/assets-store';
 import { useNodesStore } from 'src/stores/nodes-store';
+import { useBookStore } from 'src/stores/book-store';
 import { storeToRefs } from 'pinia';
-import type { BookNode, AnyAction, AnyChoice, SimpleChoice } from 'src/stores/types';
+import type { BookNode, AnyAction, AnyChoice, SimpleChoice, BookEvents } from 'src/stores/types';
 import ActionsEditor from './ActionsEditor.vue';
 import ChoicesEditor from './ChoicesEditor.vue';
 
@@ -204,8 +205,10 @@ const emit = defineEmits(['save', 'close', 'delete']);
 const $q = useQuasar();
 const assetsStore = useAssetsStore();
 const nodesStore = useNodesStore();
+const bookStore = useBookStore();
 const { assets } = storeToRefs(assetsStore);
 const { nodes } = storeToRefs(nodesStore);
+const { activeBook } = storeToRefs(bookStore);
 
 const localNode = ref<BookNode | null>(null);
 const allTagsOptions = ref<string[]>([]);
@@ -232,6 +235,27 @@ const toolbarOptions = [
   ['removeFormat']
 ];
 
+const availableStats = computed<string[]>(() => {
+  if (!activeBook.value?.characterSheet?.stats) return [];
+  return Object.keys(activeBook.value.characterSheet.stats).sort();
+});
+
+const availableEvents = computed<BookEvent[]>(() => {
+  if (!activeBook.value?.events) return [];
+  return [...activeBook.value.events].sort((a, b) => a.name.localeCompare(b.name));
+});
+
+function handleCreateEvent(newEvent: { id: string; name: string }) {
+  if (activeBook.value?.events?.some(e => e.id === newEvent.id)) {
+    $q.notify({
+      type: 'negative',
+      message: `El código de evento "${newEvent.id}" ya existe. Por favor, usa uno diferente.`,
+    });
+    return;
+  }
+  bookStore.addEvent(newEvent);
+}
+
 const allBookTags = computed(() => {
   const all = nodes.value.flatMap(node => node.data.tags || []);
   return [...new Set(all)];
@@ -255,14 +279,14 @@ const currentImageUrl = computed(() => {
 });
 
 function updateNodeActions(newActions: AnyAction[]) {
-  if (localNode.value) {
-    localNode.value.actions = newActions;
+  if (localNode.value?.data) {
+    localNode.value.data.actions = newActions;
   }
 }
 
 function updateNodeChoices(newChoices: AnyChoice[]) {
   if (localNode.value) {
-    localNode.value.choices = newChoices;
+    localNode.value.data.choices = newChoices;
   }
 }
 
@@ -277,13 +301,12 @@ function createTag(inputValue: string, doneFn: (item: string, mode: 'add-unique'
 watch(() => props.node, (newNode) => {
   if (newNode) {
     localNode.value = JSON.parse(JSON.stringify(newNode));
+    if (!localNode.value.data) localNode.value.data = {};
     if (!localNode.value.data.tags) localNode.value.data.tags = [];
-    if (!localNode.value.actions) localNode.value.actions = [];
-    if (!localNode.value.choices) localNode.value.choices = [];
+    if (!localNode.value.data.actions) localNode.value.data.actions = [];
+    if (!localNode.value.data.choices) localNode.value.data.choices = [];
     if (typeof localNode.value.data.paragraphNumber !== 'number') {
-      const existingParagraphNumbers = nodes.value.map(n => n.data.paragraphNumber || 0);
-      const maxParagraphNumber = Math.max(0, ...existingParagraphNumbers);
-      localNode.value.data.paragraphNumber = maxParagraphNumber + 1;
+      localNode.value.data.paragraphNumber = nodesStore.getNewParagraphNumber();
     }
     allTagsOptions.value = [...new Set([...allBookTags.value, ...(localNode.value.data.tags || [])])];
   } else {

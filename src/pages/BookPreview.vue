@@ -291,6 +291,11 @@ async function buildPdfNative(options: {
         return `[Se añade el objeto '${action.itemId}' al inventario]`;
       case 'setFlag':
         return `Marca el evento ${action.flag}`;
+      // [CORRECCIÓN] Añadimos un caso por defecto para que la función SIEMPRE devuelva un string.
+      default:
+        // Para acciones que no tienen una representación textual (como 'diceRoll'),
+        // devolvemos una cadena vacía para que no se impriman en el PDF y no causen errores.
+        return '';
     }
   };
 
