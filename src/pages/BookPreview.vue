@@ -48,7 +48,7 @@ import { storeToRefs } from 'pinia';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
 import * as pdfLib from 'pdf-lib';
-import type { AnyAction, AnyChoice, BookNode } from 'src/stores/types';
+import type { AnyAction, AnyChoice } from 'src/stores/types';
 
 const $q = useQuasar();
 const { t } = useI18n();
@@ -140,9 +140,20 @@ async function buildPdfNative(options: {
     actions: AnyAction[];
     choices: AnyChoice[];
   }[];
-  allNodes: BookNode[];
+
+  formatChoiceText: (choice: AnyChoice) => string;
+  formatActionText: (action: AnyAction) => string;
 }) {
-  const { imageId, title, author, description, blocks, allNodes } = options; // [CAMBIO]
+  const {
+    imageId,
+    title,
+    author,
+    description,
+    blocks,
+
+    formatChoiceText,
+    formatActionText,
+  } = options;
 
   if (!activeBook.value) {
     $q.notify({ type: 'negative', message: t('bookPreview.notifications.noActiveBook') });
@@ -275,46 +286,6 @@ async function buildPdfNative(options: {
   let currentColumn = 0; // 0 for left, 1 for right
   const columnX = [marginLeftPt, marginLeftPt + columnWidthPt + gapBetweenColumnsPt];
 
-  const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
-  const getParagraphNumber = (nodeId: string): string => {
-    const targetNode = nodeMap.get(nodeId);
-    return targetNode?.data?.paragraphNumber ? String(targetNode.data.paragraphNumber) : '???';
-  };
-
-  const formatActionText = (action: AnyAction): string => {
-    switch (action.type) {
-      case 'setVariable':
-        return `[Se establece la variable '${action.variable}' a '${action.value}']`;
-      case 'addItem':
-        return `[Se añade el objeto '${action.itemId}' al inventario]`;
-      case 'delItem':
-        return `[Se añade el objeto '${action.itemId}' al inventario]`;
-      case 'setFlag':
-        return `Marca el evento ${action.flag}`;
-      // [CORRECCIÓN] Añadimos un caso por defecto para que la función SIEMPRE devuelva un string.
-      default:
-        // Para acciones que no tienen una representación textual (como 'diceRoll'),
-        // devolvemos una cadena vacía para que no se impriman en el PDF y no causen errores.
-        return '';
-    }
-  };
-
-  const formatChoiceText = (choice: AnyChoice): string => {
-    let text = `${choice.label || 'Sigue leyendo el párrafo'}`;
-    if (choice.targetNodeId) {
-      const targetPara = getParagraphNumber(choice.targetNodeId);
-      text += ` ${targetPara}`;
-    }
-
-    if (choice.conditions && choice.conditions.length > 0) {
-      const conditionStr = choice.conditions
-        .map((c: any) => `${c.variable} ${c.operator} ${c.value}`)
-        .join(' y ');
-      text = `Si (${conditionStr}), ${text}`;
-    }
-    return text;
-  };
-
   const checkAndSwitchColumn = (neededHeight = fontSizeText * lineHeight) => {
     if (cursorY - neededHeight < marginBottomPt) {
       currentColumn++;
@@ -344,7 +315,9 @@ async function buildPdfNative(options: {
       const bulletSize = fontSizeText;
       // Centramos la viñeta en el espacio de la sangría para un mejor aspecto
       const bulletX =
-        columnX[currentColumn] + indent / 2 - bulletFont.widthOfTextAtSize(bullet, bulletSize) / 2;
+        (columnX[currentColumn] ?? 0) +
+        indent / 2 -
+        bulletFont.widthOfTextAtSize(bullet, bulletSize) / 2;
       currentPage.drawText(bullet, {
         x: bulletX,
         y: cursorY,
@@ -424,10 +397,10 @@ async function buildPdfNative(options: {
       const line = lines[i];
       const isLastLine = i === lines.length - 1;
       checkAndSwitchColumn();
-      let cursorX = columnX[currentColumn] + indent;
+      let cursorX = (columnX[currentColumn] ?? 0) + indent;
 
       // No justificar la última línea, ni las de acciones/elecciones, ni las de una sola palabra
-      if (isLastLine || options.isChoiceOrAction || line.length <= 1) {
+      if (line && (isLastLine || options.isChoiceOrAction || line.length <= 1)) {
         // Dibujar alineado a la izquierda
         for (const part of line) {
           currentPage.drawText(part.text, {
@@ -439,7 +412,7 @@ async function buildPdfNative(options: {
           });
           cursorX += part.width + spaceWidth;
         }
-      } else {
+      } else if (line) {
         // Dibujar con justificación
         const totalWordsWidth = line.reduce((sum, part) => sum + part.width, 0);
         const totalSpacing = availableWidth - totalWordsWidth;
@@ -467,7 +440,7 @@ async function buildPdfNative(options: {
     checkAndSwitchColumn(fontSizeNumber * lineHeight + fontSizeText * lineHeight);
 
     const numberWidth = fontBold.widthOfTextAtSize(nro, fontSizeNumber);
-    const numberX = columnX[currentColumn] + (columnWidthPt - numberWidth) / 2;
+    const numberX = (columnX[currentColumn] ?? 0) + (columnWidthPt - numberWidth) / 2;
     currentPage.drawText(nro, {
       x: numberX,
       y: cursorY,
@@ -537,13 +510,15 @@ async function buildPdfNative(options: {
       totalPages: pages.length - 1,
     }); // Exclude cover
     const textWidth = font.widthOfTextAtSize(pageNumberText, 8);
-    p.drawText(pageNumberText, {
-      x: (pageWidthPt - textWidth) / 2,
-      y: marginBottomPt / 2,
-      size: 8,
-      font,
-      color: pdfLib.rgb(0.5, 0.5, 0.5),
-    });
+    if (p) {
+      p.drawText(pageNumberText, {
+        x: (pageWidthPt - textWidth) / 2,
+        y: marginBottomPt / 2,
+        size: 8,
+        font,
+        color: pdfLib.rgb(0.5, 0.5, 0.5),
+      });
+    }
   }
 
   // --------------- [NUEVO] CONTRAPORTADA ----------------
@@ -562,7 +537,8 @@ async function buildPdfNative(options: {
   }
 
   const pdfBytes = await pdfDoc.save();
-  return new Blob([pdfBytes], { type: 'application/pdf' });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return new Blob([pdfBytes as any], { type: 'application/pdf' });
 }
 
 async function generatePdf() {
@@ -576,6 +552,55 @@ async function generatePdf() {
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   try {
+    const formatChoiceText = (choice: AnyChoice): string => {
+      let text = `${choice.label || 'Sigue leyendo el párrafo'}`;
+
+      if (choice.type === 'simple' && choice.targetNodeId) {
+        const targetPara = getParagraphNumber(choice.targetNodeId);
+        text += ` ${targetPara}`;
+      } else if (choice.type === 'conditional') {
+        const c = choice.condition;
+        const conditionStr = `${c.subject} ${c.operator} ${c.value}`;
+        text = `Si (${conditionStr}), ${text}`;
+        if (choice.successTargetNodeId) {
+          const targetPara = getParagraphNumber(choice.successTargetNodeId);
+          text += ` -> ${targetPara}`;
+        }
+      } else if (choice.type === 'diceRoll') {
+        text = `[Tirada: ${choice.dice}]`;
+        if (choice.outcomes?.length) {
+          const outcomesText = choice.outcomes
+            .map((o) => {
+              const target = o.targetNodeId ? ` -> ${getParagraphNumber(o.targetNodeId)}` : '';
+              return `${o.label} (${o.range})${target}`;
+            })
+            .join(', ');
+          text += ` (${outcomesText})`;
+        }
+      }
+      return text;
+    };
+
+    const formatActionText = (action: AnyAction): string => {
+      switch (action.type) {
+        case 'modifyStat':
+          return `[Se modifica la estadística '${action.stat}' (${action.operation} ${action.value})]`;
+        case 'modifyInventory':
+          return `[Se ${action.operation === 'add' ? 'añade' : 'elimina'} ${action.quantity} de '${action.item}' en el inventario]`;
+        case 'setFlag':
+          return `[Se establece el evento '${action.flag}' a '${action.value}']`;
+        case 'diceRoll':
+          return `[Tirada de dados: ${action.dice} - ${action.description}]`;
+        default:
+          return '';
+      }
+    };
+
+    const getParagraphNumber = (nodeId: string): string => {
+      const node = sortedNodes.find((n) => n.id === nodeId);
+      return node?.data?.paragraphNumber ? String(node.data.paragraphNumber) : '?';
+    };
+
     const sortedNodes = [...nodes.value].sort((a, b) => {
       const numA = parseFloat(String(a.data?.paragraphNumber ?? '').trim());
       const numB = parseFloat(String(b.data?.paragraphNumber ?? '').trim());
@@ -588,23 +613,27 @@ async function generatePdf() {
     const blocks = sortedNodes
       .filter((n) => n.data?.paragraphNumber && String(n.data?.paragraphNumber).trim() !== '')
       .map((n) => ({
-        number: n.data.paragraphNumber,
+        number: n.data.paragraphNumber || 0,
         description: n.data.description || t('bookPreview.pdfContent.noDescription'),
-        actions: n.actions || [],
-        choices: n.choices || [],
+        actions: n.data.actions || [],
+        choices: n.data.choices || [],
       }));
 
     const blob = await buildPdfNative({
-      imageId: activeBook.value.meta.imageId,
+      imageId: activeBook.value.meta.imageId || null,
       title: activeBook.value.meta.title || t('bookPreview.pdfContent.untitled'),
       author: activeBook.value.meta.author || t('bookPreview.pdfContent.unknownAuthor'),
-      description: activeBook.value.meta.description || '', // [CAMBIO]
+      description: activeBook.value.meta.description || '',
       blocks,
-      allNodes: sortedNodes,
+
+      formatChoiceText, // Pass the function
+      formatActionText, // Pass the function
     });
 
-    pdfDataUrl.value = URL.createObjectURL(blob);
-    $q.notify({ type: 'positive', message: 'PDF generado correctamente.' });
+    if (blob) {
+      pdfDataUrl.value = URL.createObjectURL(blob);
+      $q.notify({ type: 'positive', message: 'PDF generado correctamente.' });
+    }
   } catch (err) {
     console.error('Error generando PDF nativo:', err);
     $q.notify({ type: 'negative', message: t('bookPreview.notifications.generationError') });

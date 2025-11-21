@@ -1,9 +1,6 @@
 <!-- src/components/NodeResizer.vue (NUEVO FICHERO) -->
 <template>
-  <div
-    class="node-resizer"
-    @mousedown.stop.prevent="onMouseDown"
-  ></div>
+  <div class="node-resizer" @mousedown.stop.prevent="onMouseDown"></div>
 </template>
 
 <script setup lang="ts">
@@ -19,7 +16,7 @@ const props = defineProps<{
 const nodesStore = useNodesStore();
 
 function onMouseDown(event: MouseEvent) {
-  const node = nodesStore.nodes.find(n => n.id === props.nodeId) as BookNode | undefined;
+  const node = nodesStore.nodes.find((n) => n.id === props.nodeId) as BookNode | undefined;
   if (!node) return;
 
   // Obtenemos el elemento del DOM para tener una referencia
@@ -46,7 +43,7 @@ function onMouseDown(event: MouseEvent) {
     nodeElement.style.height = `${newHeight}px`;
   };
 
-  const onMouseUp = (upEvent: MouseEvent) => {
+  const onMouseUp = () => {
     // Limpiamos los listeners
     window.removeEventListener('mousemove', onMouseMove);
     window.removeEventListener('mouseup', onMouseUp);

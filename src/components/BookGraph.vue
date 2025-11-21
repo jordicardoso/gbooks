@@ -26,7 +26,7 @@
       <template #node-start="props">
         <BookStartNode
           :id="props.id"
-          :label="props.label"
+          :label="props.label as string"
           :selected="props.selected"
           :paragraph-number="props.data.paragraphNumber"
           :description="props.data.description"
@@ -40,7 +40,7 @@
       <template #node-story="props">
         <BookStoryNode
           :id="props.id"
-          :label="props.label"
+          :label="props.label as string"
           :selected="props.selected"
           :paragraph-number="props.data.paragraphNumber"
           :description="props.data.description"
@@ -54,7 +54,7 @@
       <template #node-default="props">
         <BookStoryNode
           :id="props.id"
-          :label="props.label"
+          :label="props.label as string"
           :selected="props.selected"
           :paragraph-number="props.data.paragraphNumber"
           :description="props.data.description"
@@ -68,7 +68,7 @@
       <template #node-end="props">
         <BookEndNode
           :id="props.id"
-          :label="props.label"
+          :label="props.label as string"
           :selected="props.selected"
           :paragraph-number="props.data.paragraphNumber"
           :description="props.data.description"
@@ -121,10 +121,11 @@ import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/controls/dist/style.css';
 import '@vue-flow/minimap/dist/style.css';
 
-import { ref, nextTick, onMounted, computed } from 'vue';
+import { ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { VueFlow, useVueFlow } from '@vue-flow/core';
-import type { Connection, NodeMouseEvent, Viewport } from '@vue-flow/core';
+import type { Connection, NodeMouseEvent } from '@vue-flow/core';
+import type { BookNode, Viewport } from 'src/stores/types';
 import { Background, BackgroundVariant } from '@vue-flow/background';
 import { Controls } from '@vue-flow/controls';
 import { MiniMap } from '@vue-flow/minimap';
@@ -141,7 +142,7 @@ import BookEndNode from './BookEndNode.vue';
 import BookLocationNode from './BookLocationNode.vue';
 import NodeEditorPanel from './NodeEditorPanel.vue';
 import EdgeEditorPanel from './EdgeEditorPanel.vue';
-import type { BookEdge, BookNode } from 'src/stores/types';
+import type { BookEdge } from 'src/stores/types';
 
 const nodesStore = useNodesStore();
 const { nodes, edges } = storeToRefs(nodesStore);
@@ -160,7 +161,6 @@ const contextMenuItems = computed<MenuItem[]>(() => [
 ]);
 const menuProjectedPosition = ref<{ x: number; y: number } | null>(null);
 
-const isGraphReady = ref(false);
 const isEditorOpen = ref(false);
 const selectedNode = ref<BookNode | null>(null);
 const isEdgeEditorOpen = ref(false);
@@ -179,7 +179,7 @@ onInit(() => {
   const bookStore = useBookStore();
   const initialViewport = bookStore.getViewport();
   if (initialViewport) {
-    setViewport(initialViewport);
+    void setViewport(initialViewport);
   }
 });
 

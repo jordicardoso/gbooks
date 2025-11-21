@@ -1,11 +1,18 @@
 // src/stores/book-store.ts
 
 import { defineStore } from 'pinia';
-import { toRaw, type Viewport } from 'vue';
+import { toRaw } from 'vue';
+import type { Viewport } from './types';
 import { useNodesStore } from './nodes-store';
 import { useAssetsStore } from './assets-store';
-import type { BookData, BookNode, CharacterSheet, CharacterSheetSchema,
-  CharacterSheetSectionSchema, BookEvent } from './types';
+import type {
+  BookData,
+  BookNode,
+  CharacterSheet,
+  CharacterSheetSchema,
+  CharacterSheetSectionSchema,
+  BookEvent,
+} from './types';
 
 export interface BookState {
   activeBook: BookData | null;
@@ -32,18 +39,22 @@ function getInitialDataForSection(section: CharacterSheetSectionSchema) {
 function generateDefaultSheetFromSchema(schema: CharacterSheetSchema): CharacterSheet {
   const newSheet: Partial<CharacterSheet> = {};
   for (const section of schema.layout) {
-    (newSheet as any)[section.dataKey] = getInitialDataForSection(section);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (newSheet as Record<string, any>)[section.dataKey] = getInitialDataForSection(section);
   }
-  const statsSection = schema.layout.find(s => s.type === 'stats');
-  if (statsSection && !newSheet.stats) {
-    newSheet.stats = (newSheet as any)[statsSection.dataKey] || {};
-  } else if (!newSheet.stats) {
+  const statsSection = schema.layout.find((s) => s.type === 'stats');
+  if (statsSection) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    newSheet.stats = (newSheet as Record<string, any>)[statsSection.dataKey] || {};
+  }
+  if (!newSheet.stats) {
     newSheet.stats = {};
   }
 
   return newSheet as CharacterSheet;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function validateAndRepairBookData(data: any): BookData {
   const defaults: BookData = {
     meta: { title: 'Sin Título', description: '', author: '' },
@@ -52,22 +63,26 @@ function validateAndRepairBookData(data: any): BookData {
     assets: [],
     events: [], // La única fuente de verdad
     viewport: { x: 0, y: 0, zoom: 1 },
-    characterSheetSchema: null,
-    characterSheet: null,
   };
 
   if (!data || typeof data !== 'object') return defaults;
 
   const rawEvents = data.events || [];
-  const migratedEvents: BookEvent[] = rawEvents.map((event: any) => {
-    // Solo se procesan objetos con 'name'. La migración de strings se elimina.
-    if (typeof event === 'object' && event.name) {
-      // Asegura que los eventos tengan un id.
-      return { id: event.id || event.name.replace(/\s+/g, '_').toLowerCase(), name: event.name };
-    }
-    return null;
-  }).filter((e): e is BookEvent => e !== null);
-
+  const migratedEvents: BookEvent[] = rawEvents
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((event: Record<string, any>) => {
+      // Solo se procesan objetos con 'name'. La migración de strings se elimina.
+      if (typeof event === 'object' && event.name) {
+        // Asegura que los eventos tengan un id.
+        return {
+          id: event.id || event.name.replace(/\s+/g, '_').toLowerCase(),
+          name: event.name,
+          initialValue: event.initialValue !== undefined ? event.initialValue : false,
+        };
+      }
+      return null;
+    })
+    .filter((e: BookEvent | null): e is BookEvent => e !== null);
 
   let cleanViewport = { ...defaults.viewport };
   if (data.viewport) {
@@ -79,6 +94,7 @@ function validateAndRepairBookData(data: any): BookData {
   }
 
   const nodesToMigrate = Array.isArray(data.nodes) ? data.nodes : defaults.nodes;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const migratedNodes: BookNode[] = nodesToMigrate.map((node: any) => {
     if (!node) return node;
     if (node.data && typeof node.data === 'object') return node;
@@ -136,7 +152,7 @@ export const useBookStore = defineStore('book', {
           },
         ],
       };
-      this.$patch(state => {
+      this.$patch((state) => {
         if (state.activeBook) {
           state.activeBook.characterSheetSchema = initialSchema;
           state.activeBook.characterSheet = generateDefaultSheetFromSchema(initialSchema);
@@ -158,20 +174,23 @@ export const useBookStore = defineStore('book', {
         return;
       }
       const oldSchema = this.characterSheetSchema;
-      const oldDataKeys = new Set(oldSchema.layout.map(s => s.dataKey));
-      const newDataKeys = new Set(newSchema.layout.map(s => s.dataKey));
+      const oldDataKeys = new Set(oldSchema.layout.map((s) => s.dataKey));
+      const newDataKeys = new Set(newSchema.layout.map((s) => s.dataKey));
       const newCharacterSheet = { ...this.characterSheet };
       for (const key of oldDataKeys) {
         if (!newDataKeys.has(key)) {
-          delete (newCharacterSheet as any)[key];
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          delete (newCharacterSheet as Record<string, any>)[key];
         }
       }
       for (const section of newSchema.layout) {
         if (!oldDataKeys.has(section.dataKey)) {
-          (newCharacterSheet as any)[section.dataKey] = getInitialDataForSection(section);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (newCharacterSheet as Record<string, any>)[section.dataKey] =
+            getInitialDataForSection(section);
         }
       }
-      this.$patch(state => {
+      this.$patch((state) => {
         if (state.activeBook) {
           state.activeBook.characterSheetSchema = newSchema;
           state.activeBook.characterSheet = newCharacterSheet;
@@ -180,12 +199,15 @@ export const useBookStore = defineStore('book', {
       this.setDirty();
     },
 
-    addEvent(newEvent: { id: string; name: string }) {
+    addEvent(newEvent: { id: string; name: string; initialValue?: string | number | boolean }) {
       if (!this.activeBook) return;
       if (!this.activeBook.events) {
         this.activeBook.events = [];
       }
-      this.activeBook.events.push(newEvent);
+      this.activeBook.events.push({
+        ...newEvent,
+        initialValue: newEvent.initialValue !== undefined ? newEvent.initialValue : false,
+      });
       this.setDirty();
     },
 
@@ -195,7 +217,8 @@ export const useBookStore = defineStore('book', {
       this.isDirty = false;
       if (this.debounceSaveTimer) clearTimeout(this.debounceSaveTimer);
       try {
-        const content = await window.electronAPI.loadBook(bookId);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const content = await (window as any).electronAPI.loadBook(bookId);
         const bookData = validateAndRepairBookData(JSON.parse(content));
         this.activeBook = bookData;
         this.activeBookId = bookId;
@@ -222,15 +245,15 @@ export const useBookStore = defineStore('book', {
         const nodesStore = useNodesStore();
         const assetsStore = useAssetsStore();
 
-        const cleanEdges = toRaw(nodesStore.edges).map(edge => ({
+        const cleanEdges = toRaw(nodesStore.edges).map((edge) => ({
           id: edge.id,
           source: edge.source,
           target: edge.target,
-          sourceHandle: edge.sourceHandle,
-          targetHandle: edge.targetHandle,
-          markerEnd: edge.markerEnd,
-          label: edge.label,
+          sourceHandle: edge.sourceHandle || null,
+          targetHandle: edge.targetHandle || null,
+          label: (edge.label as string) || '',
           data: edge.data,
+          ...(edge.markerEnd ? { markerEnd: edge.markerEnd } : {}),
         }));
 
         const bookToSave: BookData = {
@@ -243,7 +266,8 @@ export const useBookStore = defineStore('book', {
         };
 
         const content = JSON.stringify(bookToSave, null, 2);
-        await window.electronAPI.saveBook(this.activeBookId, content);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (window as any).electronAPI.saveBook(this.activeBookId, content);
 
         this.activeBook = bookToSave;
         this.isDirty = false;
@@ -273,7 +297,7 @@ export const useBookStore = defineStore('book', {
         clearTimeout(this.debounceSaveTimer);
       }
       this.debounceSaveTimer = setTimeout(() => {
-        this.saveCurrentBook();
+        void this.saveCurrentBook();
       }, 1500);
     },
   },

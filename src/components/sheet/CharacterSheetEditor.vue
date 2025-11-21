@@ -60,7 +60,8 @@
 import { ref, watch, shallowRef, nextTick, type Component } from 'vue';
 import { debounce } from 'quasar';
 import { useI18n } from 'vue-i18n'; // <-- 1. Importar
-import { useBookStore, type CharacterSheet } from 'src/stores/book-store';
+import { useBookStore } from 'src/stores/book-store';
+import type { CharacterSheet } from 'src/stores/types';
 import { storeToRefs } from 'pinia';
 import type { ItemEffect } from 'src/stores/types';
 
@@ -83,7 +84,9 @@ const componentMap = shallowRef<Record<string, Component>>({
   events: EventsSection,
 });
 
-watch(characterSheet, (newSheet) => {
+watch(
+  characterSheet,
+  (newSheet) => {
     isInitialized.value = false;
     if (newSheet) {
       editableSheet.value = JSON.parse(JSON.stringify(newSheet));
@@ -94,7 +97,7 @@ watch(characterSheet, (newSheet) => {
       isInitialized.value = true;
     });
   },
-  { immediate: true, deep: true }
+  { immediate: true, deep: true },
 );
 
 const debouncedUpdateStore = debounce(() => {
@@ -108,7 +111,7 @@ function handleApplyEffects(effects: ItemEffect[]) {
 
   const stats = editableSheet.value.stats;
 
-  effects.forEach(effect => {
+  effects.forEach((effect) => {
     const targetStatKey = effect.target.toLowerCase();
 
     if (stats[targetStatKey]) {
@@ -135,13 +138,15 @@ watch(
       debouncedUpdateStore();
     }
   },
-  { deep: true }
+  { deep: true },
 );
 
 // Actualiza una porción de nuestra copia local
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function updateSectionData(key: keyof CharacterSheet, newData: any) {
   if (editableSheet.value) {
-    (editableSheet.value as any)[key] = newData;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (editableSheet.value as Record<string, any>)[key] = newData;
   }
 }
 

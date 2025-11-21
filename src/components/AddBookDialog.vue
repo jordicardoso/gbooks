@@ -3,7 +3,7 @@
   <q-dialog :model-value="modelValue" @update:model-value="updateModelValue" persistent>
     <q-card style="min-width: 350px" class="bg-grey-9 text-white">
       <q-card-section>
-        <div class="text-h6">Crear Nuevo Libro</div>
+        <div class="text-h6">{{ t('addBookDialog.title') }}</div>
       </q-card-section>
 
       <q-form @submit.prevent="onSubmit">
@@ -12,24 +12,24 @@
             dark
             dense
             v-model="name"
-            label="Nombre del Libro"
+            :label="t('addBookDialog.nameLabel')"
             autofocus
-            :rules="[val => !!val || 'El nombre es obligatorio']"
+            :rules="[(val) => !!val || t('addBookDialog.nameRequired')]"
             lazy-rules
           />
           <q-input
             dark
             dense
             v-model="description"
-            label="Descripción"
+            :label="t('addBookDialog.descriptionLabel')"
             type="textarea"
             class="q-mt-sm"
           />
         </q-card-section>
 
         <q-card-actions align="right" class="text-primary">
-          <q-btn flat label="Cancelar" @click="closeDialog" />
-          <q-btn flat label="Crear Libro" type="submit" />
+          <q-btn flat :label="t('addBookDialog.cancelButton')" @click="closeDialog" />
+          <q-btn flat :label="t('addBookDialog.submitButton')" type="submit" />
         </q-card-actions>
       </q-form>
     </q-card>
@@ -38,9 +38,12 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
-const props = defineProps<{ modelValue: boolean }>();
+defineProps<{ modelValue: boolean }>();
 const emit = defineEmits(['update:modelValue', 'submit']);
+
+const { t } = useI18n();
 
 const name = ref('');
 const description = ref('');

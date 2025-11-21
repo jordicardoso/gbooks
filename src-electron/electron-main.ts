@@ -42,8 +42,8 @@ async function createWindow() {
         currentDir,
         path.join(
           process.env.QUASAR_ELECTRON_PRELOAD_FOLDER,
-          'electron-preload' + process.env.QUASAR_ELECTRON_PRELOAD_EXTENSION
-        )
+          'electron-preload' + process.env.QUASAR_ELECTRON_PRELOAD_EXTENSION,
+        ),
       ),
     },
   });
@@ -82,7 +82,7 @@ void app.whenReady().then(async () => {
       console.error('URL de asset inválida:', request.url);
       return callback({ error: -6 /* net::ERR_FILE_NOT_FOUND */ });
     }
-    const bookId = urlParts[0];
+    const bookId = urlParts[0] as string;
     const filename = urlParts.slice(1).join('/');
     const filePath = path.join(getBookAssetsDir(bookId), filename);
     callback({ path: path.normalize(filePath) });
@@ -117,74 +117,65 @@ void app.whenReady().then(async () => {
   });
 
   // Crear un nuevo libro
-  ipcMain.handle(
-    'book:create',
-    async (event, data: { name: string; description: string }) => {
-      const bookId = uid();
-      const bookDir = getBookDir(bookId);
-      const assetsDir = getBookAssetsDir(bookId);
-      const bookJsonFilePath = path.join(bookDir, 'book.json');
+  ipcMain.handle('book:create', async (event, data: { name: string; description: string }) => {
+    const bookId = uid();
+    const bookDir = getBookDir(bookId);
+    const assetsDir = getBookAssetsDir(bookId);
+    const bookJsonFilePath = path.join(bookDir, 'book.json');
 
-      const newBook = {
-        id: bookId,
-        name: data.name,
+    const newBook = {
+      id: bookId,
+      name: data.name,
+      description: data.description,
+      jsonFile: bookJsonFilePath,
+    };
+
+    const initialBookContent = {
+      meta: {
+        title: data.name,
         description: data.description,
-        jsonFile: bookJsonFilePath,
-      };
+        author: '',
+      },
+      chapters: [],
+      assets: [],
+      variables: [],
+      edges: [],
+      viewport: { x: 0, y: 0, zoom: 1 },
+    };
 
-      const initialBookContent = {
-        meta: {
-          title: data.name,
-          description: data.description,
-          author: '',
-        },
-        chapters: [],
-        assets: [],
-        variables: [],
-        edges: [],
-        viewport: { x: 0, y: 0, zoom: 1 },
-      };
-
-      try {
-        await fs.mkdir(bookDir, { recursive: true });
-        await fs.mkdir(assetsDir, { recursive: true });
-        await fs.writeFile(
-          bookJsonFilePath,
-          JSON.stringify(initialBookContent, null, 2)
-        );
-        console.log(`[Electron Main] Libro creado con ID: ${bookId}`);
-        return newBook;
-      } catch (error) {
-        console.error(`[Electron Main] Fallo al crear ficheros para el libro ${bookId}:`, error);
-        throw error;
-      }
+    try {
+      await fs.mkdir(bookDir, { recursive: true });
+      await fs.mkdir(assetsDir, { recursive: true });
+      await fs.writeFile(bookJsonFilePath, JSON.stringify(initialBookContent, null, 2));
+      console.log(`[Electron Main] Libro creado con ID: ${bookId}`);
+      return newBook;
+    } catch (error) {
+      console.error(`[Electron Main] Fallo al crear ficheros para el libro ${bookId}:`, error);
+      throw error;
     }
-  );
+  });
 
   // Guardar el contenido de un libro (book.json)
-  ipcMain.handle(
-    'save-book',
-    async (event, bookId: string, content: string) => {
-      const bookJsonPath = path.join(getBookDir(bookId), 'book.json');
-      try {
-        await fs.writeFile(bookJsonPath, content, 'utf-8');
-        return { success: true };
-      } catch (error) {
-        console.error(`[Electron Main] Error al guardar el archivo ${bookJsonPath}:`, error);
-        return { success: false, error: (error as Error).message };
-      }
+  ipcMain.handle('save-book', async (event, bookId: string, content: string) => {
+    const bookJsonPath = path.join(getBookDir(bookId), 'book.json');
+    try {
+      await fs.writeFile(bookJsonPath, content, 'utf-8');
+      return { success: true };
+    } catch (error) {
+      console.error(`[Electron Main] Error al guardar el archivo ${bookJsonPath}:`, error);
+      return { success: false, error: (error as Error).message };
     }
-  );
+  });
 
   ipcMain.handle(
-    'book:update',
-    async (event, bookId: string, data: { name: string; description: string }) => {
+    'book:update', // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    async (_event, _bookId, _data) => {
       const fileContent = await fs.readFile(libraryFilePath, 'utf-8'); // Lee library.json
       const books = JSON.parse(fileContent);
       // ... encuentra el libro y lo actualiza
       await fs.writeFile(libraryFilePath, JSON.stringify(books, null, 2), 'utf-8'); // Guarda library.json
       // ...
-    }
+    },
   );
 
   // Cargar el contenido de un libro (book.json)
@@ -199,17 +190,14 @@ void app.whenReady().then(async () => {
     }
   });
 
-  ipcMain.handle(
-    'get-asset-path',
-    (event, bookId: string, filename: string) => {
-      if (!bookId || !filename) {
-        console.error('[Electron Main] get-asset-path llamado sin bookId o filename.');
-        return null;
-      }
-      // Construye y devuelve la URL con tu protocolo personalizado.
-      return `gbooks-asset://${bookId}/${filename}`;
+  ipcMain.handle('get-asset-path', (event, bookId: string, filename: string) => {
+    if (!bookId || !filename) {
+      console.error('[Electron Main] get-asset-path llamado sin bookId o filename.');
+      return null;
     }
-  );
+    // Construye y devuelve la URL con tu protocolo personalizado.
+    return `gbooks-asset://${bookId}/${filename}`;
+  });
 
   ipcMain.handle('book:get-cover-info', async (event, bookId: string) => {
     const bookJsonPath = path.join(getBookDir(bookId), 'book.json');
@@ -297,7 +285,9 @@ void app.whenReady().then(async () => {
       bookData.assets.push(newAsset);
       await fs.writeFile(bookJsonPath, JSON.stringify(bookData, null, 2));
 
-      console.log(`[Electron Main] Asset guardado y registrado para el libro ${bookId}: ${filename}`);
+      console.log(
+        `[Electron Main] Asset guardado y registrado para el libro ${bookId}: ${filename}`,
+      );
       return newAsset; // 5. Devolver el objeto completo al frontend
     } catch (error) {
       console.error(`[Electron Main] Error al guardar el asset para el libro ${bookId}:`, error);
@@ -331,10 +321,15 @@ void app.whenReady().then(async () => {
       const filePath = path.join(getBookAssetsDir(bookId), assetToDelete.filename);
       await fs.unlink(filePath);
 
-      console.log(`[Electron Main] Asset eliminado para el libro ${bookId}: ${assetToDelete.filename}`);
+      console.log(
+        `[Electron Main] Asset eliminado para el libro ${bookId}: ${assetToDelete.filename}`,
+      );
       return { success: true };
     } catch (error) {
-      console.error(`[Electron Main] Error al eliminar el asset ${assetId} para el libro ${bookId}:`, error);
+      console.error(
+        `[Electron Main] Error al eliminar el asset ${assetId} para el libro ${bookId}:`,
+        error,
+      );
       return { success: false, error: (error as Error).message };
     }
   });

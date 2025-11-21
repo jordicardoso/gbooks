@@ -103,7 +103,57 @@ export default {
       noOutcomes: 'Añade al menos un resultado.',
       outcomeLabel: 'Resultado para [{range}]',
       newOutcomeDescription: 'Nuevo resultado',
-    }
+    },
+  },
+  addBookDialog: {
+    title: 'Crear Nuevo Libro',
+    nameLabel: 'Nombre del Libro',
+    nameRequired: 'El nombre es obligatorio',
+    descriptionLabel: 'Descripción',
+    cancelButton: 'Cancelar',
+    submitButton: 'Crear Libro',
+  },
+  editBookDialog: {
+    title: 'Editar Libro',
+    nameLabel: 'Nombre del Libro',
+    nameRequired: 'El nombre es obligatorio',
+    descriptionLabel: 'Descripción',
+    cancelButton: 'Cancelar',
+    submitButton: 'Guardar Cambios',
+  },
+  nodeEditorPanel: {
+    title: 'Editar Nodo',
+    fullscreen: 'Pantalla completa',
+    exitFullscreen: 'Salir de pantalla completa',
+    label: 'Nombre del Nodo',
+    paragraphNumber: 'Nº Párrafo',
+    tags: 'Etiquetas',
+    newTagPlaceholder: 'Escribe para añadir una nueva etiqueta',
+    type: 'Tipo de Nodo',
+    types: {
+      story: 'Párrafo (Historia)',
+      end: 'Final',
+    },
+    color: 'Color del Nodo',
+    image: 'Imagen del Nodo',
+    noImages: 'No hay imágenes en los assets.',
+    noImageSelected: 'Sin imagen seleccionada',
+    content: 'TEXTO DEL NODO',
+    deleteButton: 'Eliminar',
+    cancelButton: 'Cancelar',
+    saveButton: 'Guardar',
+    confirmDelete: {
+      title: 'Confirmar Eliminación',
+      message:
+        '¿Estás seguro de que quieres eliminar el nodo "{nodeLabel}"? Esta acción no se puede deshacer y eliminará todas las conexiones asociadas.',
+      okButton: 'Eliminar',
+      cancelButton: 'Cancelar',
+    },
+    errors: {
+      invalidParagraphNumber: 'El número de párrafo debe ser un número mayor que cero.',
+      duplicateParagraphNumber:
+        'El número de párrafo {number} ya está en uso. Por favor, elige otro.',
+    },
   },
   actionsEditor: {
     title: 'Acciones al Entrar al Nodo',
@@ -117,18 +167,18 @@ export default {
       title: 'Condición',
       sourceLabel: 'Tipo',
       subjectLabelStat: 'Estadística a comprobar',
-      subjectLabelFlag: 'Evento a comprobar', // <-- CAMBIO
+      subjectLabelFlag: 'Evento a comprobar',
       valueLabel: 'Valor',
       sources: {
         stat: 'Estadística',
-        flag: 'Evento', // <-- CAMBIO
+        flag: 'Evento',
       },
     },
     dialog: {
       title: 'Elige un tipo de Acción',
       conditional: 'Acción Condicional (Si... entonces...)',
       modifyStat: 'Modificar Estadística',
-      setFlag: 'Establecer Evento', // <-- CAMBIO
+      setFlag: 'Establecer Evento',
     },
     dialogs: {
       modifyStat: {
@@ -136,16 +186,53 @@ export default {
         message: 'Define la estadística, la operación y el valor.',
       },
       setFlag: {
-        title: 'Establecer Evento', // <-- CAMBIO
-        message:
-          'Introduce el nombre del evento (ej: "puerta_abierta"). Se establecerá a "true".',
+        title: 'Establecer Evento',
+        message: 'Introduce el nombre del evento (ej: "puerta_abierta"). Se establecerá a "true".',
       },
+    },
+    createEventDialog: {
+      title: 'Crear Nuevo Evento',
+      message:
+        'Estás creando un nuevo evento con la descripción: "{eventName}". Por favor, introduce un código único para identificarlo (sin espacios ni caracteres especiales).',
+      promptLabel: 'Código del Evento (ID)',
     },
     descriptions: {
       modifyStat: 'Estadística: {stat} {operation} {value}',
-      setFlag: 'Evento: {flag} = {value}', // <-- CAMBIO
+      setFlag: 'Evento: {flag} = {value}',
       conditional: 'SI ({subject} {operator} {value}) ENTONCES...',
       unknown: 'Acción desconocida',
+    },
+  },
+  editChoiceDialog: {
+    editTitle: 'Editar Opción de Salida',
+    newTitle: 'Nueva Opción de Salida',
+    optionLabel: 'Texto de la opción (lo que ve el jugador)',
+    optionLabelRequired: 'El texto es obligatorio',
+    targetNodeLabel: 'Nodo de destino',
+    targetNodeRequired: 'Debes seleccionar un nodo de destino',
+    noNodes: 'No hay nodos',
+    sourceHandleLabel: 'Punto de conexión de salida',
+    conditionTitle: 'Condición',
+    statLabel: 'Estadística',
+    operatorLabel: 'Operador',
+    valueLabel: 'Valor',
+    successTargetLabel: 'Destino si se CUMPLE',
+    failureTargetLabel: 'Destino si FALLA',
+    diceLabel: 'Dados a lanzar (ej: 1d6, 2d10+3)',
+    outcomesTitle: 'Resultados posibles',
+    outcomeCondition: 'Si el resultado es {condition}',
+    outcomeTarget: 'Va al nodo: {target}',
+    noOutcomes: '(Añade resultados abajo)',
+    newOutcomeCondition: 'Condición (ej: 1-3, 4, 5-6)',
+    cancelButton: 'Cancelar',
+    saveButton: 'Guardar',
+    createNewNode: '➡️ Crear nuevo nodo al guardar',
+    newNode: 'Nuevo nodo',
+    sourceHandles: {
+      bottom: 'Abajo',
+      right: 'Derecha',
+      left: 'Izquierda',
+      top: 'Arriba',
     },
   },
   assetsPage: {

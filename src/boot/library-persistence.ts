@@ -1,7 +1,7 @@
 // src/boot/library-persistence.ts
 
 import { boot } from 'quasar/wrappers';
-import type { useLibraryStore, LibraryState } from 'src/stores/library-store';
+import { useLibraryStore, type LibraryState } from 'src/stores/library-store';
 import { watch } from 'vue';
 
 export default boot(async ({ store }) => {
@@ -17,6 +17,7 @@ export default boot(async ({ store }) => {
       // Es una mejor práctica guardar los datos del usuario en la carpeta 'userData'
       // en lugar del directorio de la aplicación, ya que este último puede no ser escribible.
       // '@electron/remote' nos ayuda a obtener esta ruta de forma segura.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { app } = require('@electron/remote');
       const userDataPath = app.getPath('userData');
       const libraryFileName = 'library.json';
@@ -52,7 +53,7 @@ export default boot(async ({ store }) => {
             console.error('Error al guardar library.json:', e);
           }
         },
-        { deep: true } // 'deep: true' es crucial para detectar cambios dentro de los objetos del array.
+        { deep: true }, // 'deep: true' es crucial para detectar cambios dentro de los objetos del array.
       );
     } catch (e) {
       console.error('Error al inicializar la persistencia de archivos en Electron:', e);

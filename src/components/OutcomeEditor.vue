@@ -3,7 +3,7 @@
   <div class="q-gutter-y-md">
     <div class="row q-gutter-x-sm">
       <q-input
-        v-model="outcome.range"
+        v-model="range"
         label="Rango"
         placeholder="Ej: 1, 2-4, >5"
         dark
@@ -12,7 +12,7 @@
         hint="El motor interpretará el rango."
       />
       <q-select
-        v-model="outcome.targetNodeId"
+        v-model="targetNodeId"
         :options="nodeOptions"
         label="Nodo de Destino"
         emit-value
@@ -23,16 +23,14 @@
       >
         <template #no-option>
           <q-item>
-            <q-item-section class="text-grey">
-              No hay otros nodos en el libro.
-            </q-item-section>
+            <q-item-section class="text-grey"> No hay otros nodos en el libro. </q-item-section>
           </q-item>
         </template>
       </q-select>
     </div>
 
     <q-input
-      v-model="outcome.description"
+      v-model="description"
       label="Descripción del Resultado"
       type="textarea"
       autogrow
@@ -67,16 +65,32 @@ import { useNodesStore } from 'src/stores/nodes-store';
 import type { DiceRollOutcome } from 'src/stores/types';
 
 const props = defineProps<{
-  outcome: DiceRollOutcome;
+  modelValue: DiceRollOutcome;
 }>();
 
-const emit = defineEmits(['delete']);
+const emit = defineEmits(['delete', 'update:modelValue']);
 
 const nodesStore = useNodesStore();
 
+// Computed properties to handle v-model updates without mutating props
+const range = computed({
+  get: () => props.modelValue.range,
+  set: (val) => emit('update:modelValue', { ...props.modelValue, range: val }),
+});
+
+const targetNodeId = computed({
+  get: () => props.modelValue.targetNodeId,
+  set: (val) => emit('update:modelValue', { ...props.modelValue, targetNodeId: val }),
+});
+
+const description = computed({
+  get: () => props.modelValue.description,
+  set: (val) => emit('update:modelValue', { ...props.modelValue, description: val }),
+});
+
 // Creamos una lista de opciones para el QSelect con todos los nodos del libro.
 const nodeOptions = computed(() => {
-  return nodesStore.nodes.map(node => ({
+  return nodesStore.nodes.map((node) => ({
     label: `${node.label} (ID: ...${node.id.slice(-4)})`,
     value: node.id,
   }));

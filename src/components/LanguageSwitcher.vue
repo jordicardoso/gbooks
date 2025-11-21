@@ -37,7 +37,7 @@ const languageOptions = computed(() => [
 watch(locale, (newLocale) => {
   // Guardamos el nuevo idioma en el localStorage para que se recuerde
   // en futuras visitas.
-  localStorage.setItem('user-locale', newLocale as string);
+  localStorage.setItem('user-locale', newLocale);
   console.log(`Idioma cambiado a: ${newLocale}`);
 });
 </script>

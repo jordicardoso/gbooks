@@ -289,24 +289,26 @@ const confirmDelete = (asset: BookAsset) => {
     dark: true,
     ok: { color: 'negative', label: t('assetsPage.dialogs.deleteAsset.okButton') },
     cancel: { flat: true, label: t('assetsPage.dialogs.deleteAsset.cancelButton') },
-  }).onOk(async () => {
-    $q.loading.show({ message: t('assetsPage.notifications.deleting') });
-    try {
-      await assetsStore.deleteAsset(asset.id);
-      $q.notify({
-        message: t('assetsPage.notifications.deletedSuccess', { assetName: asset.name }),
-        color: 'positive',
-        icon: 'check_circle',
-      });
-    } catch (error) {
-      $q.notify({
-        message: (error as Error).message || t('assetsPage.notifications.deletedError'),
-        color: 'negative',
-        icon: 'error',
-      });
-    } finally {
-      $q.loading.hide();
-    }
+  }).onOk(() => {
+    void (async () => {
+      $q.loading.show({ message: t('assetsPage.notifications.deleting') });
+      try {
+        await assetsStore.deleteAsset(asset.id);
+        $q.notify({
+          message: t('assetsPage.notifications.deletedSuccess', { assetName: asset.name }),
+          color: 'positive',
+          icon: 'check_circle',
+        });
+      } catch (error) {
+        $q.notify({
+          message: (error as Error).message || t('assetsPage.notifications.deletedError'),
+          color: 'negative',
+          icon: 'error',
+        });
+      } finally {
+        $q.loading.hide();
+      }
+    })();
   });
 };
 </script>

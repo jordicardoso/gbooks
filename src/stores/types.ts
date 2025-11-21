@@ -1,6 +1,12 @@
 // src/stores/types.ts
 
-import type { Node, Edge, Viewport as VueFlowViewport } from '@vue-flow/core';
+import type { Node, Edge } from '@vue-flow/core';
+
+export interface Viewport {
+  x: number;
+  y: number;
+  zoom: number;
+}
 
 // --- TIPOS DE ASSETS ---
 export interface BookAsset {
@@ -94,7 +100,7 @@ export interface ActionCondition {
   source: 'stat' | 'flag';
   subject: string;
   operator: '==' | '!=' | '>' | '<' | '>=' | '<=';
-  value: any;
+  value: string | number | boolean;
 }
 
 export interface ConditionalAction {
@@ -112,7 +118,7 @@ export interface SimpleChoice {
   type: 'simple';
   label: string;
   targetNodeId: string;
-  srcHandle?: string;
+  sourceHandle?: string;
 }
 
 export type ConditionType = 'stat' | 'item' | 'event';
@@ -169,13 +175,14 @@ export type AnyAction =
 export type AnyChoice = SimpleChoice | ConditionalChoice | DiceRollChoice;
 
 // [CORRECCIÓN] Definición única y completa de BookEdge
-export interface BookEdge extends Edge {
+export type BookEdge = Edge & {
+  id: string;
   label?: string;
   data?: {
     description?: string;
     actions?: AnyAction[];
   };
-}
+};
 
 // --- FICHA DE PERSONAJE ---
 
@@ -228,7 +235,7 @@ export interface BookData {
   edges: BookEdge[];
   assets: BookAsset[];
   events: BookEvent[];
-  viewport: VueFlowViewport;
+  viewport: Viewport;
   characterSheetSchema?: CharacterSheetSchema;
   characterSheet?: CharacterSheet;
 }

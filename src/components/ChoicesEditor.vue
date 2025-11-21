@@ -34,8 +34,10 @@
 
     <!-- Diálogo para ELEGIR el tipo de opción -->
     <q-dialog v-model="isAddChoiceDialogOpen">
-      <q-card class="bg-grey-9 text-white" style="width: 400px;">
-        <q-card-section><div class="text-h6">{{ t('choices.addDialog.title') }}</div></q-card-section>
+      <q-card class="bg-grey-9 text-white" style="width: 400px">
+        <q-card-section
+          ><div class="text-h6">{{ t('choices.addDialog.title') }}</div></q-card-section
+        >
         <q-list dark separator>
           <q-item clickable v-ripple @click="promptNewChoice('simple')">
             <q-item-section avatar><q-icon name="call_split" /></q-item-section>
@@ -54,11 +56,7 @@
     </q-dialog>
 
     <!-- Diálogo para EDITAR/CREAR la opción -->
-    <EditChoiceDialog
-      v-model="isEditDialogOpen"
-      :choice="editingChoice"
-      @save="handleSaveChoice"
-    />
+    <EditChoiceDialog v-model="isEditDialogOpen" :choice="editingChoice" @save="handleSaveChoice" />
   </div>
 </template>
 
@@ -86,9 +84,13 @@ const isEditDialogOpen = ref(false);
 const editingChoice = ref<AnyChoice | null>(null);
 const editingChoiceIndex = ref<number | null>(null);
 
-watch(() => props.choices, (newChoices) => {
-  localChoices.value = JSON.parse(JSON.stringify(newChoices || []));
-}, { deep: true, immediate: true });
+watch(
+  () => props.choices,
+  (newChoices) => {
+    localChoices.value = JSON.parse(JSON.stringify(newChoices || []));
+  },
+  { deep: true, immediate: true },
+);
 
 function emitUpdate() {
   emit('update:choices', localChoices.value);
@@ -107,11 +109,15 @@ function promptNewChoice(type: 'simple' | 'conditional' | 'diceRoll') {
     newChoice = { id: uid(), type, label: '', targetNodeId: '' } as SimpleChoice;
   } else if (type === 'conditional') {
     newChoice = {
-      id: uid(), type, label: '',
+      id: uid(),
+      type,
+      label: '',
       condition: { id: uid(), type: 'stat', subject: '', operator: '>=', value: 10 },
-      successTargetNodeId: '', failureTargetNodeId: '',
+      successTargetNodeId: '',
+      failureTargetNodeId: '',
     } as ConditionalChoice;
-  } else { // diceRoll
+  } else {
+    // diceRoll
     newChoice = { id: uid(), type, label: '', dice: '1d6', outcomes: [] } as DiceRollChoice;
   }
 
@@ -145,17 +151,18 @@ function getChoiceDescription(choice: AnyChoice): string {
   const getParagraphLabel = (nodeId: string | undefined | null): string => {
     if (!nodeId) return '???';
     if (nodeId === '--CREATE-NEW--') return t('dialogs.editChoice.newNode');
-    const node = nodes.value.find(n => n.id === nodeId);
+    const node = nodes.value.find((n) => n.id === nodeId);
     // [MEJORA] Usamos el número de párrafo si existe, si no, el ID como fallback.
-    return node ? `P.${node.data.paragraphNumber}` : (nodeId.substring(0, 8) || '???');
+    return node ? `P.${node.data.paragraphNumber}` : nodeId.substring(0, 8) || '???';
   };
 
   switch (choice.type) {
-    case 'simple':
+    case 'simple': {
       const paragraphLabel = getParagraphLabel(choice.targetNodeId).replace('P.', '');
       return t('choices.description.simple', { paragraph: paragraphLabel });
+    }
 
-    case 'conditional':
+    case 'conditional': {
       const c = choice.condition;
       return t('choices.description.conditional', {
         subject: c.subject || '?',
@@ -164,11 +171,12 @@ function getChoiceDescription(choice: AnyChoice): string {
         success: getParagraphLabel(choice.successTargetNodeId),
         failure: getParagraphLabel(choice.failureTargetNodeId),
       });
+    }
 
     case 'diceRoll':
       return t('choices.description.diceRoll', {
         dice: choice.dice,
-        count: choice.outcomes.length
+        count: choice.outcomes.length,
       });
 
     default:

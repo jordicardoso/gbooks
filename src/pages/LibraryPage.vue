@@ -32,10 +32,9 @@
         class="col-12 col-sm-6 col-md-4 col-lg-3"
       >
         <q-card class="bg-grey-9 text-white column">
-
           <q-img
             :src="coverImages.get(book.id) || 'https://cdn.quasar.dev/img/material.png'"
-            :ratio="16/9"
+            :ratio="16 / 9"
             class="cursor-pointer"
             @click="openBook(book.id)"
           >
@@ -47,14 +46,7 @@
                 </div>
                 <!-- Botones a la derecha -->
                 <div class="col-auto">
-                  <q-btn
-                    flat
-                    round
-                    dense
-                    size="sm"
-                    icon="edit"
-                    @click.stop="onEditBook(book)"
-                  >
+                  <q-btn flat round dense size="sm" icon="edit" @click.stop="onEditBook(book)">
                     <q-tooltip>{{ $t('library.editTooltip') }}</q-tooltip>
                   </q-btn>
                   <q-btn
@@ -77,16 +69,12 @@
               {{ book.description || $t('library.noDescription') }}
             </p>
           </q-card-section>
-
         </q-card>
       </div>
     </div>
 
     <!-- Diálogos (sin cambios) -->
-    <add-book-dialog
-      v-model="isAddBookDialogOpen"
-      @submit="handleBookSubmit"
-    />
+    <add-book-dialog v-model="isAddBookDialogOpen" @submit="handleBookSubmit" />
     <edit-book-dialog
       v-model="isEditDialogOpen"
       :initial-data="editingBook"
@@ -111,7 +99,7 @@ const $q = useQuasar();
 const { t } = useI18n(); // <-- 2. Obtener la función de traducción 't'
 
 onMounted(() => {
-  libraryStore.initializeLibrary();
+  void libraryStore.initializeLibrary();
 });
 
 // State para los diálogos
@@ -123,37 +111,44 @@ const editingBook = ref<Book | null>(null);
 const coverImages = ref(new Map<string, string>());
 
 // --- Observador para cargar las portadas (sin cambios) ---
-watch(() => libraryStore.books, async (books) => {
-  if (!books || books.length === 0) {
-    coverImages.value.clear();
-    return;
-  }
+watch(
+  () => libraryStore.books,
+  async (books) => {
+    if (!books || books.length === 0) {
+      coverImages.value.clear();
+      return;
+    }
 
-  const coverPromises = books.map(async (book) => {
-    try {
-      const coverInfo = await window.electronAPI.getCoverInfo(book.id);
-      if (coverInfo?.filename) {
-        const imageUrl = await window.electronAPI.getAssetPath(book.id, coverInfo.filename);
-        return { bookId: book.id, imageUrl };
+    const coverPromises = books.map(async (book) => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const coverInfo = await (window as any).electronAPI.getCoverInfo(book.id);
+        if (coverInfo?.filename) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const imageUrl = await (window as any).electronAPI.getAssetPath(
+            book.id,
+            coverInfo.filename,
+          );
+          return { bookId: book.id, imageUrl };
+        }
+      } catch (error) {
+        console.error(`No se pudo cargar la portada para el libro ${book.id}:`, error);
       }
-    } catch (error) {
-      console.error(`No se pudo cargar la portada para el libro ${book.id}:`, error);
+      return { bookId: book.id, imageUrl: null };
+    });
+
+    const results = await Promise.all(coverPromises);
+
+    const newImageMap = new Map<string, string>();
+    for (const result of results) {
+      if (result.imageUrl) {
+        newImageMap.set(result.bookId, result.imageUrl);
+      }
     }
-    return { bookId: book.id, imageUrl: null };
-  });
-
-  const results = await Promise.all(coverPromises);
-
-  const newImageMap = new Map<string, string>();
-  for (const result of results) {
-    if (result.imageUrl) {
-      newImageMap.set(result.bookId, result.imageUrl);
-    }
-  }
-  coverImages.value = newImageMap;
-
-}, { immediate: true, deep: true });
-
+    coverImages.value = newImageMap;
+  },
+  { immediate: true, deep: true },
+);
 
 // --- Lógica para CREAR un libro (modificada para i18n) ---
 async function handleBookSubmit(data: { name: string; description: string }) {
@@ -215,23 +210,25 @@ function onDeleteBook(book: Book) {
       label: t('dialogs.deleteBook.okButton'),
       color: 'negative',
     },
-  }).onOk(async () => {
-    $q.loading.show({ message: t('notifications.deletingBook') });
-    try {
-      await libraryStore.removeBook(book.id);
-      $q.notify({
-        color: 'positive',
-        message: t('notifications.bookDeletedSuccess'),
-      });
-    } catch (error) {
-      const err = error as Error;
-      $q.notify({
-        color: 'negative',
-        message: t('notifications.bookDeletedError', { errorMessage: err.message }),
-      });
-    } finally {
-      $q.loading.hide();
-    }
+  }).onOk(() => {
+    void (async () => {
+      $q.loading.show({ message: t('notifications.deletingBook') });
+      try {
+        await libraryStore.removeBook(book.id);
+        $q.notify({
+          color: 'positive',
+          message: t('notifications.bookDeletedSuccess'),
+        });
+      } catch (error) {
+        const err = error as Error;
+        $q.notify({
+          color: 'negative',
+          message: t('notifications.bookDeletedError', { errorMessage: err.message }),
+        });
+      } finally {
+        $q.loading.hide();
+      }
+    })();
   });
 }
 
@@ -246,6 +243,7 @@ function openBook(bookId: string) {
 .ellipsis-3-lines {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;

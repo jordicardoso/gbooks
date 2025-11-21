@@ -115,11 +115,9 @@
 
 <script setup lang="ts">
 import { ref, onUnmounted, watch, computed } from 'vue';
-import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { useBookStore } from 'src/stores/book-store';
-import { useAssetsStore } from 'src/stores/assets-store';
 import { useNodesStore } from 'src/stores/nodes-store';
 
 // Componentes para las pestañas
@@ -132,11 +130,9 @@ import BookPreview from 'pages/BookPreview.vue';
 import MetaPage from 'pages/MetaPage.vue';
 
 const props = defineProps<{ id: string }>();
-const router = useRouter();
 const { t } = useI18n();
 const $q = useQuasar();
 const bookStore = useBookStore();
-const assetsStore = useAssetsStore();
 const nodesStore = useNodesStore();
 
 const tab = ref('design');
@@ -180,28 +176,11 @@ watch(
   { deep: true },
 );
 
-const imageAssetOptions = computed(() =>
-  assetsStore.assets
-    .filter((asset) => asset.type === 'image')
-    .map((asset) => ({
-      id: asset.id,
-      name: asset.name,
-      category: asset.category,
-      src: assetsStore.getAssetUrl(asset.filename),
-    })),
-);
-
-const coverImageUrl = computed(() => {
-  if (!bookStore.activeBook?.meta.imageId) return null;
-  const asset = assetsStore.getAssetById(bookStore.activeBook.meta.imageId);
-  return asset ? assetsStore.getAssetUrl(asset.filename) : null;
-});
-
 watch(
   () => props.id,
   (newBookId) => {
     if (newBookId) {
-      bookStore.loadBookById(newBookId);
+      void bookStore.loadBookById(newBookId);
     } else {
       bookStore.clearBook();
     }
@@ -238,7 +217,7 @@ async function saveBook() {
       message: t('bookPage.saveSuccess'),
       timeout: 1500,
     });
-  } catch (error) {
+  } catch {
     $q.notify({
       type: 'negative',
       message: t('bookPage.saveError'),
@@ -246,9 +225,5 @@ async function saveBook() {
   } finally {
     isSaving.value = false;
   }
-}
-
-function goBack() {
-  router.push({ name: 'library' });
 }
 </script>

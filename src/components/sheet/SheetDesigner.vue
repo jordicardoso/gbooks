@@ -1,6 +1,6 @@
 <!-- src/components/sheet/SheetDesigner.vue -->
 <template>
-  <q-card class="bg-grey-10 text-white" style="width: 600px; max-width: 90vw;">
+  <q-card class="bg-grey-10 text-white" style="width: 600px; max-width: 90vw">
     <q-card-section>
       <div class="text-h6">{{ t('characterSheet.designer.title') }}</div>
       <div class="text-subtitle2 text-grey-5">{{ t('characterSheet.designer.subtitle') }}</div>
@@ -44,11 +44,15 @@
 
     <q-card-actions align="right">
       <q-btn flat :label="t('characterSheet.designer.cancel')" @click="emit('close')" />
-      <q-btn color="primary" :label="t('characterSheet.designer.saveChanges')" @click="saveSchema" />
+      <q-btn
+        color="primary"
+        :label="t('characterSheet.designer.saveChanges')"
+        @click="saveSchema"
+      />
     </q-card-actions>
 
     <q-dialog v-model="isAddDialogOpen">
-      <q-card class="bg-grey-9 text-white" style="width: 450px;">
+      <q-card class="bg-grey-9 text-white" style="width: 450px">
         <q-card-section>
           <div class="text-h6">{{ t('characterSheet.designer.addDialog.title') }}</div>
         </q-card-section>
@@ -86,7 +90,8 @@
 import { ref, computed } from 'vue';
 import { useQuasar } from 'quasar';
 import { useI18n } from 'vue-i18n';
-import { useBookStore, type CharacterSheetSchema, type CharacterSheetSectionSchema } from 'src/stores/book-store';
+import { useBookStore } from 'src/stores/book-store';
+import type { CharacterSheetSchema, CharacterSheetSectionSchema } from 'src/stores/types';
 
 const emit = defineEmits(['close']);
 const $q = useQuasar();
@@ -94,28 +99,40 @@ const { t } = useI18n();
 const bookStore = useBookStore();
 
 const localSchema = ref<CharacterSheetSchema>(
-  JSON.parse(JSON.stringify(bookStore.characterSheetSchema))
+  JSON.parse(JSON.stringify(bookStore.characterSheetSchema)),
 );
 const isAddDialogOpen = ref(false);
 
 const rawTemplates = [
   { key: 'stats', icon: 'analytics', schema: { type: 'stats' as const } },
-  { key: 'itemSlots', icon: 'checkroom', schema: { type: 'itemSection' as const, mode: 'slots' as const } },
-  { key: 'itemList', icon: 'inventory_2', schema: { type: 'itemSection' as const, mode: 'list' as const } },
+  {
+    key: 'itemSlots',
+    icon: 'checkroom',
+    schema: { type: 'itemSection' as const, mode: 'slots' as const },
+  },
+  {
+    key: 'itemList',
+    icon: 'inventory_2',
+    schema: { type: 'itemSection' as const, mode: 'list' as const },
+  },
   { key: 'events', icon: 'event_note', schema: { type: 'events' as const } },
 ];
 
-const sectionTemplates = computed(() => rawTemplates.map(template => ({
-  ...template,
-  label: t(`characterSheet.designer.addDialog.templates.${template.key}.label`),
-  description: t(`characterSheet.designer.addDialog.templates.${template.key}.description`),
-})));
+const sectionTemplates = computed(() =>
+  rawTemplates.map((template) => ({
+    ...template,
+    label: t(`characterSheet.designer.addDialog.templates.${template.key}.label`),
+    description: t(`characterSheet.designer.addDialog.templates.${template.key}.description`),
+  })),
+);
 
-type SectionTemplate = typeof sectionTemplates.value[number];
+type SectionTemplate = (typeof sectionTemplates.value)[number];
 
 function getSectionTypeDescription(section: CharacterSheetSectionSchema): string {
   if (section.type === 'itemSection') {
-    return section.mode === 'slots' ? t('characterSheet.designer.sectionTypes.slots') : t('characterSheet.designer.sectionTypes.list');
+    return section.mode === 'slots'
+      ? t('characterSheet.designer.sectionTypes.slots')
+      : t('characterSheet.designer.sectionTypes.list');
   }
   if (section.type === 'stats') {
     return t('characterSheet.designer.sectionTypes.stats');
@@ -132,7 +149,7 @@ function promptForSectionTitle(template: SectionTemplate) {
   $q.dialog({
     title: t('characterSheet.designer.promptTitle.title', { sectionLabel: template.label }),
     message: t('characterSheet.designer.promptTitle.message'),
-    prompt: { model: '', type: 'text', isValid: val => val.length > 0 },
+    prompt: { model: '', type: 'text', isValid: (val) => val.length > 0 },
     dark: true,
     cancel: true,
     persistent: true,
@@ -144,7 +161,7 @@ function promptForSectionTitle(template: SectionTemplate) {
 function addNewSection(title: string, template: SectionTemplate) {
   const dataKey = `${template.schema.type}_${template.schema.mode || 'default'}_${Date.now()}`;
 
-  if (localSchema.value.layout.some(s => s.dataKey === dataKey)) {
+  if (localSchema.value.layout.some((s) => s.dataKey === dataKey)) {
     $q.notify({ type: 'negative', message: t('characterSheet.designer.errors.uniqueKey') });
     return;
   }
@@ -152,7 +169,7 @@ function addNewSection(title: string, template: SectionTemplate) {
   const newSection: CharacterSheetSectionSchema = {
     title,
     icon: template.icon,
-    dataKey: dataKey as any,
+    dataKey: dataKey,
     ...template.schema,
   };
 
