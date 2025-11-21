@@ -300,5 +300,60 @@ export const useBookStore = defineStore('book', {
         void this.saveCurrentBook();
       }, 1500);
     },
+    deleteEventIfUnused(eventId: string): boolean {
+      if (!this.activeBook || !this.activeBook.events) return false;
+
+      const nodesStore = useNodesStore();
+      const nodes = nodesStore.nodes;
+
+      // Check if event is used in any node
+      const isUsed = nodes.some((node) => {
+        // Check actions
+        if (node.data.actions) {
+          const checkActions = (actions: any[]): boolean => {
+            return actions.some((action) => {
+              if (action.type === 'setFlag' && action.flag === eventId) return true;
+              if (
+                action.type === 'conditional' &&
+                action.condition.source === 'flag' &&
+                action.condition.subject === eventId
+              )
+                return true;
+              if (action.type === 'conditional') {
+                return checkActions(action.successActions) || checkActions(action.failureActions);
+              }
+              return false;
+            });
+          };
+          if (checkActions(node.data.actions)) return true;
+        }
+
+        // Check choices
+        if (node.data.choices) {
+          return node.data.choices.some((choice: any) => {
+            if (
+              choice.type === 'conditional' &&
+              choice.condition.type === 'event' &&
+              choice.condition.subject === eventId
+            )
+              return true;
+            return false;
+          });
+        }
+
+        return false;
+      });
+
+      if (!isUsed) {
+        const index = this.activeBook.events.findIndex((e) => e.id === eventId);
+        if (index !== -1) {
+          this.activeBook.events.splice(index, 1);
+          this.setDirty();
+          return true;
+        }
+      }
+
+      return false;
+    },
   },
 });

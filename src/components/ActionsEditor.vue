@@ -70,7 +70,7 @@
                   />
                 </div>
 
-                <div class="col-2">
+                <div v-if="action.condition.source !== 'flag'" class="col-2">
                   <q-select
                     v-model="action.condition.operator"
                     :options="['==', '!=', '>', '>=', '<', '<=']"
@@ -80,13 +80,13 @@
                     dense
                   />
                 </div>
-                <div class="col-3">
+                <div :class="action.condition.source === 'flag' ? 'col-5' : 'col-3'">
                   <q-select
                     v-if="action.condition.source === 'flag'"
                     v-model="action.condition.value"
                     :options="[
-                      { label: 'Verdadero', value: true },
-                      { label: 'Falso', value: false },
+                      { label: $t('actionsEditor.condition.valueTrue'), value: true },
+                      { label: $t('actionsEditor.condition.valueFalse'), value: false },
                     ]"
                     :label="$t('actionsEditor.condition.valueLabel')"
                     filled
@@ -106,6 +106,14 @@
                   />
                 </div>
               </div>
+
+              <!-- ... -->
+
+              function onConditionSourceChange(condition: ActionCondition) { if (condition.source
+              === 'stat') { condition.subject = props.availableStats[0] || ''; // Reset operator to
+              default for stats if needed, or leave as is } else { // 'flag' condition.subject =
+              props.availableEvents[0]?.id || ''; condition.operator = '=='; // Enforce '==' for
+              flags } }
 
               <!-- Sub-lista: Acciones si se CUMPLE -->
               <div class="q-mt-md">
@@ -242,6 +250,31 @@
         </q-list>
       </q-card>
     </q-dialog>
+
+    <!-- Diálogo Custom para Set Flag -->
+    <q-dialog v-model="isSetFlagDialogOpen">
+      <q-card class="bg-grey-9 text-white" style="width: 400px">
+        <q-card-section>
+          <div class="text-h6">{{ $t('actionsEditor.dialogs.setFlag.title') }}</div>
+        </q-card-section>
+
+        <q-card-section class="q-gutter-y-md">
+          <q-input
+            v-model="newFlagName"
+            :label="$t('actionsEditor.createEventDialog.promptLabel')"
+            dark
+            filled
+            autofocus
+          />
+          <q-input v-model="newFlagId" label="ID" dark filled hint="Unique identifier" />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" color="grey-5" v-close-popup />
+          <q-btn flat label="Save" color="primary" @click="saveSetFlagAction" />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
@@ -272,6 +305,25 @@ const { t } = useI18n();
 const localActions = ref<AnyAction[]>([]);
 const isAddActionDialogOpen = ref(false);
 
+// State for Custom Set Flag Dialog
+const isSetFlagDialogOpen = ref(false);
+const newFlagName = ref('');
+const newFlagId = ref('');
+const pendingFlagContext = ref<{
+  parentAction?: ConditionalAction;
+  listType?: 'success' | 'failure';
+} | null>(null);
+
+// Auto-generate ID from Name
+watch(newFlagName, (val) => {
+  // Only auto-update if the ID matches the previous slugified name (or is empty),
+  // to avoid overwriting manual edits.
+  // For simplicity, we'll just always update if the user hasn't manually focused/edited the ID field?
+  // Or simpler: just always update it unless we track "dirty" state.
+  // Let's just update it.
+  newFlagId.value = val.trim().replace(/\s+/g, '_').toLowerCase();
+});
+
 const conditionSourceOptions = computed(() => [
   { label: t('actionsEditor.condition.sources.stat'), value: 'stat' },
   { label: t('actionsEditor.condition.sources.flag'), value: 'flag' },
@@ -283,6 +335,7 @@ function onConditionSourceChange(condition: ActionCondition) {
   } else {
     // 'flag'
     condition.subject = props.availableEvents[0]?.id || '';
+    condition.operator = '==';
   }
 }
 
@@ -335,6 +388,55 @@ function removeAction(index: number) {
   emitUpdate();
 }
 
+function openSetFlagDialog(parentAction?: ConditionalAction, listType?: 'success' | 'failure') {
+  newFlagName.value = '';
+  newFlagId.value = '';
+  if (parentAction) {
+    if (listType) {
+      pendingFlagContext.value = { parentAction, listType };
+    } else {
+      pendingFlagContext.value = { parentAction };
+    }
+  } else {
+    pendingFlagContext.value = null;
+  }
+  isSetFlagDialogOpen.value = true;
+}
+
+function saveSetFlagAction() {
+  if (!newFlagId.value || !newFlagName.value) return;
+
+  const id = newFlagId.value;
+  const name = newFlagName.value;
+
+  // Check if event exists
+  const exists = props.availableEvents.some((e) => e.id === id);
+  if (!exists) {
+    emit('create-event', { id, name, initialValue: false });
+  }
+
+  const newAction: SetFlagAction = {
+    id: uid(),
+    type: 'setFlag',
+    flag: id,
+    value: true,
+  };
+
+  if (pendingFlagContext.value && pendingFlagContext.value.parentAction) {
+    const { parentAction, listType } = pendingFlagContext.value;
+    if (listType === 'success') {
+      parentAction.successActions.push(newAction);
+    } else if (listType === 'failure') {
+      parentAction.failureActions.push(newAction);
+    }
+  } else {
+    localActions.value.push(newAction);
+  }
+
+  emitUpdate();
+  isSetFlagDialogOpen.value = false;
+}
+
 function promptAddAction(type: 'modifyStat' | 'setFlag' | 'conditional') {
   isAddActionDialogOpen.value = false;
 
@@ -372,50 +474,12 @@ function promptAddAction(type: 'modifyStat' | 'setFlag' | 'conditional') {
       emitUpdate();
     });
   } else if (type === 'setFlag') {
-    $q.dialog({
-      title: t('actionsEditor.dialogs.setFlag.title'),
-      message: t('actionsEditor.dialogs.setFlag.message'),
-      prompt: { model: '', type: 'text' },
-      dark: true,
-      cancel: true,
-    }).onOk((flagName) => {
-      if (flagName && flagName.trim()) {
-        const newAction: SetFlagAction = {
-          id: uid(),
-          type: 'setFlag',
-          flag: flagName.trim(),
-          value: true,
-        };
-        localActions.value.push(newAction);
-        emitUpdate();
-      }
-    });
+    openSetFlagDialog();
   }
 }
 
 function promptAddNestedAction(parentAction: ConditionalAction, listType: 'success' | 'failure') {
-  $q.dialog({
-    title: t('actionsEditor.dialogs.setFlag.title'),
-    message: t('actionsEditor.dialogs.setFlag.message'),
-    prompt: { model: '', type: 'text' },
-    dark: true,
-    cancel: true,
-  }).onOk((flagName) => {
-    if (flagName && flagName.trim()) {
-      const newAction: SetFlagAction = {
-        id: uid(),
-        type: 'setFlag',
-        flag: flagName.trim(),
-        value: true,
-      };
-      if (listType === 'success') {
-        parentAction.successActions.push(newAction);
-      } else {
-        parentAction.failureActions.push(newAction);
-      }
-      emitUpdate();
-    }
-  });
+  openSetFlagDialog(parentAction, listType);
 }
 
 function removeNestedAction(

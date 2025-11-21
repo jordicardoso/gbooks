@@ -41,11 +41,13 @@ export default {
       simple: 'Decisión Simple',
       conditional: 'Prueba Condicional (Stat/Item/Evento)',
       diceRoll: 'Tirada de Dados',
+      skillCheck: 'Prueba de Habilidad (Skill Check)',
     },
     description: {
       simple: 'Directo a párrafo: {paragraph}',
       conditional: 'Si {subject} {operator} {value} → {success} | Si no → {failure}',
       diceRoll: 'Tirada de {dice} con {count} resultados.',
+      skillCheck: 'Prueba de {skill} (DT {difficulty})',
       unknown: 'Opción desconocida',
     },
   },
@@ -169,6 +171,8 @@ export default {
       subjectLabelStat: 'Estadística a comprobar',
       subjectLabelFlag: 'Evento a comprobar',
       valueLabel: 'Valor',
+      valueTrue: 'Activado',
+      valueFalse: 'Desactivado',
       sources: {
         stat: 'Estadística',
         flag: 'Evento',
@@ -194,7 +198,7 @@ export default {
       title: 'Crear Nuevo Evento',
       message:
         'Estás creando un nuevo evento con la descripción: "{eventName}". Por favor, introduce un código único para identificarlo (sin espacios ni caracteres especiales).',
-      promptLabel: 'Código del Evento (ID)',
+      promptLabel: 'Descripción del Evento',
     },
     descriptions: {
       modifyStat: 'Estadística: {stat} {operation} {value}',
@@ -233,6 +237,24 @@ export default {
       right: 'Derecha',
       left: 'Izquierda',
       top: 'Arriba',
+    },
+    skillCheck: {
+      skillLabel: 'Habilidad (ej: Supervivencia)',
+      difficultyLabel: 'Dificultad Base (DT)',
+      diceTypeLabel: 'Dados (ej: 1d6)',
+      modifiersTitle: 'Modificadores Condicionales',
+      addModifier: 'Añadir Modificador',
+      noModifiers: '(Sin modificadores)',
+      modifierDesc: 'Si {trigger} {operator} → {operation} {value}',
+      dialog: {
+        title: 'Editar Modificador',
+        triggerType: 'Tipo de Trigger',
+        targetId: 'ID del Evento (Flag)',
+        operator: 'Condición',
+        operation: 'Operación',
+        value: 'Valor',
+        save: 'Guardar Modificador',
+      },
     },
   },
   assetsPage: {

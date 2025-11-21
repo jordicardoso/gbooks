@@ -410,12 +410,49 @@ function saveChanges() {
 
     if (localNode.value.data.choices) {
       for (const choice of localNode.value.data.choices) {
+        // Simple Choice
         if (choice.type === 'simple' && choice.targetNodeId === '--CREATE-NEW--') {
           const newNode = nodesStore.createNodeAndConnect(props.node.id, choice);
-          if (newNode) {
-            choice.targetNodeId = newNode.id;
-          } else {
-            choice.targetNodeId = '';
+          if (newNode) choice.targetNodeId = newNode.id;
+          else choice.targetNodeId = '';
+        }
+
+        // Conditional Choice
+        if (choice.type === 'conditional') {
+          if (choice.successTargetNodeId === '--CREATE-NEW--') {
+            const newNode = nodesStore.createNodeAndConnect(props.node.id, choice, 'success');
+            if (newNode) choice.successTargetNodeId = newNode.id;
+            else choice.successTargetNodeId = '';
+          }
+          if (choice.failureTargetNodeId === '--CREATE-NEW--') {
+            const newNode = nodesStore.createNodeAndConnect(props.node.id, choice, 'failure');
+            if (newNode) choice.failureTargetNodeId = newNode.id;
+            else choice.failureTargetNodeId = '';
+          }
+        }
+
+        // Dice Roll Choice
+        if (choice.type === 'diceRoll') {
+          for (const outcome of choice.outcomes) {
+            if (outcome.targetNodeId === '--CREATE-NEW--') {
+              const newNode = nodesStore.createNodeAndConnect(props.node.id, choice, outcome.id);
+              if (newNode) outcome.targetNodeId = newNode.id;
+              else outcome.targetNodeId = '';
+            }
+          }
+        }
+
+        // Skill Check Choice
+        if (choice.type === 'skillCheck') {
+          if (choice.successTargetNodeId === '--CREATE-NEW--') {
+            const newNode = nodesStore.createNodeAndConnect(props.node.id, choice, 'success');
+            if (newNode) choice.successTargetNodeId = newNode.id;
+            else choice.successTargetNodeId = '';
+          }
+          if (choice.failureTargetNodeId === '--CREATE-NEW--') {
+            const newNode = nodesStore.createNodeAndConnect(props.node.id, choice, 'failure');
+            if (newNode) choice.failureTargetNodeId = newNode.id;
+            else choice.failureTargetNodeId = '';
           }
         }
       }
@@ -438,10 +475,44 @@ function saveChanges() {
     }
 
     const { ...updates } = localNode.value;
+
+    // [NEW] Identify potential events to delete (those present in the old node)
+    const oldEventsToCheck = new Set<string>();
+    if (props.node.data.actions) {
+      const collectEvents = (actions: AnyAction[]) => {
+        actions.forEach((action) => {
+          if (action.type === 'setFlag') oldEventsToCheck.add(action.flag);
+          if (action.type === 'conditional' && action.condition.source === 'flag') {
+            oldEventsToCheck.add(action.condition.subject);
+          }
+          if (action.type === 'conditional') {
+            collectEvents(action.successActions);
+            collectEvents(action.failureActions);
+          }
+        });
+      };
+      collectEvents(props.node.data.actions);
+    }
+    if (props.node.data.choices) {
+      props.node.data.choices.forEach((choice) => {
+        if (choice.type === 'conditional' && choice.condition.type === 'event') {
+          oldEventsToCheck.add(choice.condition.subject);
+        }
+      });
+    }
+
     emit('save', {
       nodeId: props.node.id,
       updates: updates,
     });
+
+    // [NEW] Check if any of the old events are now unused
+    // We use setTimeout to ensure the store has been updated by the parent component handling the 'save' event
+    setTimeout(() => {
+      oldEventsToCheck.forEach((eventId) => {
+        bookStore.deleteEventIfUnused(eventId);
+      });
+    }, 100);
   }
 }
 </script>

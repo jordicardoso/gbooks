@@ -161,6 +161,43 @@ export interface DiceRollChoice {
   sourceHandle?: string;
 }
 
+// --- SKILL CHECK TYPES ---
+
+export interface ModifierTrigger {
+  checkType: 'flag';
+  targetId: string;
+  operator: 'exists' | 'not_exists';
+  value?: boolean;
+}
+
+export interface ModifierEffect {
+  operation: 'add';
+  value: number;
+}
+
+export interface ConditionalModifier {
+  ruleId: string;
+  trigger: ModifierTrigger;
+  effect: ModifierEffect;
+}
+
+export interface SkillCheckConfig {
+  baseDifficulty: number;
+  skill: string;
+  diceType: string;
+  conditionalModifiers: ConditionalModifier[];
+}
+
+export interface SkillCheckChoice {
+  id: string;
+  type: 'skillCheck';
+  label: string;
+  successTargetNodeId: string;
+  failureTargetNodeId: string;
+  rollConfig: SkillCheckConfig;
+  sourceHandle?: string;
+}
+
 // --- TIPOS GLOBALES CONSOLIDADOS ---
 
 // [CORRECCIÓN] Definición única y completa de AnyAction
@@ -172,7 +209,7 @@ export type AnyAction =
   | ConditionalAction;
 
 // Definición única de AnyChoice
-export type AnyChoice = SimpleChoice | ConditionalChoice | DiceRollChoice;
+export type AnyChoice = SimpleChoice | ConditionalChoice | DiceRollChoice | SkillCheckChoice;
 
 // [CORRECCIÓN] Definición única y completa de BookEdge
 export type BookEdge = Edge & {

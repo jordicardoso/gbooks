@@ -51,6 +51,10 @@
             <q-item-section avatar><q-icon name="casino" /></q-item-section>
             <q-item-section>{{ t('choices.addDialog.diceRoll') }}</q-item-section>
           </q-item>
+          <q-item clickable v-ripple @click="promptNewChoice('skillCheck')">
+            <q-item-section avatar><q-icon name="psychology" /></q-item-section>
+            <q-item-section>{{ t('choices.addDialog.skillCheck') }}</q-item-section>
+          </q-item>
         </q-list>
       </q-card>
     </q-dialog>
@@ -63,19 +67,25 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { uid } from 'quasar';
-import { useI18n } from 'vue-i18n'; // [1. AÑADIDO] Importar i18n
-import { useNodesStore } from 'src/stores/nodes-store'; // [2. AÑADIDO] Importar el store de nodos
-import { storeToRefs } from 'pinia'; // [3. AÑADIDO] Importar storeToRefs
-import type { AnyChoice, SimpleChoice, ConditionalChoice, DiceRollChoice } from 'src/stores/types';
+import { useI18n } from 'vue-i18n';
+import { useNodesStore } from 'src/stores/nodes-store';
+import { storeToRefs } from 'pinia';
+import type {
+  AnyChoice,
+  SimpleChoice,
+  ConditionalChoice,
+  DiceRollChoice,
+  SkillCheckChoice,
+} from 'src/stores/types';
 import EditChoiceDialog from './EditChoiceDialog.vue';
 
 const props = defineProps<{ choices: AnyChoice[] }>();
 const emit = defineEmits(['update:choices']);
 
 // --- STORES E I18N ---
-const { t } = useI18n(); // [4. AÑADIDO] Obtener la función de traducción
-const nodesStore = useNodesStore(); // [5. AÑADIDO] Inicializar el store
-const { nodes } = storeToRefs(nodesStore); // [6. AÑADIDO] Obtener el array de nodos de forma reactiva
+const { t } = useI18n();
+const nodesStore = useNodesStore();
+const { nodes } = storeToRefs(nodesStore);
 
 // --- ESTADO LOCAL ---
 const localChoices = ref<AnyChoice[]>([]);
@@ -101,7 +111,7 @@ function removeChoice(index: number) {
   emitUpdate();
 }
 
-function promptNewChoice(type: 'simple' | 'conditional' | 'diceRoll') {
+function promptNewChoice(type: 'simple' | 'conditional' | 'diceRoll' | 'skillCheck') {
   isAddChoiceDialogOpen.value = false;
   let newChoice: AnyChoice;
 
@@ -116,9 +126,23 @@ function promptNewChoice(type: 'simple' | 'conditional' | 'diceRoll') {
       successTargetNodeId: '',
       failureTargetNodeId: '',
     } as ConditionalChoice;
-  } else {
-    // diceRoll
+  } else if (type === 'diceRoll') {
     newChoice = { id: uid(), type, label: '', dice: '1d6', outcomes: [] } as DiceRollChoice;
+  } else {
+    // skillCheck
+    newChoice = {
+      id: uid(),
+      type: 'skillCheck',
+      label: '',
+      successTargetNodeId: '',
+      failureTargetNodeId: '',
+      rollConfig: {
+        baseDifficulty: 5,
+        skill: 'supervivencia',
+        diceType: '1d6',
+        conditionalModifiers: [],
+      },
+    } as SkillCheckChoice;
   }
 
   editingChoice.value = newChoice;
@@ -134,16 +158,25 @@ function openEditDialog(choice: AnyChoice, index: number) {
 
 function handleSaveChoice(updatedChoice: AnyChoice) {
   if (editingChoiceIndex.value !== null) {
-    localChoices.value.splice(editingChoiceIndex.value, 1, updatedChoice);
+    // Editing existing choice
+    localChoices.value[editingChoiceIndex.value] = updatedChoice;
   } else {
+    // Adding new choice
     localChoices.value.push(updatedChoice);
   }
   emitUpdate();
   isEditDialogOpen.value = false;
+  editingChoice.value = null;
+  editingChoiceIndex.value = null;
 }
 
 function getChoiceIcon(type: AnyChoice['type']): string {
-  const map = { simple: 'call_split', conditional: 'help_outline', diceRoll: 'casino' };
+  const map = {
+    simple: 'call_split',
+    conditional: 'help_outline',
+    diceRoll: 'casino',
+    skillCheck: 'psychology',
+  };
   return map[type];
 }
 
@@ -152,7 +185,6 @@ function getChoiceDescription(choice: AnyChoice): string {
     if (!nodeId) return '???';
     if (nodeId === '--CREATE-NEW--') return t('dialogs.editChoice.newNode');
     const node = nodes.value.find((n) => n.id === nodeId);
-    // [MEJORA] Usamos el número de párrafo si existe, si no, el ID como fallback.
     return node ? `P.${node.data.paragraphNumber}` : nodeId.substring(0, 8) || '???';
   };
 
@@ -177,6 +209,12 @@ function getChoiceDescription(choice: AnyChoice): string {
       return t('choices.description.diceRoll', {
         dice: choice.dice,
         count: choice.outcomes.length,
+      });
+
+    case 'skillCheck':
+      return t('choices.description.skillCheck', {
+        skill: choice.rollConfig.skill,
+        difficulty: choice.rollConfig.baseDifficulty,
       });
 
     default:

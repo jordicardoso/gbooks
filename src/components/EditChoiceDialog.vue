@@ -81,7 +81,7 @@
               </div>
               <div class="col-3">
                 <q-input
-                  v-model.number="editableChoice.condition.value"
+                  v-model.number="editableChoice.condition.value as number"
                   type="number"
                   :label="t('editChoiceDialog.valueLabel')"
                   filled
@@ -185,6 +185,107 @@
               </div>
             </div>
           </div>
+
+          <!-- === CAMPOS PARA SKILL CHECK === -->
+          <div v-if="editableChoice.type === 'skillCheck'" class="q-gutter-y-md">
+            <div class="row q-col-gutter-sm">
+              <div class="col-6">
+                <q-input
+                  v-model="editableChoice.rollConfig.skill"
+                  :label="t('editChoiceDialog.skillCheck.skillLabel')"
+                  filled
+                  dark
+                />
+              </div>
+              <div class="col-3">
+                <q-input
+                  v-model.number="editableChoice.rollConfig.baseDifficulty"
+                  type="number"
+                  :label="t('editChoiceDialog.skillCheck.difficultyLabel')"
+                  filled
+                  dark
+                />
+              </div>
+              <div class="col-3">
+                <q-input
+                  v-model="editableChoice.rollConfig.diceType"
+                  :label="t('editChoiceDialog.skillCheck.diceTypeLabel')"
+                  filled
+                  dark
+                />
+              </div>
+            </div>
+
+            <q-select
+              v-model="editableChoice.successTargetNodeId"
+              :options="nodeOptions"
+              :label="t('editChoiceDialog.successTargetLabel')"
+              filled
+              dark
+              emit-value
+              map-options
+              use-input
+            />
+            <q-select
+              v-model="editableChoice.failureTargetNodeId"
+              :options="nodeOptions"
+              :label="t('editChoiceDialog.failureTargetLabel')"
+              filled
+              dark
+              emit-value
+              map-options
+              use-input
+            />
+
+            <!-- MODIFICADORES -->
+            <div class="text-subtitle2 q-mt-md">
+              {{ t('editChoiceDialog.skillCheck.modifiersTitle') }}
+            </div>
+            <q-list dark separator bordered>
+              <q-item
+                v-for="(mod, index) in editableChoice.rollConfig.conditionalModifiers"
+                :key="mod.ruleId"
+              >
+                <q-item-section>
+                  <q-item-label>{{ mod.ruleId }}</q-item-label>
+                  <q-item-label caption>
+                    {{
+                      t('editChoiceDialog.skillCheck.modifierDesc', {
+                        trigger: `${mod.trigger.targetId} (${mod.trigger.operator})`,
+                        operator: '→',
+                        operation: mod.effect.operation,
+                        value: mod.effect.value,
+                      })
+                    }}
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side>
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    icon="delete"
+                    color="negative"
+                    @click="removeModifier(index)"
+                  />
+                </q-item-section>
+              </q-item>
+              <q-item v-if="!editableChoice.rollConfig.conditionalModifiers.length">
+                <q-item-section class="text-grey text-center">
+                  {{ t('editChoiceDialog.skillCheck.noModifiers') }}
+                </q-item-section>
+              </q-item>
+            </q-list>
+            <div class="row justify-end q-mt-sm">
+              <q-btn
+                :label="t('editChoiceDialog.skillCheck.addModifier')"
+                color="secondary"
+                size="sm"
+                icon="add"
+                @click="openModifierDialog"
+              />
+            </div>
+          </div>
         </q-card-section>
 
         <q-separator dark />
@@ -200,6 +301,76 @@
         </q-card-actions>
       </q-form>
     </q-card>
+
+    <!-- DIALOGO PARA EDITAR MODIFICADOR -->
+    <q-dialog v-model="isModifierDialogOpen">
+      <q-card class="bg-grey-9 text-white" style="width: 400px">
+        <q-card-section>
+          <div class="text-h6">{{ t('editChoiceDialog.skillCheck.dialog.title') }}</div>
+        </q-card-section>
+        <q-card-section class="q-gutter-y-sm">
+          <q-input
+            v-model="newModifier.ruleId"
+            label="Rule ID"
+            filled
+            dark
+            dense
+            hint="Unique ID for this rule"
+          />
+          <q-select
+            v-model="newModifier.trigger.targetId"
+            :options="availableEvents"
+            :label="t('editChoiceDialog.skillCheck.dialog.targetId')"
+            filled
+            dark
+            dense
+            emit-value
+            map-options
+            option-value="id"
+            option-label="name"
+          />
+          <q-select
+            v-model="newModifier.trigger.operator"
+            :options="['exists', 'not_exists']"
+            :label="t('editChoiceDialog.skillCheck.dialog.operator')"
+            filled
+            dark
+            dense
+          />
+          <div class="row q-col-gutter-sm">
+            <div class="col">
+              <q-select
+                v-model="newModifier.effect.operation"
+                :options="['add']"
+                :label="t('editChoiceDialog.skillCheck.dialog.operation')"
+                filled
+                dark
+                dense
+                readonly
+              />
+            </div>
+            <div class="col">
+              <q-input
+                v-model.number="newModifier.effect.value"
+                type="number"
+                :label="t('editChoiceDialog.skillCheck.dialog.value')"
+                filled
+                dark
+                dense
+              />
+            </div>
+          </div>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn flat label="Cancel" v-close-popup />
+          <q-btn
+            color="primary"
+            :label="t('editChoiceDialog.skillCheck.dialog.save')"
+            @click="saveModifier"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </q-dialog>
 </template>
 
@@ -210,7 +381,7 @@ import { useNodesStore } from 'src/stores/nodes-store';
 import { useBookStore } from 'src/stores/book-store';
 import { storeToRefs } from 'pinia';
 import { uid } from 'quasar';
-import type { AnyChoice } from 'src/stores/types';
+import type { AnyChoice, ConditionalModifier } from 'src/stores/types';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -230,6 +401,14 @@ const { activeBook } = storeToRefs(bookStore);
 // --- ESTADO LOCAL ---
 const editableChoice = ref<AnyChoice | null>(null);
 const newOutcome = ref<{ range: string; targetNodeId: string }>({ range: '', targetNodeId: '' });
+
+// Modifier Dialog State
+const isModifierDialogOpen = ref(false);
+const newModifier = ref<ConditionalModifier>({
+  ruleId: '',
+  trigger: { checkType: 'flag', targetId: '', operator: 'exists', value: true },
+  effect: { operation: 'add', value: 0 },
+});
 
 // --- COMPUTED PROPS ---
 const formTitle = computed(() =>
@@ -255,6 +434,10 @@ const sourceHandleOptions = computed(() => [
 const availableStats = computed(() => {
   if (!activeBook.value?.characterSheet?.stats) return [];
   return Object.keys(activeBook.value.characterSheet.stats);
+});
+
+const availableEvents = computed(() => {
+  return activeBook.value?.events || [];
 });
 
 // --- WATCHERS ---
@@ -313,5 +496,40 @@ function addOutcome() {
 function removeOutcome(index: number) {
   if (!editableChoice.value || editableChoice.value.type !== 'diceRoll') return;
   editableChoice.value.outcomes.splice(index, 1);
+}
+
+// Métodos para Skill Check Modifiers
+function openModifierDialog() {
+  newModifier.value = {
+    ruleId: `mod_${uid()}`,
+    trigger: {
+      checkType: 'flag',
+      targetId: availableEvents.value[0]?.id || '',
+      operator: 'exists',
+      value: true,
+    },
+    effect: { operation: 'add', value: 1 },
+  };
+  isModifierDialogOpen.value = true;
+}
+
+function saveModifier() {
+  if (
+    !editableChoice.value ||
+    editableChoice.value.type !== 'skillCheck' ||
+    !newModifier.value.trigger.targetId
+  )
+    return;
+
+  editableChoice.value.rollConfig.conditionalModifiers.push({
+    ...newModifier.value,
+    ruleId: newModifier.value.ruleId || `mod_${uid()}`,
+  });
+  isModifierDialogOpen.value = false;
+}
+
+function removeModifier(index: number) {
+  if (!editableChoice.value || editableChoice.value.type !== 'skillCheck') return;
+  editableChoice.value.rollConfig.conditionalModifiers.splice(index, 1);
 }
 </script>

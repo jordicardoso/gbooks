@@ -152,7 +152,10 @@ export const useNodesStore = defineStore('nodes', {
     /**
      * Crea un nuevo nodo y lo conecta automáticamente a un nodo de origen.
      */
-    createNodeAndConnect(sourceNodeId: string, choice: AnyChoice) {
+    /**
+     * Crea un nuevo nodo y lo conecta automáticamente a un nodo de origen.
+     */
+    createNodeAndConnect(sourceNodeId: string, choice: AnyChoice, branchLabel?: string) {
       const sourceNode = this.nodes.find((n) => n.id === sourceNodeId);
       if (!sourceNode) return null;
 
@@ -163,7 +166,9 @@ export const useNodesStore = defineStore('nodes', {
       const offsetY = (dimensions?.height || 100) + 80;
 
       let targetHandle = 'left-target';
-      switch (choice.sourceHandle) {
+      const sourceHandle = (choice as SimpleChoice).sourceHandle || 'bottom-source';
+
+      switch (sourceHandle) {
         case 'right-source':
           position.x += offsetX;
           targetHandle = 'left-target';
@@ -182,9 +187,22 @@ export const useNodesStore = defineStore('nodes', {
           break;
       }
 
+      // Adjust position based on branchLabel to avoid overlap
+      if (branchLabel) {
+        if (branchLabel === 'success' || branchLabel === 'true') {
+          position.y -= 100;
+        } else if (branchLabel === 'failure' || branchLabel === 'false') {
+          position.y += 100;
+        } else {
+          // For other cases (like dice outcomes), try to hash the label to get an offset
+          const hash = branchLabel.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+          position.y += (hash % 200) - 100;
+        }
+      }
+
       const newNode: BookNode = {
         id: uid(),
-        label: 'Nuevo Párrafo',
+        label: branchLabel ? `Nuevo (${branchLabel})` : 'Nuevo Párrafo',
         position: position,
         data: {
           paragraphNumber: this.getNewParagraphNumber(),
@@ -198,7 +216,7 @@ export const useNodesStore = defineStore('nodes', {
       // Esta llamada ya marcará el libro como "sucio" y creará la flecha.
       this.addConnection({
         source: sourceNodeId,
-        sourceHandle: (choice as SimpleChoice).sourceHandle || 'bottom-source',
+        sourceHandle: sourceHandle,
         target: newNode.id,
         targetHandle: targetHandle,
       });
