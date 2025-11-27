@@ -184,6 +184,7 @@
           @update:actions="updateNodeActions"
           :available-stats="availableStats"
           :available-events="availableEvents"
+          :available-sections="availableSections"
           @create-event="handleCreateEvent"
         />
       </q-card-section>
@@ -282,6 +283,14 @@ const availableStats = computed<string[]>(() => {
 const availableEvents = computed<BookEvent[]>(() => {
   if (!activeBook.value?.events) return [];
   return [...activeBook.value.events].sort((a, b) => a.name.localeCompare(b.name));
+});
+
+const availableSections = computed(() => {
+  if (!activeBook.value?.characterSheetSchema?.layout) return [];
+  return activeBook.value.characterSheetSchema.layout.map((section) => ({
+    label: section.title,
+    value: section.dataKey,
+  }));
 });
 
 function handleCreateEvent(newEvent: { id: string; name: string }) {

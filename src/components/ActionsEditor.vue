@@ -74,7 +74,7 @@
                   <q-select
                     v-model="action.condition.operator"
                     :options="['==', '!=', '>', '>=', '<', '<=']"
-                    label="Op."
+                    :label="$t('actionsEditor.condition.operatorLabel')"
                     filled
                     dark
                     dense
@@ -142,15 +142,29 @@
                       }}</q-item-label>
                     </q-item-section>
                     <q-item-section side>
-                      <q-btn
-                        flat
-                        round
-                        dense
-                        size="xs"
-                        icon="delete"
-                        color="negative"
-                        @click="removeNestedAction(action, 'success', subIndex)"
-                      />
+                      <div class="row items-center no-wrap">
+                        <q-btn
+                          flat
+                          round
+                          dense
+                          size="xs"
+                          icon="edit"
+                          @click="editNestedAction(action, 'success', subIndex)"
+                        >
+                          <q-tooltip>{{ $t('actionsEditor.editActionTooltip') }}</q-tooltip>
+                        </q-btn>
+                        <q-btn
+                          flat
+                          round
+                          dense
+                          size="xs"
+                          icon="delete"
+                          color="negative"
+                          @click="removeNestedAction(action, 'success', subIndex)"
+                        >
+                          <q-tooltip>{{ $t('actionsEditor.deleteActionTooltip') }}</q-tooltip>
+                        </q-btn>
+                      </div>
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -186,15 +200,29 @@
                       }}</q-item-label>
                     </q-item-section>
                     <q-item-section side>
-                      <q-btn
-                        flat
-                        round
-                        dense
-                        size="xs"
-                        icon="delete"
-                        color="negative"
-                        @click="removeNestedAction(action, 'failure', subIndex)"
-                      />
+                      <div class="row items-center no-wrap">
+                        <q-btn
+                          flat
+                          round
+                          dense
+                          size="xs"
+                          icon="edit"
+                          @click="editNestedAction(action, 'failure', subIndex)"
+                        >
+                          <q-tooltip>{{ $t('actionsEditor.editActionTooltip') }}</q-tooltip>
+                        </q-btn>
+                        <q-btn
+                          flat
+                          round
+                          dense
+                          size="xs"
+                          icon="delete"
+                          color="negative"
+                          @click="removeNestedAction(action, 'failure', subIndex)"
+                        >
+                          <q-tooltip>{{ $t('actionsEditor.deleteActionTooltip') }}</q-tooltip>
+                        </q-btn>
+                      </div>
                     </q-item-section>
                   </q-item>
                 </q-list>
@@ -221,7 +249,14 @@
             <q-item-label>{{ getActionDescription(action) }}</q-item-label>
           </q-item-section>
           <q-item-section side>
-            <q-btn flat round dense icon="delete" color="negative" @click="removeAction(index)" />
+            <div class="row items-center no-wrap">
+              <q-btn flat round dense icon="edit" @click="editAction(action, index)">
+                <q-tooltip>{{ $t('actionsEditor.editActionTooltip') }}</q-tooltip>
+              </q-btn>
+              <q-btn flat round dense icon="delete" color="negative" @click="removeAction(index)">
+                <q-tooltip>{{ $t('actionsEditor.deleteActionTooltip') }}</q-tooltip>
+              </q-btn>
+            </div>
           </q-item-section>
         </q-item>
       </template>
@@ -247,6 +282,10 @@
             <q-item-section avatar><q-icon name="flag" /></q-item-section>
             <q-item-section>{{ $t('actionsEditor.dialog.setFlag') }}</q-item-section>
           </q-item>
+          <q-item clickable v-ripple @click="promptAddAction('addItem')">
+            <q-item-section avatar><q-icon name="backpack" /></q-item-section>
+            <q-item-section>{{ $t('actionsEditor.dialog.addItem') }}</q-item-section>
+          </q-item>
         </q-list>
       </q-card>
     </q-dialog>
@@ -266,12 +305,165 @@
             filled
             autofocus
           />
-          <q-input v-model="newFlagId" label="ID" dark filled hint="Unique identifier" />
+          <q-input
+            v-model="newFlagId"
+            :label="$t('actionsEditor.dialogs.setFlag.idLabel')"
+            dark
+            filled
+            :hint="$t('actionsEditor.dialogs.setFlag.idHint')"
+          />
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn flat label="Cancel" color="grey-5" v-close-popup />
-          <q-btn flat label="Save" color="primary" @click="saveSetFlagAction" />
+          <q-btn flat :label="$t('actionsEditor.buttons.cancel')" color="grey-5" v-close-popup />
+          <q-btn
+            flat
+            :label="$t('actionsEditor.buttons.save')"
+            color="primary"
+            @click="saveSetFlagAction"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Diálogo Custom para Modify Stat -->
+    <q-dialog v-model="isModifyStatDialogOpen">
+      <q-card class="bg-grey-9 text-white" style="width: 400px">
+        <q-card-section>
+          <div class="text-h6">{{ $t('actionsEditor.dialogs.modifyStat.title') }}</div>
+          <div class="text-caption text-grey-5">
+            {{ $t('actionsEditor.dialogs.modifyStat.message') }}
+          </div>
+        </q-card-section>
+
+        <q-card-section class="q-gutter-y-md">
+          <q-select
+            v-model="newStatName"
+            :options="availableStats"
+            :label="$t('actionsEditor.dialogs.modifyStat.statLabel')"
+            dark
+            filled
+            autofocus
+          />
+          <q-input
+            v-model="newStatOperation"
+            :label="$t('actionsEditor.dialogs.modifyStat.operationLabel')"
+            dark
+            filled
+            :hint="$t('actionsEditor.dialogs.modifyStat.operationHint')"
+            placeholder="-10"
+          />
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat :label="$t('actionsEditor.buttons.cancel')" color="grey-5" v-close-popup />
+          <q-btn
+            flat
+            :label="$t('actionsEditor.buttons.save')"
+            color="primary"
+            @click="saveModifyStatAction"
+          />
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
+
+    <!-- Diálogo Custom para Add Item -->
+    <q-dialog v-model="isAddItemDialogOpen">
+      <q-card class="bg-grey-9 text-white" style="width: 500px">
+        <q-card-section>
+          <div class="text-h6">{{ $t('actionsEditor.dialogs.addItem.title') }}</div>
+        </q-card-section>
+
+        <q-card-section class="q-gutter-y-md">
+          <q-select
+            v-model="newItemSection"
+            :options="availableSections"
+            :label="$t('actionsEditor.dialogs.addItem.sectionLabel')"
+            dark
+            filled
+            emit-value
+            map-options
+          />
+          <q-input
+            v-model="newItemName"
+            :label="$t('actionsEditor.dialogs.addItem.nameLabel')"
+            dark
+            filled
+          />
+          <q-input
+            v-model="newItemDescription"
+            :label="$t('actionsEditor.dialogs.addItem.descriptionLabel')"
+            dark
+            filled
+            type="textarea"
+            rows="2"
+          />
+
+          <!-- Modifiers List -->
+          <div>
+            <div class="row items-center q-mb-xs">
+              <div class="text-subtitle2">
+                {{ $t('actionsEditor.dialogs.addItem.modifiersTitle') }}
+              </div>
+              <q-space />
+              <q-btn flat round dense icon="add" size="sm" color="positive" @click="addModifier" />
+            </div>
+            <q-list dark bordered separator dense>
+              <q-item v-for="(mod, idx) in newItemModifiers" :key="idx">
+                <q-item-section>
+                  <div class="row q-col-gutter-xs">
+                    <div class="col-7">
+                      <q-select
+                        v-model="mod.target"
+                        :options="availableStats"
+                        :label="$t('actionsEditor.dialogs.addItem.modifierStat')"
+                        dark
+                        filled
+                        dense
+                      />
+                    </div>
+                    <div class="col-5">
+                      <q-input
+                        v-model.number="mod.value"
+                        type="number"
+                        :label="$t('actionsEditor.dialogs.addItem.modifierValue')"
+                        dark
+                        filled
+                        dense
+                      />
+                    </div>
+                  </div>
+                </q-item-section>
+                <q-item-section side>
+                  <q-btn
+                    flat
+                    round
+                    dense
+                    icon="delete"
+                    color="negative"
+                    size="sm"
+                    @click="removeModifier(idx)"
+                  />
+                </q-item-section>
+              </q-item>
+              <div
+                v-if="newItemModifiers.length === 0"
+                class="text-caption text-grey-5 q-pa-sm text-center"
+              >
+                {{ $t('actionsEditor.dialogs.addItem.noModifiers') }}
+              </div>
+            </q-list>
+          </div>
+        </q-card-section>
+
+        <q-card-actions align="right">
+          <q-btn flat :label="$t('actionsEditor.buttons.cancel')" color="grey-5" v-close-popup />
+          <q-btn
+            flat
+            :label="$t('actionsEditor.buttons.save')"
+            color="primary"
+            @click="saveAddItemAction"
+          />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -289,12 +481,14 @@ import type {
   ConditionalAction,
   ActionCondition,
   BookEvent,
+  AddItemAction,
 } from 'src/stores/types';
 
 const props = defineProps<{
   actions: AnyAction[];
   availableStats: string[];
   availableEvents: BookEvent[];
+  availableSections: { label: string; value: string }[];
 }>();
 
 const emit = defineEmits(['update:actions', 'create-event']);
@@ -313,6 +507,42 @@ const pendingFlagContext = ref<{
   parentAction?: ConditionalAction;
   listType?: 'success' | 'failure';
 } | null>(null);
+
+// State for Custom Modify Stat Dialog
+const isModifyStatDialogOpen = ref(false);
+const newStatName = ref('');
+const newStatOperation = ref('');
+
+// State for editing actions
+const editingActionIndex = ref<number | null>(null);
+const editingNestedContext = ref<{
+  parentAction: ConditionalAction;
+  listType: 'success' | 'failure';
+  index: number;
+} | null>(null);
+
+// State for Add Item Dialog
+const isAddItemDialogOpen = ref(false);
+const newItemName = ref('');
+const newItemDescription = ref('');
+const newItemSection = ref('');
+const newItemModifiers = ref<{ target: string; value: number }[]>([]);
+
+function addModifier() {
+  newItemModifiers.value.push({ target: props.availableStats[0] || '', value: 0 });
+}
+
+function removeModifier(index: number) {
+  newItemModifiers.value.splice(index, 1);
+}
+
+function openAddItemDialog() {
+  newItemName.value = '';
+  newItemDescription.value = '';
+  newItemSection.value = props.availableSections[0]?.value || '';
+  newItemModifiers.value = [];
+  isAddItemDialogOpen.value = true;
+}
 
 // Auto-generate ID from Name
 watch(newFlagName, (val) => {
@@ -403,6 +633,58 @@ function openSetFlagDialog(parentAction?: ConditionalAction, listType?: 'success
   isSetFlagDialogOpen.value = true;
 }
 
+function openModifyStatDialog() {
+  newStatName.value = props.availableStats[0] || '';
+  newStatOperation.value = '';
+  isModifyStatDialogOpen.value = true;
+}
+
+function saveModifyStatAction() {
+  if (!newStatName.value || !newStatOperation.value) return;
+
+  // Parse the operation string (e.g., "-10", "+5", "10")
+  const operationStr = newStatOperation.value.trim();
+  let operation: 'add' | 'subtract' | 'set' = 'add';
+  let value = 0;
+
+  if (operationStr.startsWith('+')) {
+    operation = 'add';
+    value = parseInt(operationStr.substring(1), 10);
+  } else if (operationStr.startsWith('-')) {
+    operation = 'subtract';
+    value = Math.abs(parseInt(operationStr, 10));
+  } else {
+    // If no sign, treat as absolute set
+    operation = 'set';
+    value = parseInt(operationStr, 10);
+  }
+
+  if (isNaN(value)) return;
+
+  const actionData: ModifyStatAction = {
+    id: uid(),
+    type: 'modifyStat',
+    stat: newStatName.value,
+    operation,
+    value,
+  };
+
+  if (editingActionIndex.value !== null) {
+    // Editing existing action
+    actionData.id = localActions.value[editingActionIndex.value]!.id;
+    localActions.value[editingActionIndex.value] = actionData;
+    editingActionIndex.value = null;
+  } else {
+    // Adding new action
+    localActions.value.push(actionData);
+  }
+
+  emitUpdate();
+  isModifyStatDialogOpen.value = false;
+  newStatName.value = '';
+  newStatOperation.value = '';
+}
+
 function saveSetFlagAction() {
   if (!newFlagId.value || !newFlagName.value) return;
 
@@ -415,29 +697,82 @@ function saveSetFlagAction() {
     emit('create-event', { id, name, initialValue: false });
   }
 
-  const newAction: SetFlagAction = {
+  const actionData: SetFlagAction = {
     id: uid(),
     type: 'setFlag',
     flag: id,
     value: true,
   };
 
-  if (pendingFlagContext.value && pendingFlagContext.value.parentAction) {
+  if (editingNestedContext.value) {
+    // Editing nested action
+    const { parentAction, listType, index } = editingNestedContext.value;
+    actionData.id = (
+      listType === 'success'
+        ? parentAction.successActions[index]
+        : parentAction.failureActions[index]
+    ).id;
+
+    if (listType === 'success') {
+      parentAction.successActions[index] = actionData;
+    } else {
+      parentAction.failureActions[index] = actionData;
+    }
+    editingNestedContext.value = null;
+  } else if (editingActionIndex.value !== null) {
+    // Editing main action
+    actionData.id = localActions.value[editingActionIndex.value]!.id;
+    localActions.value[editingActionIndex.value] = actionData;
+    editingActionIndex.value = null;
+  } else if (pendingFlagContext.value && pendingFlagContext.value.parentAction) {
+    // Adding new nested action
     const { parentAction, listType } = pendingFlagContext.value;
     if (listType === 'success') {
-      parentAction.successActions.push(newAction);
+      parentAction.successActions.push(actionData);
     } else if (listType === 'failure') {
-      parentAction.failureActions.push(newAction);
+      parentAction.failureActions.push(actionData);
     }
   } else {
-    localActions.value.push(newAction);
+    // Adding new main action
+    localActions.value.push(actionData);
   }
 
   emitUpdate();
   isSetFlagDialogOpen.value = false;
+  newFlagName.value = '';
+  newFlagId.value = '';
 }
 
-function promptAddAction(type: 'modifyStat' | 'setFlag' | 'conditional') {
+function saveAddItemAction() {
+  if (!newItemName.value || !newItemSection.value) return;
+
+  const actionData: AddItemAction = {
+    id: uid(),
+    type: 'addItem',
+    section: newItemSection.value,
+    item: {
+      id: uid(),
+      name: newItemName.value,
+      description: newItemDescription.value,
+      effects: newItemModifiers.value.map((m) => ({ target: m.target, value: m.value })),
+    },
+  };
+
+  if (editingActionIndex.value !== null) {
+    // Editing existing action
+    actionData.id = localActions.value[editingActionIndex.value]!.id;
+    localActions.value[editingActionIndex.value] = actionData;
+    editingActionIndex.value = null;
+  } else {
+    // Adding new action
+    localActions.value.push(actionData);
+  }
+
+  emitUpdate();
+  isAddItemDialogOpen.value = false;
+}
+
+function promptAddAction(type: 'modifyStat' | 'setFlag' | 'conditional' | 'addItem') {
   isAddActionDialogOpen.value = false;
 
   if (type === 'conditional') {
@@ -456,30 +791,82 @@ function promptAddAction(type: 'modifyStat' | 'setFlag' | 'conditional') {
     localActions.value.push(newAction);
     emitUpdate();
   } else if (type === 'modifyStat') {
-    $q.dialog({
-      title: t('actionsEditor.dialogs.modifyStat.title'),
-      message: t('actionsEditor.dialogs.modifyStat.message'),
-      prompt: { model: '' },
-      dark: true,
-      cancel: true,
-    }).onOk(() => {
-      const newAction: ModifyStatAction = {
-        id: uid(),
-        type: 'modifyStat',
-        stat: 'vida',
-        operation: 'add',
-        value: 10,
-      };
-      localActions.value.push(newAction);
-      emitUpdate();
-    });
+    openModifyStatDialog();
   } else if (type === 'setFlag') {
     openSetFlagDialog();
+  } else if (type === 'addItem') {
+    openAddItemDialog();
   }
 }
 
 function promptAddNestedAction(parentAction: ConditionalAction, listType: 'success' | 'failure') {
+  editingActionIndex.value = null;
+  editingNestedContext.value = null;
   openSetFlagDialog(parentAction, listType);
+}
+
+function editAction(action: AnyAction, index: number) {
+  editingActionIndex.value = index;
+  editingNestedContext.value = null;
+
+  if (action.type === 'modifyStat') {
+    newStatName.value = action.stat;
+    // Reconstruct the operation string
+    if (action.operation === 'add') {
+      newStatOperation.value = `+${action.value}`;
+    } else if (action.operation === 'subtract') {
+      newStatOperation.value = `-${action.value}`;
+    } else {
+      newStatOperation.value = String(action.value);
+    }
+    isModifyStatDialogOpen.value = true;
+  } else if (action.type === 'setFlag') {
+    const event = props.availableEvents.find((e) => e.id === action.flag);
+    newFlagName.value = event?.name || action.flag;
+    newFlagId.value = action.flag;
+    isSetFlagDialogOpen.value = true;
+  } else if (action.type === 'addItem') {
+    newItemName.value = action.item.name;
+    newItemDescription.value = action.item.description || '';
+    newItemSection.value = action.section;
+    newItemModifiers.value = (action.item.effects || []).map((e) => ({
+      target: e.target,
+      value: e.value,
+    }));
+    isAddItemDialogOpen.value = true;
+  }
+}
+
+function editNestedAction(
+  parentAction: ConditionalAction,
+  listType: 'success' | 'failure',
+  index: number,
+) {
+  const action =
+    listType === 'success'
+      ? parentAction.successActions[index]
+      : parentAction.failureActions[index];
+
+  if (!action) return;
+
+  editingActionIndex.value = null;
+  editingNestedContext.value = { parentAction, listType, index };
+
+  if (action.type === 'setFlag') {
+    const event = props.availableEvents.find((e) => e.id === action.flag);
+    newFlagName.value = event?.name || action.flag;
+    newFlagId.value = action.flag;
+    isSetFlagDialogOpen.value = true;
+  } else if (action.type === 'addItem') {
+    newItemName.value = action.item.name;
+    newItemDescription.value = action.item.description || '';
+    newItemSection.value = action.section;
+    newItemModifiers.value = (action.item.effects || []).map((e) => ({
+      target: e.target,
+      value: e.value,
+    }));
+    isAddItemDialogOpen.value = true;
+  }
 }
 
 function removeNestedAction(
@@ -511,6 +898,11 @@ function getActionDescription(action: AnyAction): string {
         value: String(action.value),
       });
     }
+    case 'addItem':
+      return t('actionsEditor.descriptions.addItem', {
+        item: action.item.name,
+        section: action.section,
+      });
     case 'conditional': {
       let subjectName = action.condition.subject;
       if (action.condition.source === 'flag') {

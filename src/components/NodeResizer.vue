@@ -1,6 +1,6 @@
 <!-- src/components/NodeResizer.vue (NUEVO FICHERO) -->
 <template>
-  <div class="node-resizer" @mousedown.stop.prevent="onMouseDown"></div>
+  <div class="node-resizer nodrag" @mousedown.stop.prevent="onMouseDown"></div>
 </template>
 
 <script setup lang="ts">
@@ -16,12 +16,30 @@ const props = defineProps<{
 const nodesStore = useNodesStore();
 
 function onMouseDown(event: MouseEvent) {
+  console.log('[NodeResizer] onMouseDown triggered', props.nodeId);
   const node = nodesStore.nodes.find((n) => n.id === props.nodeId) as BookNode | undefined;
-  if (!node) return;
+  if (!node) {
+    console.warn('[NodeResizer] Node not found in store', props.nodeId);
+    return;
+  }
 
-  // Obtenemos el elemento del DOM para tener una referencia
-  const nodeElement = document.querySelector(`[data-id="${props.nodeId}"]`) as HTMLElement;
-  if (!nodeElement) return;
+  // Usamos closest para encontrar el nodo contenedor de Vue Flow de forma más robusta
+  // y sin depender de selectores globales que podrían fallar.
+  const target = event.target as HTMLElement;
+  let nodeElement = target.closest('.vue-flow__node') as HTMLElement;
+
+  if (!nodeElement) {
+    console.warn('[NodeResizer] Node element not found in DOM via closest(). Trying fallback...');
+    // Fallback to querySelector just in case
+    const fallbackElement = document.querySelector(`[data-id="${props.nodeId}"]`) as HTMLElement;
+    console.log('[NodeResizer] Fallback querySelector found:', fallbackElement);
+
+    if (fallbackElement) {
+      nodeElement = fallbackElement;
+    } else {
+      return;
+    }
+  }
 
   const startX = event.clientX;
   const startY = event.clientY;
@@ -44,6 +62,7 @@ function onMouseDown(event: MouseEvent) {
   };
 
   const onMouseUp = () => {
+    console.log('[NodeResizer] onMouseUp triggered');
     // Limpiamos los listeners
     window.removeEventListener('mousemove', onMouseMove);
     window.removeEventListener('mouseup', onMouseUp);

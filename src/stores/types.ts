@@ -72,6 +72,13 @@ export interface ModifyInventoryAction {
   quantity: number;
 }
 
+export interface AddItemAction {
+  id: string;
+  type: 'addItem';
+  section: string; // The dataKey of the section (e.g., 'inventory', 'equipment')
+  item: Item;
+}
+
 export interface SetFlagAction {
   id: string;
   type: 'setFlag';
@@ -196,6 +203,8 @@ export interface SkillCheckChoice {
   failureTargetNodeId: string;
   rollConfig: SkillCheckConfig;
   sourceHandle?: string;
+  successText?: string;
+  failureText?: string;
 }
 
 // --- TIPOS GLOBALES CONSOLIDADOS ---
@@ -204,6 +213,7 @@ export interface SkillCheckChoice {
 export type AnyAction =
   | ModifyStatAction
   | ModifyInventoryAction
+  | AddItemAction
   | SetFlagAction
   | DiceRollAction
   | ConditionalAction;

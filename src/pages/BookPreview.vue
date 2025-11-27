@@ -328,8 +328,15 @@ async function buildPdfNative(options: {
     }
 
     // 1. Parsear HTML a una lista plana de palabras con su estilo
-    const wordParts: { text: string; font: pdfLib.PDFFont; width: number }[] = [];
-    const parts = htmlText.split(/(<(?:strong|b|em|i)>|<\/(?:strong|b|em|i)>)/gi).filter(Boolean);
+    const wordParts: {
+      text: string;
+      font: pdfLib.PDFFont;
+      width: number;
+      isNewline?: boolean;
+    }[] = [];
+    const parts = htmlText
+      .split(/(<(?:strong|b|em|i|br\s*\/?)>|<\/(?:strong|b|em|i|div)>|<div\b[^>]*>)/gi)
+      .filter(Boolean);
     const styleStack: ('normal' | 'bold' | 'italic')[] = ['normal'];
 
     for (const part of parts) {
@@ -352,10 +359,22 @@ async function buildPdfNative(options: {
         if (idx > -1) styleStack.splice(idx, 1);
         continue;
       }
+      if (lowerPart.startsWith('<br') || lowerPart === '</div>') {
+        // [CAMBIO] Tratamos </div> como salto de línea también
+        wordParts.push({ text: '', font: fonts.normal, width: 0, isNewline: true });
+        continue;
+      }
+      if (lowerPart.startsWith('<div')) {
+        // [CAMBIO] Ignoramos la apertura de div
+        continue;
+      }
 
       const hasBold = styleStack.includes('bold');
       const hasItalic = styleStack.includes('italic');
-      let currentFont = options.isChoiceOrAction ? fonts.italic : fonts.normal;
+      // [CAMBIO] Usamos normal como base, incluso para choices/actions.
+      // El formato específico (cursiva para instrucciones) vendrá del HTML generado.
+      let currentFont = fonts.normal;
+
       if (hasBold && hasItalic) currentFont = fonts.boldItalic;
       else if (hasBold) currentFont = fonts.bold;
       else if (hasItalic) currentFont = fonts.italic;
@@ -371,16 +390,24 @@ async function buildPdfNative(options: {
     }
 
     // 2. Agrupar palabras en líneas
-    const lines: (typeof wordParts)[] = [];
+    // [CAMBIO] Guardamos si la línea fue forzada por un <br> o salto de línea
+    const lines: { parts: typeof wordParts; isForcedEnd: boolean }[] = [];
     let currentLine: typeof wordParts = [];
     let currentLineWidth = 0;
     const spaceWidth = fonts.normal.widthOfTextAtSize(' ', fontSizeText);
 
     for (const part of wordParts) {
+      if (part.isNewline) {
+        lines.push({ parts: currentLine, isForcedEnd: true });
+        currentLine = [];
+        currentLineWidth = 0;
+        continue;
+      }
+
       const potentialWidth =
         currentLineWidth + (currentLine.length > 0 ? spaceWidth : 0) + part.width;
       if (potentialWidth > availableWidth && currentLine.length > 0) {
-        lines.push(currentLine);
+        lines.push({ parts: currentLine, isForcedEnd: false });
         currentLine = [part];
         currentLineWidth = part.width;
       } else {
@@ -389,18 +416,22 @@ async function buildPdfNative(options: {
       }
     }
     if (currentLine.length > 0) {
-      lines.push(currentLine);
+      lines.push({ parts: currentLine, isForcedEnd: true }); // La última línea siempre es forzada
     }
 
     // 3. Dibujar las líneas, justificando todas menos la última
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const isLastLine = i === lines.length - 1;
+      const lineObj = lines[i];
+      if (!lineObj) continue; // [FIX] Lint error
+      const line = lineObj.parts;
+      // [CAMBIO] Usamos isForcedEnd para decidir si justificar
+      const isLastLine = i === lines.length - 1 || lineObj.isForcedEnd;
       checkAndSwitchColumn();
       let cursorX = (columnX[currentColumn] ?? 0) + indent;
 
-      // No justificar la última línea, ni las de acciones/elecciones, ni las de una sola palabra
-      if (line && (isLastLine || options.isChoiceOrAction || line.length <= 1)) {
+      // No justificar la última línea, ni las de una sola palabra.
+      // [CAMBIO] Permitimos justificar choices/actions si el usuario lo pide (quitamos options.isChoiceOrAction)
+      if (line && (isLastLine || line.length <= 1)) {
         // Dibujar alineado a la izquierda
         for (const part of line) {
           currentPage.drawText(part.text, {
@@ -553,21 +584,28 @@ async function generatePdf() {
 
   try {
     const formatChoiceText = (choice: AnyChoice): string => {
-      let text = `${choice.label || 'Sigue leyendo el párrafo'}`;
+      // [CAMBIO] El label ya viene con HTML del editor, lo usamos tal cual.
+      let text = `<i>${choice.label || 'Sigue leyendo el párrafo'}</i>`;
 
       if (choice.type === 'simple' && choice.targetNodeId) {
         const targetPara = getParagraphNumber(choice.targetNodeId);
-        text += ` ${targetPara}`;
+        // [CAMBIO] Envolvemos la instrucción de navegación en <i>
+        text += ` <i><b>${targetPara}</b></i>`;
       } else if (choice.type === 'conditional') {
         const c = choice.condition;
         const conditionStr = `${c.subject} ${c.operator} ${c.value}`;
-        text = `Si (${conditionStr}), ${text}`;
+        // [CAMBIO] Formato para condicionales
+        text = `<i>[Si ${conditionStr}]</i> ${text}`;
         if (choice.successTargetNodeId) {
           const targetPara = getParagraphNumber(choice.successTargetNodeId);
-          text += ` -> ${targetPara}`;
+          text += ` <i>-> ${targetPara}</i>`;
+        }
+        if (choice.failureTargetNodeId) {
+          const targetPara = getParagraphNumber(choice.failureTargetNodeId);
+          text += ` <i>| Si no -> ${targetPara}</i>`;
         }
       } else if (choice.type === 'diceRoll') {
-        text = `[Tirada: ${choice.dice}]`;
+        text = `<i>[Tirada: ${choice.dice}]</i> ${text}`;
         if (choice.outcomes?.length) {
           const outcomesText = choice.outcomes
             .map((o) => {
@@ -575,25 +613,54 @@ async function generatePdf() {
               return `${o.label} (${o.range})${target}`;
             })
             .join(', ');
-          text += ` (${outcomesText})`;
+          text += ` <i>(${outcomesText})</i>`;
+        }
+      } else if (choice.type === 'skillCheck') {
+        // [CAMBIO] Lógica para Skill Check
+        // const roll = choice.rollConfig;
+        // text = `<i>[Prueba de ${roll.skill} (DT ${roll.baseDifficulty})]</i> ${text}`;
+        // [FIX] User requested to remove the auto-generated prefix
+
+        if (choice.successText || choice.successTargetNodeId) {
+          const target = choice.successTargetNodeId
+            ? ` -> ${getParagraphNumber(choice.successTargetNodeId)}`
+            : '';
+          const desc = choice.successText ? `${choice.successText}` : 'Éxito';
+          // [FIX] Replaced emoji with text to avoid WinAnsi encoding error
+          text += `<br><i>[Éxito] ${desc}${target}</i>`;
+        }
+
+        if (choice.failureText || choice.failureTargetNodeId) {
+          const target = choice.failureTargetNodeId
+            ? ` -> ${getParagraphNumber(choice.failureTargetNodeId)}`
+            : '';
+          const desc = choice.failureText ? `${choice.failureText}` : 'Fallo';
+          // [FIX] Replaced emoji with text to avoid WinAnsi encoding error
+          text += `<br><i>[Fallo] ${desc}${target}</i>`;
         }
       }
       return text;
     };
 
     const formatActionText = (action: AnyAction): string => {
+      let content = '';
       switch (action.type) {
         case 'modifyStat':
-          return `[Se modifica la estadística '${action.stat}' (${action.operation} ${action.value})]`;
+          content = `[Se modifica la estadística '${action.stat}' (${action.operation} ${action.value})]`;
+          break;
         case 'modifyInventory':
-          return `[Se ${action.operation === 'add' ? 'añade' : 'elimina'} ${action.quantity} de '${action.item}' en el inventario]`;
+          content = `[Se ${action.operation === 'add' ? 'añade' : 'elimina'} ${action.quantity} de '${action.item}' en el inventario]`;
+          break;
         case 'setFlag':
-          return `[Se establece el evento '${action.flag}' a '${action.value}']`;
+          content = `[Marca el evento '${action.flag}' en tu ficha de personaje]`;
+          break;
         case 'diceRoll':
-          return `[Tirada de dados: ${action.dice} - ${action.description}]`;
+          content = `[Tirada de dados: ${action.dice} - ${action.description}]`;
+          break;
         default:
-          return '';
+          content = '';
       }
+      return content ? `<i>${content}</i>` : '';
     };
 
     const getParagraphNumber = (nodeId: string): string => {

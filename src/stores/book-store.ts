@@ -12,6 +12,8 @@ import type {
   CharacterSheetSchema,
   CharacterSheetSectionSchema,
   BookEvent,
+  AnyAction,
+  AnyChoice,
 } from './types';
 
 export interface BookState {
@@ -310,7 +312,7 @@ export const useBookStore = defineStore('book', {
       const isUsed = nodes.some((node) => {
         // Check actions
         if (node.data.actions) {
-          const checkActions = (actions: any[]): boolean => {
+          const checkActions = (actions: AnyAction[]): boolean => {
             return actions.some((action) => {
               if (action.type === 'setFlag' && action.flag === eventId) return true;
               if (
@@ -330,7 +332,7 @@ export const useBookStore = defineStore('book', {
 
         // Check choices
         if (node.data.choices) {
-          return node.data.choices.some((choice: any) => {
+          return node.data.choices.some((choice: AnyChoice) => {
             if (
               choice.type === 'conditional' &&
               choice.condition.type === 'event' &&

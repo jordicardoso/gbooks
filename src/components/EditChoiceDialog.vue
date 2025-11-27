@@ -11,15 +11,18 @@
 
         <q-card-section v-if="editableChoice" class="q-gutter-y-md">
           <!-- Campo común para la etiqueta de la opción -->
-          <q-input
-            v-model="editableChoice.label"
-            :label="t('editChoiceDialog.optionLabel')"
-            filled
-            dark
-            autofocus
-            :rules="[(val) => (val && val.length > 0) || t('editChoiceDialog.optionLabelRequired')]"
-            lazy-rules
-          />
+          <!-- Campo común para la etiqueta de la opción -->
+          <div class="q-pa-none">
+            <p class="text-caption text-grey-5 q-mb-xs">{{ t('editChoiceDialog.optionLabel') }}</p>
+            <q-editor
+              v-model="editableChoice.label"
+              dark
+              :toolbar="toolbarOptions"
+              min-height="5rem"
+              content-class="bg-grey-9"
+              toolbar-bg="grey-10"
+            />
+          </div>
 
           <!-- === CAMPOS PARA DECISIÓN SIMPLE === -->
           <div v-if="editableChoice.type === 'simple'">
@@ -58,7 +61,24 @@
           <!-- === CAMPOS PARA PRUEBA CONDICIONAL === -->
           <div v-if="editableChoice.type === 'conditional'" class="q-gutter-y-md">
             <div class="text-subtitle2 q-mt-md">{{ t('editChoiceDialog.conditionTitle') }}</div>
-            <div class="row q-col-gutter-sm items-center">
+
+            <!-- Selector de tipo de condición -->
+            <q-select
+              v-model="editableChoice.condition.type"
+              :options="conditionTypeOptions"
+              :label="t('editChoiceDialog.conditionTypeLabel')"
+              filled
+              dark
+              emit-value
+              map-options
+              @update:model-value="onConditionTypeChange"
+            />
+
+            <!-- Campos para condición de ESTADÍSTICA -->
+            <div
+              v-if="editableChoice.condition.type === 'stat'"
+              class="row q-col-gutter-sm items-center"
+            >
               <div class="col">
                 <q-select
                   v-model="editableChoice.condition.subject"
@@ -90,6 +110,77 @@
                 />
               </div>
             </div>
+
+            <!-- Campos para condición de EVENTO -->
+            <div
+              v-if="editableChoice.condition.type === 'event'"
+              class="row q-col-gutter-sm items-center"
+            >
+              <div class="col">
+                <q-select
+                  v-model="editableChoice.condition.subject"
+                  :options="availableEvents"
+                  :label="t('editChoiceDialog.eventLabel')"
+                  filled
+                  dark
+                  dense
+                  emit-value
+                  map-options
+                  option-value="id"
+                  option-label="name"
+                />
+              </div>
+              <div class="col-auto">
+                <q-select
+                  v-model="editableChoice.condition.value"
+                  :options="[
+                    { label: t('editChoiceDialog.eventActive'), value: true },
+                    { label: t('editChoiceDialog.eventInactive'), value: false },
+                  ]"
+                  :label="t('editChoiceDialog.eventStateLabel')"
+                  filled
+                  dark
+                  dense
+                  emit-value
+                  map-options
+                  style="min-width: 150px"
+                />
+              </div>
+            </div>
+
+            <!-- Campos para condición de INVENTARIO -->
+            <div
+              v-if="editableChoice.condition.type === 'item'"
+              class="row q-col-gutter-sm items-center"
+            >
+              <div class="col">
+                <q-input
+                  v-model="editableChoice.condition.subject"
+                  :label="t('editChoiceDialog.itemLabel')"
+                  filled
+                  dark
+                  dense
+                  :hint="t('editChoiceDialog.itemHint')"
+                />
+              </div>
+              <div class="col-auto">
+                <q-select
+                  v-model="editableChoice.condition.value"
+                  :options="[
+                    { label: t('editChoiceDialog.itemExists'), value: true },
+                    { label: t('editChoiceDialog.itemNotExists'), value: false },
+                  ]"
+                  :label="t('editChoiceDialog.itemStateLabel')"
+                  filled
+                  dark
+                  dense
+                  emit-value
+                  map-options
+                  style="min-width: 150px"
+                />
+              </div>
+            </div>
+
             <q-select
               v-model="editableChoice.successTargetNodeId"
               :options="nodeOptions"
@@ -215,6 +306,24 @@
                 />
               </div>
             </div>
+
+            <q-input
+              v-model="editableChoice.successText"
+              :label="t('editChoiceDialog.skillCheck.successTextLabel')"
+              filled
+              dark
+              type="textarea"
+              autogrow
+            />
+
+            <q-input
+              v-model="editableChoice.failureText"
+              :label="t('editChoiceDialog.skillCheck.failureTextLabel')"
+              filled
+              dark
+              type="textarea"
+              autogrow
+            />
 
             <q-select
               v-model="editableChoice.successTargetNodeId"
@@ -380,7 +489,7 @@ import { useI18n } from 'vue-i18n';
 import { useNodesStore } from 'src/stores/nodes-store';
 import { useBookStore } from 'src/stores/book-store';
 import { storeToRefs } from 'pinia';
-import { uid } from 'quasar';
+import { uid, useQuasar } from 'quasar';
 import type { AnyChoice, ConditionalModifier } from 'src/stores/types';
 
 const props = defineProps<{
@@ -390,6 +499,7 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:modelValue', 'save']);
 
+const $q = useQuasar();
 const { t } = useI18n();
 
 // --- STORES ---
@@ -409,6 +519,22 @@ const newModifier = ref<ConditionalModifier>({
   trigger: { checkType: 'flag', targetId: '', operator: 'exists', value: true },
   effect: { operation: 'add', value: 0 },
 });
+
+const toolbarOptions = [
+  ['bold', 'italic', 'underline', 'strike'],
+  ['hr', 'link'],
+  ['unordered', 'ordered'],
+  [
+    {
+      label: $q.lang.editor.align,
+      icon: $q.iconSet.editor.align,
+      fixedLabel: true,
+      list: 'only-icons',
+      options: ['left', 'center', 'right', 'justify'],
+    },
+  ],
+  ['removeFormat'],
+];
 
 // --- COMPUTED PROPS ---
 const formTitle = computed(() =>
@@ -439,6 +565,12 @@ const availableStats = computed(() => {
 const availableEvents = computed(() => {
   return activeBook.value?.events || [];
 });
+
+const conditionTypeOptions = computed(() => [
+  { label: t('editChoiceDialog.conditionTypes.stat'), value: 'stat' },
+  { label: t('editChoiceDialog.conditionTypes.event'), value: 'event' },
+  { label: t('editChoiceDialog.conditionTypes.item'), value: 'item' },
+]);
 
 // --- WATCHERS ---
 watch(
@@ -472,6 +604,25 @@ function getNodeLabel(nodeId: string): string {
   if (nodeId === '--CREATE-NEW--') return t('editChoiceDialog.newNode');
   const node = nodes.value.find((n) => n.id === nodeId);
   return node ? `${node.data.paragraphNumber} - ${node.label}` : '???';
+}
+
+function onConditionTypeChange(newType: 'stat' | 'event' | 'item') {
+  if (!editableChoice.value || editableChoice.value.type !== 'conditional') return;
+
+  // Reset condition values based on type
+  if (newType === 'stat') {
+    editableChoice.value.condition.subject = availableStats.value[0] || '';
+    editableChoice.value.condition.operator = '>=';
+    editableChoice.value.condition.value = 10;
+  } else if (newType === 'event') {
+    editableChoice.value.condition.subject = availableEvents.value[0]?.id || '';
+    editableChoice.value.condition.operator = '==';
+    editableChoice.value.condition.value = true;
+  } else if (newType === 'item') {
+    editableChoice.value.condition.subject = '';
+    editableChoice.value.condition.operator = '==';
+    editableChoice.value.condition.value = true;
+  }
 }
 
 // Métodos para Tirada de Dados

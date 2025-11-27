@@ -263,12 +263,29 @@ export const useNodesStore = defineStore('nodes', {
      * Actualiza las dimensiones de un nodo (ancho y alto).
      */
     updateNodeDimensions(nodeId: string, width: number, height: number) {
+      console.log('[NodesStore] updateNodeDimensions called', { nodeId, width, height });
       const node = this.nodes.find((n) => n.id === nodeId);
       if (node) {
         if (!node.data) node.data = {};
         node.data.width = width;
         node.data.height = height;
+
+        // [FIX] Actualizamos el estilo para Vue Flow.
+        // Verificamos si style existe, si no lo inicializamos.
+        if (!node.style) {
+          node.style = {};
+        }
+
+        // Actualizamos las propiedades individualmente para evitar problemas de reactividad
+        // o reemplazo de objetos que puedan confundir a Vue Flow.
+        node.style.width = `${width}px`;
+        node.style.height = `${height}px`;
+
+        console.log('[NodesStore] Node style updated', node.style);
+
         useBookStore().setDirty(); // ¡IMPORTANTE! Marca que hay cambios.
+      } else {
+        console.warn('[NodesStore] Node not found for resizing', nodeId);
       }
     },
 
