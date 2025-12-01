@@ -299,6 +299,13 @@ async function buildPdfNative(options: {
     return false;
   };
 
+  // --- [HELPER] Decodificar entidades HTML ---
+  const decodeHtmlEntities = (text: string): string => {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = text;
+    return textarea.value;
+  };
+
   // --- [FUNCIÓN DE DIBUJO MEJORADA CON JUSTIFICACIÓN E INDENTACIÓN] ---
   const drawStyledHtmlText = (
     htmlText: string,
@@ -306,6 +313,9 @@ async function buildPdfNative(options: {
   ) => {
     const indent = options.indent || 0;
     const availableWidth = columnWidthPt - indent;
+
+    // Decodificar entidades HTML como &nbsp; a espacios regulares
+    htmlText = decodeHtmlEntities(htmlText);
 
     // Si es un elemento de lista, dibujamos la viñeta primero
     if (indent > 0) {
@@ -583,30 +593,115 @@ async function generatePdf() {
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   try {
-    const formatChoiceText = (choice: AnyChoice): string => {
-      // [CAMBIO] El label ya viene con HTML del editor, lo usamos tal cual.
-      let text = `<i>${choice.label || 'Sigue leyendo el párrafo'}</i>`;
+    // Primero definimos sortedNodes
+    const sortedNodes = [...nodes.value].sort((a, b) => {
+      const numA = parseFloat(String(a.data?.paragraphNumber ?? '').trim());
+      const numB = parseFloat(String(b.data?.paragraphNumber ?? '').trim());
+      if (isNaN(numA) && isNaN(numB)) return 0;
+      if (isNaN(numA)) return 1;
+      if (isNaN(numB)) return -1;
+      return numA - numB;
+    });
+
+    // Luego definimos getParagraphNumber que depende de sortedNodes
+    const getParagraphNumber = (nodeId: string): string => {
+      const node = sortedNodes.find((n) => n.id === nodeId);
+      return node?.data?.paragraphNumber ? String(node.data.paragraphNumber) : '?';
+    };
+
+    /**
+     * Reemplaza símbolos de marcador (#1, #2, etc.) en el texto con números de párrafo reales.
+     * También reemplaza # (sin número) con el primer párrafo objetivo.
+     * Para condicionales y skill checks: #t (true/success) y #f (false/failure).
+     * @param text - El texto que contiene los marcadores
+     * @param choice - La elección que contiene los IDs de nodos objetivo
+     * @returns El texto con los marcadores reemplazados por números de párrafo
+     */
+    const replaceParagraphPlaceholders = (text: string, choice: AnyChoice): string => {
+      // Extraer los IDs de nodos objetivo según el tipo de choice
+      const targetNodeIds: string[] = [];
 
       if (choice.type === 'simple' && choice.targetNodeId) {
-        const targetPara = getParagraphNumber(choice.targetNodeId);
-        // [CAMBIO] Envolvemos la instrucción de navegación en <i>
-        text += ` <i><b>${targetPara}</b></i>`;
+        targetNodeIds.push(choice.targetNodeId);
+      } else if (choice.type === 'conditional') {
+        if (choice.successTargetNodeId) targetNodeIds.push(choice.successTargetNodeId);
+        if (choice.failureTargetNodeId) targetNodeIds.push(choice.failureTargetNodeId);
+      } else if (choice.type === 'skillCheck') {
+        if (choice.successTargetNodeId) targetNodeIds.push(choice.successTargetNodeId);
+        if (choice.failureTargetNodeId) targetNodeIds.push(choice.failureTargetNodeId);
+      } else if (choice.type === 'diceRoll' && choice.outcomes) {
+        choice.outcomes.forEach((outcome) => {
+          if (outcome.targetNodeId) targetNodeIds.push(outcome.targetNodeId);
+        });
+      }
+
+      let processedText = text;
+
+      // Para condicionales y skill checks, reemplazar #t y #f
+      if (choice.type === 'conditional' || choice.type === 'skillCheck') {
+        if (choice.successTargetNodeId) {
+          const successPara = getParagraphNumber(choice.successTargetNodeId);
+          processedText = processedText.replace(/#t/g, successPara);
+        }
+        if (choice.failureTargetNodeId) {
+          const failurePara = getParagraphNumber(choice.failureTargetNodeId);
+          processedText = processedText.replace(/#f/g, failurePara);
+        }
+      }
+
+      // Primero reemplazar los marcadores numerados (#1, #2, etc.)
+      targetNodeIds.forEach((nodeId, index) => {
+        const placeholder = `#${index + 1}`;
+        const paragraphNumber = getParagraphNumber(nodeId);
+        // Reemplazar todas las ocurrencias del marcador numerado
+        processedText = processedText.replace(
+          new RegExp(`\\${placeholder}(?!\\d)`, 'g'),
+          paragraphNumber,
+        );
+      });
+
+      // Luego reemplazar # (sin número) con el primer párrafo objetivo
+      // Evitamos reemplazar #t y #f que ya fueron procesados
+      if (targetNodeIds.length > 0) {
+        const firstParagraphNumber = getParagraphNumber(targetNodeIds[0] as string);
+        // Reemplazar # que no esté seguido de un dígito ni de 't' ni de 'f'
+        processedText = processedText.replace(/#(?![0-9tf])/g, firstParagraphNumber);
+      }
+
+      return processedText;
+    };
+
+    const formatChoiceText = (choice: AnyChoice): string => {
+      // Procesar el label para reemplazar los marcadores de párrafo
+      const processedLabel = replaceParagraphPlaceholders(
+        choice.label || 'Sigue leyendo el párrafo',
+        choice,
+      );
+
+      let text = `<i>${processedLabel}</i>`;
+
+      if (choice.type === 'simple') {
+        // Para choices simples, solo mostramos el label procesado.
+        // El usuario puede usar # en el label para incluir el número de párrafo donde quiera.
+        // No añadimos nada automáticamente.
       } else if (choice.type === 'conditional') {
         const c = choice.condition;
         const conditionStr = `${c.subject} ${c.operator} ${c.value}`;
-        // [CAMBIO] Formato para condicionales
+        // [CAMBIO] Formato para condicionales con #t y #f
         text = `<i>[Si ${conditionStr}]</i> ${text}`;
-        if (choice.successTargetNodeId) {
-          const targetPara = getParagraphNumber(choice.successTargetNodeId);
-          text += ` <i>-> ${targetPara}</i>`;
-        }
-        if (choice.failureTargetNodeId) {
-          const targetPara = getParagraphNumber(choice.failureTargetNodeId);
-          text += ` <i>| Si no -> ${targetPara}</i>`;
+        // Solo añadir números de párrafo si no hay marcadores en el label
+        if (!choice.label?.includes('#')) {
+          if (choice.successTargetNodeId) {
+            text += ` <i>#t</i>`;
+          }
+          if (choice.failureTargetNodeId) {
+            text += ` <i>#f</i>`;
+          }
         }
       } else if (choice.type === 'diceRoll') {
         text = `<i>[Tirada: ${choice.dice}]</i> ${text}`;
-        if (choice.outcomes?.length) {
+        // Solo añadir números de párrafo si no hay marcadores en el label
+        if (!choice.label?.includes('#') && choice.outcomes?.length) {
           const outcomesText = choice.outcomes
             .map((o) => {
               const target = o.targetNodeId ? ` -> ${getParagraphNumber(o.targetNodeId)}` : '';
@@ -616,30 +711,27 @@ async function generatePdf() {
           text += ` <i>(${outcomesText})</i>`;
         }
       } else if (choice.type === 'skillCheck') {
-        // [CAMBIO] Lógica para Skill Check
-        // const roll = choice.rollConfig;
-        // text = `<i>[Prueba de ${roll.skill} (DT ${roll.baseDifficulty})]</i> ${text}`;
-        // [FIX] User requested to remove the auto-generated prefix
+        // Solo añadir información de éxito/fallo si no hay marcadores en el label
+        if (!choice.label?.includes('#')) {
+          if (choice.successText || choice.successTargetNodeId) {
+            const desc = choice.successText ? `${choice.successText}` : 'Éxito';
+            // Si successText ya contiene #, no añadir nada más
+            const target =
+              choice.successTargetNodeId && !choice.successText?.includes('#') ? ` #t` : '';
+            text += `<br><i>[Éxito] ${desc}${target}</i>`;
+          }
 
-        if (choice.successText || choice.successTargetNodeId) {
-          const target = choice.successTargetNodeId
-            ? ` -> ${getParagraphNumber(choice.successTargetNodeId)}`
-            : '';
-          const desc = choice.successText ? `${choice.successText}` : 'Éxito';
-          // [FIX] Replaced emoji with text to avoid WinAnsi encoding error
-          text += `<br><i>[Éxito] ${desc}${target}</i>`;
-        }
-
-        if (choice.failureText || choice.failureTargetNodeId) {
-          const target = choice.failureTargetNodeId
-            ? ` -> ${getParagraphNumber(choice.failureTargetNodeId)}`
-            : '';
-          const desc = choice.failureText ? `${choice.failureText}` : 'Fallo';
-          // [FIX] Replaced emoji with text to avoid WinAnsi encoding error
-          text += `<br><i>[Fallo] ${desc}${target}</i>`;
+          if (choice.failureText || choice.failureTargetNodeId) {
+            const desc = choice.failureText ? `${choice.failureText}` : 'Fallo';
+            // Si failureText ya contiene #, no añadir nada más
+            const target =
+              choice.failureTargetNodeId && !choice.failureText?.includes('#') ? ` #f` : '';
+            text += `<br><i>[Fallo] ${desc}${target}</i>`;
+          }
         }
       }
-      return text;
+      // Aplicar el reemplazo de marcadores al texto completo
+      return replaceParagraphPlaceholders(text, choice);
     };
 
     const formatActionText = (action: AnyAction): string => {
@@ -662,20 +754,6 @@ async function generatePdf() {
       }
       return content ? `<i>${content}</i>` : '';
     };
-
-    const getParagraphNumber = (nodeId: string): string => {
-      const node = sortedNodes.find((n) => n.id === nodeId);
-      return node?.data?.paragraphNumber ? String(node.data.paragraphNumber) : '?';
-    };
-
-    const sortedNodes = [...nodes.value].sort((a, b) => {
-      const numA = parseFloat(String(a.data?.paragraphNumber ?? '').trim());
-      const numB = parseFloat(String(b.data?.paragraphNumber ?? '').trim());
-      if (isNaN(numA) && isNaN(numB)) return 0;
-      if (isNaN(numA)) return 1;
-      if (isNaN(numB)) return -1;
-      return numA - numB;
-    });
 
     const blocks = sortedNodes
       .filter((n) => n.data?.paragraphNumber && String(n.data?.paragraphNumber).trim() !== '')

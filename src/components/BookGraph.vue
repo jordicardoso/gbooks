@@ -329,4 +329,14 @@ defineExpose({
   border: 1px solid rgba(0, 110, 255, 0.8);
   border-radius: 4px;
 }
+
+/* Hacer las cabezas de las flechas más grandes */
+:deep(.vue-flow__edge-path) {
+  stroke-width: 2;
+}
+
+:deep(.vue-flow__arrowhead) {
+  transform: scale(2);
+  transform-origin: center;
+}
 </style>
